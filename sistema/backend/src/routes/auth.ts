@@ -4,7 +4,7 @@
  * GET  /auth/me     → retorna usuário logado
  */
 import { FastifyPluginAsync } from 'fastify'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 import { ehDominioOficial } from '../lib/dominios.js'
 
