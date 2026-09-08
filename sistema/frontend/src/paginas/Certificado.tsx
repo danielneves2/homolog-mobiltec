@@ -222,7 +222,7 @@ export function Certificado() {
             <span key={c.id}>
               {i > 0 && ' · '}
               <a
-                href={`/api${c.arquivoUrl}`}
+                href={c.arquivoUrl.startsWith('http') ? c.arquivoUrl : `/api${c.arquivoUrl}`}
                 target="_blank"
                 rel="noreferrer"
                 className="underline underline-offset-2"

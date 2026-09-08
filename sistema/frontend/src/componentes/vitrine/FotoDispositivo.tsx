@@ -52,6 +52,7 @@ export function FotoDispositivo({
         // backend atrás do proxy `/api` do Vite.
         <img
           ref={refImg}
+          crossOrigin="anonymous"
           src={url.startsWith('/uploads') ? `/api${url}` : url}
           alt={nome}
           loading="lazy"

@@ -132,6 +132,18 @@ const COMANDOS_DE_TELA = new Set([
   'COMANDOS::Desbloquear',
 ])
 
+/** Mapeamento das chaves da planilha de telemetria para os nomes canônicos no catálogo */
+const DE_PARA_TELEMETRIA: Record<string, string> = {
+  'TELEMETRIA::Nível de Bateria': 'TELEMETRIA::Bateria',
+  'TELEMETRIA::Status de Memória RAM': 'TELEMETRIA::Memória',
+  'TELEMETRIA::Consumo de Dados Móveis': 'TELEMETRIA::Dados Móveis',
+  'TELEMETRIA::Status de Armazenamento': 'TELEMETRIA::Armazenamento',
+  'TELEMETRIA::Aplicativos Instalados': 'TELEMETRIA::Apps Instalados',
+  'TELEMETRIA::Tempo de Uso Apps': 'TELEMETRIA::App Tempo/Tela',
+  'TELEMETRIA::Consumo WiFi por App': 'TELEMETRIA::App Consumo WiFi',
+  'TELEMETRIA::Consumo 4G por Apps': 'TELEMETRIA::App Consumo 4G',
+}
+
 const REQUISITO_INSTALACAO = 'COMANDOS::Requisito de Instalação'
 const APPS_BLOQUEADOS = 'PERFIS::Apps Bloqueados'
 
@@ -232,6 +244,16 @@ async function main() {
   const planilha: Planilha = JSON.parse(
     readFileSync(join(AQUI, 'dados', 'planilha-pos.json'), 'utf8'),
   )
+
+  // Normaliza chaves de telemetria alinhadas ao catálogo canônico da Mobiltec
+  for (const m of planilha.modelos) {
+    const respostasNormalizadas: Record<string, string> = {}
+    for (const [k, v] of Object.entries(m.respostas)) {
+      const normalizada = DE_PARA_TELEMETRIA[k] ?? k
+      respostasNormalizadas[normalizada] = v
+    }
+    m.respostas = respostasNormalizadas
+  }
 
   console.log(`\n📄 ${planilha.origem} · aba ${planilha.aba} · ${planilha.modelos.length} modelos`)
   console.log(aplicar ? '   modo: APLICAR' : '   modo: simulação (use --aplicar para gravar)')

@@ -12,8 +12,7 @@
 import { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
-import { mkdir, writeFile } from 'node:fs/promises'
-import path from 'node:path'
+import { salvarCertificadoPdf } from '../lib/storage.js'
 import {
   analiseComoBlocos,
   gerarCertificadoHtml,
@@ -306,11 +305,7 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
     const html = gerarCertificadoHtml(h as unknown as HomologacaoCertificado)
     const pdf = await renderizarPdf(html)
 
-    const dir = path.resolve(process.env.UPLOAD_DIR ?? './uploads', 'certificados')
-    await mkdir(dir, { recursive: true })
-
-    const nomeArquivo = `${id}-${Date.now()}.pdf`
-    await writeFile(path.join(dir, nomeArquivo), pdf)
+    const arquivoUrl = await salvarCertificadoPdf(id, pdf)
 
     // Snapshot dos dados no momento da emissão — o cliente pode pedir
     // reemissão idêntica anos depois (spec §4.2 / §11.3).
@@ -318,7 +313,7 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
       data: {
         homologacaoId: id,
         formato: 'PDF',
-        arquivoUrl: `/uploads/certificados/${nomeArquivo}`,
+        arquivoUrl,
         snapshot: JSON.parse(JSON.stringify(h)),
         emitidoPor: request.user.id,
       },

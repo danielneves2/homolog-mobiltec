@@ -8,9 +8,7 @@
  */
 import { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
-import { mkdir, writeFile } from 'node:fs/promises'
-import path from 'node:path'
-import { randomUUID } from 'node:crypto'
+import { salvarFotoDispositivo } from '../lib/storage.js'
 
 /**
  * `fotoUrl` aceita URL absoluta OU caminho servido por nós (`/uploads/...`).
@@ -157,17 +155,11 @@ const dispositivoRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(413).send({ erro: 'Arquivo muito grande. O limite é 8 MB.' })
     }
 
-    const dir = path.resolve(process.env.UPLOAD_DIR ?? './uploads', 'fotos')
-    await mkdir(dir, { recursive: true })
-
-    // Nome novo a cada upload: trocar a foto não pode ser mascarado por cache,
-    // e certificados já emitidos guardam o caminho antigo no snapshot.
-    const nomeArquivo = `${id}-${randomUUID().slice(0, 8)}${extensao}`
-    await writeFile(path.join(dir, nomeArquivo), conteudo)
+    const fotoUrl = await salvarFotoDispositivo(id, extensao, conteudo, arquivo.mimetype)
 
     return fastify.prisma.dispositivo.update({
       where: { id },
-      data: { fotoUrl: `/uploads/fotos/${nomeArquivo}` },
+      data: { fotoUrl },
     })
   })
 
