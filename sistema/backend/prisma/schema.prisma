@@ -37,8 +37,10 @@ enum TipoGerenciamento {
 
 enum StatusHomologacao {
   RASCUNHO
+  AGUARDANDO_ANALISE
   EM_REVISAO
   APROVADO
+  REPROVADO
   PUBLICADO
 }
 
@@ -50,6 +52,7 @@ enum FormatoCertificado {
 enum PapelUsuario {
   ADMIN
   HOMOLOGADOR
+  PARCEIRO
   LEITOR
 }
 
@@ -84,6 +87,8 @@ model Usuario {
   cargo                 String
   senhaHash             String          @map("senha_hash")
   papel                 PapelUsuario    @default(HOMOLOGADOR)
+  empresa               String?
+  dominioCorporativo    String?         @map("dominio_corporativo")
   ativo                 Boolean         @default(true)
   criadoEm              DateTime        @default(now()) @map("criado_em")
   homologacoesResponsavel Homologacao[] @relation("Responsavel")
@@ -91,6 +96,7 @@ model Usuario {
   homologacoesApoio     Homologacao[]   @relation("Apoio")
   certificadosEmitidos  CertificadoEmitido[]
   reaberturasLog        LogReabertura[]
+  historicoStatus       HistoricoStatus[]
 
   @@map("usuario")
 }
@@ -221,6 +227,7 @@ model Homologacao {
   resultados           Resultado[]
   certificados         CertificadoEmitido[]
   reaberturasLog       LogReabertura[]
+  historicoStatus      HistoricoStatus[]
 
   @@map("homologacao")
 }
@@ -266,4 +273,18 @@ model LogReabertura {
   usuario       Usuario     @relation(fields: [usuarioId], references: [id])
 
   @@map("log_reabertura")
+}
+
+model HistoricoStatus {
+  id             String            @id @default(uuid())
+  homologacaoId  String            @map("homologacao_id")
+  statusAnterior StatusHomologacao @map("status_anterior")
+  statusNovo     StatusHomologacao @map("status_novo")
+  usuarioId      String            @map("usuario_id")
+  motivo         String?
+  criadoEm       DateTime          @default(now()) @map("criado_em")
+  homologacao    Homologacao       @relation(fields: [homologacaoId], references: [id])
+  usuario        Usuario           @relation(fields: [usuarioId], references: [id])
+
+  @@map("historico_status")
 }

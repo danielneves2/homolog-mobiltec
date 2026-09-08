@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useAuth } from '@/contextos/AuthContext'
 import { META_STATUS, STATUS_ORDEM } from '@/lib/tipos'
 import { ancorarMenu } from '@/lib/ancorarMenu'
 import type { ResultadoMatriz, StatusResultado } from '@/lib/tipos'
@@ -26,6 +27,7 @@ export function CelulaStatus({
   aoAbrirObservacao,
   aoAbrirJustificativa,
 }: Props) {
+  const { podeJustificar } = useAuth()
   const [aberto, setAberto] = useState(false)
   const [posicao, setPosicao] = useState<{ x: number; y: number } | null>(null)
   const refBotao = useRef<HTMLButtonElement>(null)
@@ -145,27 +147,27 @@ export function CelulaStatus({
 
           <div className="my-1 border-t" />
 
-          {/* A justificativa deixou de ser obrigatória para marcar o status,
-              então precisa de porta própria: é por aqui que ela é escrita
-              depois, quando o dev responde. */}
-          <button
-            type="button"
-            onClick={() => {
-              setAberto(false)
-              aoAbrirJustificativa()
-            }}
-            className="w-full px-3 py-1.5 flex items-center gap-2 text-left text-xs hover:opacity-80 transition-opacity"
-          >
-            <span className="w-2.5 shrink-0 text-center">§</span>
-            <span className="flex-1">Justificativa</span>
-            {justificativa && (
-              <span
-                className="w-1.5 h-1.5 rounded-full shrink-0"
-                style={{ background: 'var(--color-primary)' }}
-                aria-label="tem justificativa"
-              />
-            )}
-          </button>
+          {/* A justificativa é restrita à Mobiltec */}
+          {podeJustificar && (
+            <button
+              type="button"
+              onClick={() => {
+                setAberto(false)
+                aoAbrirJustificativa()
+              }}
+              className="w-full px-3 py-1.5 flex items-center gap-2 text-left text-xs hover:opacity-80 transition-opacity"
+            >
+              <span className="w-2.5 shrink-0 text-center">§</span>
+              <span className="flex-1">Justificativa</span>
+              {justificativa && (
+                <span
+                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                  style={{ background: 'var(--color-primary)' }}
+                  aria-label="tem justificativa"
+                />
+              )}
+            </button>
+          )}
 
           {/* Observação: nota interna, herdada do checklist removido */}
           <button

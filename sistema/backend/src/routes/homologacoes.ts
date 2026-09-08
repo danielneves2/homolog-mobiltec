@@ -171,6 +171,17 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(403).send({ erro: 'Homologação aprovada é somente leitura. Reabra para editar.' })
     }
 
+    // Parceiro só pode alterar dados enquanto em RASCUNHO
+    if (request.user.papel === 'PARCEIRO') {
+      if (atual.status !== StatusHomologacao.RASCUNHO) {
+        return reply.status(403).send({ erro: 'Homologação em análise ou finalizada é somente leitura para parceiros.' })
+      }
+      // Parceiro não edita assinaturas oficiais nem fontes
+      delete body.fontes
+      delete body.assinaturaResponsavel
+      delete body.assinaturaGerente
+    }
+
     return fastify.prisma.homologacao.update({ where: { id }, data: body as any })
   })
 
@@ -300,6 +311,18 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(403).send({ erro: 'Homologação aprovada é somente leitura. Reabra para editar.' })
     }
 
+    // Regras RBAC para Parceiro:
+    if (request.user.papel === 'PARCEIRO') {
+      if (homologacao.status !== StatusHomologacao.RASCUNHO) {
+        return reply.status(403).send({ erro: 'Homologação em análise ou finalizada é somente leitura para parceiros.' })
+      }
+      if (body.justificativaId || body.justificativaTexto) {
+        return reply.status(403).send({
+          erro: 'Parceiros não possuem permissão para registrar justificativas técnicas oficiais. Utilize o campo de observações.',
+        })
+      }
+    }
+
     // A justificativa NÃO trava mais a marcação do status (decisão do usuário,
     // DECISOES Etapa 43): durante a homologação interna o técnico marca o que
     // observou e escreve a justificativa depois, com o retorno do dev.
@@ -341,16 +364,19 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
 
   // ============================================================
   // POST /homologacoes/:id/status — Transição de status
-  // RASCUNHO → EM_REVISAO → APROVADO
+  // RASCUNHO → AGUARDANDO_ANALISE → EM_REVISAO → APROVADO
   // ============================================================
   fastify.post('/homologacoes/:id/status', {
     onRequest: [fastify.autenticar],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
-    const { novoStatus, homologado } = request.body as {
-      novoStatus: StatusHomologacao
-      homologado?: boolean
-    }
+    const statusSchema = z.object({
+      novoStatus: z.enum(['RASCUNHO', 'AGUARDANDO_ANALISE', 'EM_REVISAO', 'APROVADO', 'REPROVADO', 'PUBLICADO']),
+      homologado: z.boolean().optional(),
+      assinaturaApoio: z.string().optional().nullable(),
+      motivo: z.string().optional().nullable(),
+    })
+    const { novoStatus, homologado, assinaturaApoio, motivo } = statusSchema.parse(request.body)
 
     const homologacao = await fastify.prisma.homologacao.findUnique({
       where: { id },
@@ -364,11 +390,23 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
     })
     if (!homologacao) return reply.status(404).send({ erro: 'Homologação não encontrada' })
 
+    const ehParceiro = request.user.papel === 'PARCEIRO'
+    if (ehParceiro) {
+      // Parceiro SÓ pode transicionar de RASCUNHO para AGUARDANDO_ANALISE
+      if (homologacao.status !== StatusHomologacao.RASCUNHO || novoStatus !== StatusHomologacao.AGUARDANDO_ANALISE) {
+        return reply.status(403).send({
+          erro: 'Parceiros só possuem permissão para submeter homologações em rascunho para Aguardando Análise.',
+        })
+      }
+    }
+
     // Validar transições permitidas
     const transicoesPermitidas: Partial<Record<StatusHomologacao, StatusHomologacao[]>> = {
-      RASCUNHO: ['EM_REVISAO'],
-      EM_REVISAO: ['APROVADO', 'RASCUNHO'],
-      APROVADO: ['PUBLICADO'],
+      RASCUNHO: [StatusHomologacao.EM_REVISAO, StatusHomologacao.AGUARDANDO_ANALISE],
+      AGUARDANDO_ANALISE: [StatusHomologacao.EM_REVISAO, StatusHomologacao.APROVADO, StatusHomologacao.REPROVADO, StatusHomologacao.RASCUNHO],
+      EM_REVISAO: [StatusHomologacao.APROVADO, StatusHomologacao.REPROVADO, StatusHomologacao.RASCUNHO, StatusHomologacao.AGUARDANDO_ANALISE],
+      APROVADO: [StatusHomologacao.PUBLICADO, StatusHomologacao.RASCUNHO],
+      REPROVADO: [StatusHomologacao.RASCUNHO],
     }
 
     const permitidas = transicoesPermitidas[homologacao.status] ?? []
@@ -380,13 +418,6 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     // Pendências: item não testado ou divergência sem justificativa.
-    //
-    // NÃO bloqueiam a transição — decisão do usuário (ver DECISOES, Etapa 33):
-    // quem fecha a homologação é o time de homologação, e quem valida e
-    // assina é o gerente de produto. O checklist continua existindo, mas
-    // como informação, não como trava. A pendência segue visível em três
-    // lugares: no modal de finalizar, no contador da barra de filtros e no
-    // certificado, onde a linha sem justificativa sai em branco (spec §5).
     const pendentes = homologacao.resultados.filter(r => {
       if (r.status === StatusResultado.NAO_TESTADO) return true
       if (STATUS_COM_JUSTIFICATIVA_OBRIGATORIA.includes(r.status)) {
@@ -402,20 +433,34 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
       })
     }
 
-    const atualizado = await fastify.prisma.homologacao.update({
-      where: { id },
-      data: {
-        status: novoStatus,
-        ...(novoStatus === StatusHomologacao.APROVADO ? {
-          homologado,
-          dataFim: homologado ? new Date() : undefined,
-        } : {}),
-      },
-    })
+    // Atualiza homologação e registra histórico de transição
+    const [atualizado] = await fastify.prisma.$transaction([
+      fastify.prisma.homologacao.update({
+        where: { id },
+        data: {
+          status: novoStatus,
+          ...(assinaturaApoio !== undefined ? { assinaturaApoio } : {}),
+          ...(novoStatus === StatusHomologacao.APROVADO ? {
+            homologado,
+            dataFim: homologado ? new Date() : undefined,
+          } : {}),
+          ...(novoStatus === StatusHomologacao.REPROVADO ? {
+            homologado: false,
+            dataFim: new Date(),
+          } : {}),
+        },
+      }),
+      fastify.prisma.historicoStatus.create({
+        data: {
+          homologacaoId: id,
+          statusAnterior: homologacao.status,
+          statusNovo: novoStatus,
+          usuarioId: request.user.id,
+          motivo: motivo ?? null,
+        },
+      }),
+    ])
 
-    // As pendências vão junto na resposta: quem fechou com item em aberto
-    // fica sabendo o que ficou para trás, e o gerente de produto tem o que
-    // conferir antes de assinar.
     return {
       ...atualizado,
       pendencias: pendentes.map(r => ({ itemId: r.itemId, status: r.status })),

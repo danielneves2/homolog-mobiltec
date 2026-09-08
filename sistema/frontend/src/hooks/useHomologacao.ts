@@ -61,8 +61,12 @@ export function useTransicaoStatus(homologacaoId: string) {
   const qc = useQueryClient()
 
   return useMutation({
-    mutationFn: (p: { novoStatus: StatusHomologacao; homologado?: boolean }) =>
-      api.post<Homologacao>(`/homologacoes/${homologacaoId}/status`, p),
+    mutationFn: (p: {
+      novoStatus: StatusHomologacao
+      homologado?: boolean
+      assinaturaApoio?: string | null
+      motivo?: string | null
+    }) => api.post<Homologacao>(`/homologacoes/${homologacaoId}/status`, p),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: chaves.homologacao(homologacaoId) })
       qc.invalidateQueries({ queryKey: chaves.dashboard(homologacaoId) })

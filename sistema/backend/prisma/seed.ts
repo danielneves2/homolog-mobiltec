@@ -53,9 +53,27 @@ async function main() {
       cargo: 'Responsável Técnico',
       senhaHash,
       papel: PapelUsuario.ADMIN,
+      empresa: 'Mobiltec',
     },
   })
   console.log('✅ Usuário admin criado:', admin.email)
+
+  // ============================================================
+  // USUÁRIO PARCEIRO PADRÃO
+  // ============================================================
+  const parceiro = await prisma.usuario.upsert({
+    where: { email: 'parceiro@fabricante.com' },
+    update: { nome: 'Carlos Silva (Parceiro)' },
+    create: {
+      nome: 'Carlos Silva (Parceiro)',
+      email: 'parceiro@fabricante.com',
+      cargo: 'Engenheiro de Testes',
+      empresa: 'Fabricante Global',
+      senhaHash,
+      papel: PapelUsuario.PARCEIRO,
+    },
+  })
+  console.log('✅ Usuário parceiro criado:', parceiro.email)
 
   // ============================================================
   // CATÁLOGO DE 48 ITENS DE TESTE — seed PoS (spec §6)

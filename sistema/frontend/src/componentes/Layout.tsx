@@ -216,7 +216,7 @@ const NOME_REGISTRO = 'Registro de Testes Internos'
  * categoria no banco a faz aparecer aqui sozinha, sem mexer no código.
  */
 export function Layout() {
-  const { usuario, sair } = useAuth()
+  const { usuario, ehParceiro, sair } = useAuth()
   const { data: categorias } = useCategorias()
   const { pathname } = useLocation()
 
@@ -280,114 +280,145 @@ export function Layout() {
   /** Só as telas de planilha registram testes */
   const ehPlanilha = pathname.startsWith('/matriz')
 
+  const ehSandbox =
+    import.meta.env.VITE_AMBIENTE === 'sandbox' ||
+    window.location.hostname.includes('sandbox') ||
+    window.location.port === '3002'
+
   return (
-    // O fundo da janela é o mesmo do menu: é a faixa que aparece em volta do
-    // card do painel e o que dá a ele o efeito de folha solta.
-    <div className="h-screen flex overflow-hidden" style={{ background: 'var(--color-sidebar)' }}>
-      <aside
-        className="flex flex-col shrink-0 transition-[width] duration-200"
-        style={{ width: largura, background: 'var(--color-sidebar)' }}
-      >
-        {/* Sem botão aqui dentro: aberto fica só o lockup, recolhido só o
-            símbolo — ambos centralizados. Quem abre e fecha é o botão da
-            borda, que não se confunde com a marca. */}
+    <div className="h-screen flex flex-col overflow-hidden">
+      {ehSandbox && (
         <div
-          className="flex items-center justify-center border-b px-3 shrink-0"
-          style={{ height: 'var(--topbar-h)' }}
+          className="w-full py-1.5 px-4 text-center text-xs font-bold uppercase tracking-wider shrink-0 z-50 flex items-center justify-center gap-2 shadow-sm"
+          style={{ background: '#FEF3C7', color: '#92400E', borderBottom: '1px solid #FCD34D' }}
         >
-          {aberto ? (
-            <LogoMobiltec className="h-11 w-auto" />
-          ) : (
-            <LogoMobiltec variante="simbolo" className="h-7 w-7" />
-          )}
+          <span>⚠️ AMBIENTE SANDBOX — EXPERIMENTAÇÃO ISOLADA (SEM IMPACTO EM PRODUÇÃO)</span>
         </div>
+      )}
 
-        <nav className="flex-1 overflow-y-auto p-2 space-y-1">
-          {itens.map((item) => (
-            <ItemMenu key={item.para} item={item} aberto={aberto} />
-          ))}
-
-          {/* O traço marca a mudança de natureza: acima, os tipos que já
-              existem; abaixo, quem cria e mantém a lista deles. */}
-          <div className="!mt-2 pt-2" style={{ borderTop: '1px solid var(--color-border)' }}>
-            <GrupoMenu item={registro} filhos={opcoesRegistro} aberto={aberto} />
-          </div>
-        </nav>
-
-        <div className="border-t p-2 shrink-0">
-          {aberto && (
-            <div className="px-2.5 py-1.5">
-              <p className="truncate text-sm font-medium">{usuario?.nome}</p>
-              <p className="truncate text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
-                {usuario?.cargo}
-              </p>
-            </div>
-          )}
-          <button
-            onClick={sair}
-            title="Sair"
-            className="flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-colors hover:opacity-70"
-            style={{
-              color: 'var(--color-muted-foreground)',
-              justifyContent: aberto ? 'flex-start' : 'center',
-            }}
+      {/* O fundo da janela é o mesmo do menu: é a faixa que aparece em volta do
+          card do painel e o que dá a ele o efeito de folha solta. */}
+      <div className="flex-1 flex min-h-0 overflow-hidden" style={{ background: 'var(--color-sidebar)' }}>
+        <aside
+          className="flex flex-col shrink-0 transition-[width] duration-200"
+          style={{ width: largura, background: 'var(--color-sidebar)' }}
+        >
+          {/* Sem botão aqui dentro: aberto fica só o lockup, recolhido só o
+              símbolo — ambos centralizados. Quem abre e fecha é o botão da
+              borda, que não se confunde com a marca. */}
+          <div
+            className="flex items-center justify-center border-b px-3 shrink-0"
+            style={{ height: 'var(--topbar-h)' }}
           >
-            <Icone nome="sair" className="h-[18px] w-[18px] shrink-0" />
-            {aberto && <span>Sair</span>}
-          </button>
-        </div>
-      </aside>
-
-      {/* O painel inteiro é um card: a folga de 8px em volta deixa aparecer a
-          faixa de fundo, e é ela que separa o card do menu — daí o `aside` ter
-          perdido a borda direita. */}
-      <main className="flex-1 min-w-0 p-2">
-        <div
-          className="flex h-full flex-col overflow-hidden rounded-xl border"
-          style={{ background: 'var(--color-card)' }}
-          data-painel
-        >
-          {/* Barra do topo do card. À esquerda, onde se está; ao centro, o
-              nome do sistema, igual em todas as telas — nenhuma página repete
-              o próprio título abaixo. O centro é absoluto para ficar no meio
-              da barra, e não no meio do que sobra depois da trilha. */}
-          <div className="relative flex shrink-0 items-center gap-3 border-b px-3 py-2">
-            <button
-              type="button"
-              onClick={alternar}
-              aria-label={aberto ? 'Recolher menu' : 'Expandir menu'}
-              title={aberto ? 'Recolher menu' : 'Expandir menu'}
-              className="grid h-8 w-8 place-items-center rounded-lg transition-colors hover:opacity-70"
-              style={{ color: 'var(--color-muted-foreground)' }}
-            >
-              <Icone nome="painel" className="h-[18px] w-[18px]" />
-            </button>
-
-            <div className="h-5 w-px" style={{ background: 'var(--color-border)' }} />
-
-            <div className="flex min-w-0 items-center gap-2">
-              <Icone nome={secao.icone} className="h-4 w-4 shrink-0" />
-              <h1 className="truncate text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
-                {secao.rotulo}
-              </h1>
-            </div>
-
-            {ehPlanilha && (
-              <span
-                data-registro
-                className="pointer-events-none absolute left-1/2 -translate-x-1/2 truncate text-sm font-semibold"
-                style={{ letterSpacing: '0.01em' }}
-              >
-                {NOME_REGISTRO}
-              </span>
+            {aberto ? (
+              <LogoMobiltec className="h-11 w-auto" />
+            ) : (
+              <LogoMobiltec variante="simbolo" className="h-7 w-7" />
             )}
           </div>
 
-          <div className="min-h-0 flex-1 overflow-hidden">
-            <Outlet />
+          <nav className="flex-1 overflow-y-auto p-2 space-y-1">
+            {itens.map((item) => (
+              <ItemMenu key={item.para} item={item} aberto={aberto} />
+            ))}
+
+            {/* O traço marca a mudança de natureza: acima, os tipos que já
+                existem; abaixo, quem cria e mantém a lista deles. */}
+            <div className="!mt-2 pt-2" style={{ borderTop: '1px solid var(--color-border)' }}>
+              <GrupoMenu item={registro} filhos={opcoesRegistro} aberto={aberto} />
+            </div>
+          </nav>
+
+          <div className="border-t p-2 shrink-0">
+            {aberto && (
+              <div className="px-2.5 py-1.5">
+                <p className="truncate text-sm font-medium">{usuario?.nome}</p>
+                <p className="truncate text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
+                  {usuario?.cargo}
+                </p>
+              </div>
+            )}
+            <button
+              onClick={sair}
+              title="Sair"
+              className="flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-colors hover:opacity-70"
+              style={{
+                color: 'var(--color-muted-foreground)',
+                justifyContent: aberto ? 'flex-start' : 'center',
+              }}
+            >
+              <Icone nome="sair" className="h-[18px] w-[18px] shrink-0" />
+              {aberto && <span>Sair</span>}
+            </button>
           </div>
-        </div>
-      </main>
+        </aside>
+
+        {/* O painel inteiro é um card: a folga de 8px em volta deixa aparecer a
+            faixa de fundo, e é ela que separa o card do menu — daí o `aside` ter
+            perdido a borda direita. */}
+        <main className="flex-1 min-w-0 p-2">
+          <div
+            className="flex h-full flex-col overflow-hidden rounded-xl border"
+            style={{ background: 'var(--color-card)' }}
+            data-painel
+          >
+            {/* Barra do topo do card. À esquerda, onde se está; ao centro, o
+                nome do sistema, igual em todas as telas — nenhuma página repete
+                o próprio título abaixo. O centro é absoluto para ficar no meio
+                da barra, e não no meio do que sobra depois da trilha. */}
+            <div className="relative flex shrink-0 items-center gap-3 border-b px-3 py-2">
+              <button
+                type="button"
+                onClick={alternar}
+                aria-label={aberto ? 'Recolher menu' : 'Expandir menu'}
+                title={aberto ? 'Recolher menu' : 'Expandir menu'}
+                className="grid h-8 w-8 place-items-center rounded-lg transition-colors hover:opacity-70"
+                style={{ color: 'var(--color-muted-foreground)' }}
+              >
+                <Icone nome="painel" className="h-[18px] w-[18px]" />
+              </button>
+
+              <div className="h-5 w-px" style={{ background: 'var(--color-border)' }} />
+
+              <div className="flex min-w-0 items-center gap-2">
+                <Icone nome={secao.icone} className="h-4 w-4 shrink-0" />
+                <h1 className="truncate text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
+                  {secao.rotulo}
+                </h1>
+              </div>
+
+              {ehPlanilha && (
+                <span
+                  data-registro
+                  className="pointer-events-none absolute left-1/2 -translate-x-1/2 truncate text-sm font-semibold"
+                  style={{ letterSpacing: '0.01em' }}
+                >
+                  {NOME_REGISTRO}
+                </span>
+              )}
+
+              <div className="ml-auto flex items-center gap-2 text-xs">
+                <span className="font-medium" style={{ color: 'var(--color-foreground)' }}>
+                  {usuario?.nome}
+                </span>
+                <span
+                  className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                  style={{
+                    background: ehParceiro ? 'var(--color-warning-soft)' : 'var(--color-info-soft)',
+                    color: ehParceiro ? 'var(--color-warning-fg)' : 'var(--color-info-fg)',
+                  }}
+                >
+                  {ehParceiro ? (usuario?.empresa ? `Parceiro (${usuario.empresa})` : 'Parceiro') : 'Mobiltec'}
+                </span>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <Outlet />
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/contextos/AuthContext'
 import { api, ErroApi } from '@/lib/api'
 import {
   useDashboard,
@@ -26,12 +27,11 @@ interface CertificadoEmitido {
 /**
  * Preview e exportação do certificado (spec §10.6).
  *
- * O preview é o HTML gerado pelo backend a partir dos dados atuais — mexeu na
- * matriz ou no checklist, recarregou aqui, o documento já reflete. Emitir é
- * outra coisa: arquiva o PDF e um snapshot imutável (spec §11.3).
+ * Para Parceiros: liberado apenas após aprovação formal pela Mobiltec. Edição bloqueada.
  */
 export function Certificado() {
   const { id = '' } = useParams()
+  const { usuario, ehParceiro } = useAuth()
   const qc = useQueryClient()
   const { data: homologacao } = useHomologacao(id)
   const { data: dashboard } = useDashboard(id)
@@ -42,10 +42,13 @@ export function Certificado() {
   const salvarDados = useSalvarDadosCertificado(id)
   const [edicao, setEdicao] = useState<EdicaoCertificado | null>(null)
 
-  const somenteLeitura = homologacao ? ehSomenteLeitura(homologacao.status) : false
+  const estaAprovado = homologacao?.status === 'APROVADO' || homologacao?.status === 'PUBLICADO'
+  const podeVerCertificado = !ehParceiro || estaAprovado
+  const somenteLeitura = ehParceiro || (homologacao ? ehSomenteLeitura(homologacao.status, usuario?.papel) : false)
 
   const { data: html, isLoading, isError, error } = useQuery({
-    queryKey: ['certificado', id, 'preview', somenteLeitura],
+    queryKey: ['certificado', id, 'preview', somenteLeitura, podeVerCertificado],
+    enabled: podeVerCertificado,
     queryFn: () =>
       api.getTexto(
         // Os lápis só entram no preview editável — o PDF nunca os recebe.
@@ -154,26 +157,38 @@ export function Certificado() {
           <button
             type="button"
             onClick={baixarPdf}
-            disabled={baixando}
+            disabled={baixando || (ehParceiro && !estaAprovado)}
+            title={ehParceiro && !estaAprovado ? 'Download disponível apenas após aprovação formal pela Mobiltec' : undefined}
             className="px-4 py-2 rounded-md text-sm font-medium border disabled:opacity-50"
             style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
           >
             {baixando ? 'Gerando…' : 'Baixar PDF'}
           </button>
-          <button
-            type="button"
-            onClick={() => emitir.mutate()}
-            disabled={emitir.isPending}
-            title="Arquiva o PDF e um snapshot imutável dos dados"
-            className="px-4 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50"
-            style={{ background: 'var(--color-primary)' }}
-          >
-            {emitir.isPending ? 'Emitindo…' : 'Emitir e arquivar'}
-          </button>
+          {!ehParceiro && (
+            <button
+              type="button"
+              onClick={() => emitir.mutate()}
+              disabled={emitir.isPending}
+              title="Arquiva o PDF e um snapshot imutável dos dados"
+              className="px-4 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50"
+              style={{ background: 'var(--color-primary)' }}
+            >
+              {emitir.isPending ? 'Emitindo…' : 'Emitir e arquivar'}
+            </button>
+          )}
         </div>
       </header>
 
-      {pendentes > 0 && (
+      {ehParceiro && !estaAprovado && (
+        <div
+          className="mx-6 mt-3 px-4 py-3 rounded-md text-sm shrink-0 font-medium"
+          style={{ background: 'var(--color-warning-soft)', color: 'var(--color-warning-fg)' }}
+        >
+          Atenção: A visualização e o download do certificado oficial são liberados apenas após a aprovação formal da homologação pela equipe Mobiltec.
+        </div>
+      )}
+
+      {pendentes > 0 && !ehParceiro && (
         <div
           className="mx-6 mt-3 px-4 py-2.5 rounded-md text-sm shrink-0"
           style={{ background: 'var(--color-warning-soft)', color: 'var(--color-warning-fg)' }}
@@ -220,53 +235,66 @@ export function Certificado() {
       )}
 
       <div className="flex-1 flex min-h-0">
-        {/* Fontes e assinaturas ficam ao lado do preview — são os dois campos
-            de rodapé do certificado (spec §8.3) e o admin costuma ir e voltar
-            entre editar e conferir o resultado. */}
-        <aside
-          className="w-72 shrink-0 border-r overflow-y-auto p-5"
-          style={{ background: 'var(--color-card)' }}
-        >
-          {homologacao ? (
-            <PainelFontesAssinaturas homologacao={homologacao} somenteLeitura={somenteLeitura} />
-          ) : (
-            <p className="text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
-              Carregando…
-            </p>
-          )}
-        </aside>
+        {/* Fontes e assinaturas são exclusivas do fluxo técnico administrativo */}
+        {!ehParceiro && (
+          <aside
+            className="w-72 shrink-0 border-r overflow-y-auto p-5"
+            style={{ background: 'var(--color-card)' }}
+          >
+            {homologacao ? (
+              <PainelFontesAssinaturas homologacao={homologacao} somenteLeitura={somenteLeitura} />
+            ) : (
+              <p className="text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
+                Carregando…
+              </p>
+            )}
+          </aside>
+        )}
 
-        <div className="flex-1 overflow-auto p-6" style={{ background: '#DDD9DE' }}>
-          {isLoading && (
-            <p className="text-sm text-center" style={{ color: 'var(--color-muted-foreground)' }}>
-              Gerando preview…
-            </p>
-          )}
-          {isError && (
-            <p className="text-sm text-center" style={{ color: 'var(--color-destructive)' }}>
-              {error instanceof ErroApi ? error.message : 'Não foi possível gerar o preview.'}
-            </p>
-          )}
-          {html && (
-            <>
-              {!somenteLeitura && (
-                <p
-                  className="text-xs text-center mb-3 mx-auto"
-                  style={{ color: 'var(--color-muted-foreground)', maxWidth: 900 }}
-                >
-                  Clique no <span style={{ color: 'var(--color-primary)' }}>✎</span> ao lado de um
-                  texto para editá-lo. Os botões não saem no PDF.
-                </p>
-              )}
-              <iframe
-                title="Preview do certificado"
-                srcDoc={html}
-                className="w-full border-0 mx-auto block"
-                style={{ height: '100%', minHeight: '80vh', maxWidth: 900 }}
-              />
-            </>
-          )}
-        </div>
+        {!podeVerCertificado ? (
+          <div className="flex-1 flex items-center justify-center p-8" style={{ background: '#F4F4F5' }}>
+            <div className="max-w-md text-center p-8 rounded-xl border shadow-sm" style={{ background: 'var(--color-card)' }}>
+              <div className="text-4xl mb-3">🔒</div>
+              <h3 className="text-base font-semibold mb-2">Certificado em Validação</h3>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--color-muted-foreground)' }}>
+                Este dispositivo está com status <strong>{homologacao ? ROTULO_STATUS_HOMOLOGACAO[homologacao.status] : '…'}</strong>.
+                O documento oficial e o download em PDF estarão disponíveis nesta tela assim que a equipe técnica da Mobiltec concluir a análise e aprovar o equipamento.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 overflow-auto p-6" style={{ background: '#DDD9DE' }}>
+            {isLoading && (
+              <p className="text-sm text-center" style={{ color: 'var(--color-muted-foreground)' }}>
+                Gerando preview…
+              </p>
+            )}
+            {isError && (
+              <p className="text-sm text-center" style={{ color: 'var(--color-destructive)' }}>
+                {error instanceof ErroApi ? error.message : 'Não foi possível gerar o preview.'}
+              </p>
+            )}
+            {html && (
+              <>
+                {!somenteLeitura && (
+                  <p
+                    className="text-xs text-center mb-3 mx-auto"
+                    style={{ color: 'var(--color-muted-foreground)', maxWidth: 900 }}
+                  >
+                    Clique no <span style={{ color: 'var(--color-primary)' }}>✎</span> ao lado de um
+                    texto para editá-lo. Os botões não saem no PDF.
+                  </p>
+                )}
+                <iframe
+                  title="Preview do certificado"
+                  srcDoc={html}
+                  className="w-full border-0 mx-auto block"
+                  style={{ height: '100%', minHeight: '80vh', maxWidth: 900 }}
+                />
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {edicao && (

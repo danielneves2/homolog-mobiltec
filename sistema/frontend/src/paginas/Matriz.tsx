@@ -1,6 +1,7 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '@/contextos/AuthContext'
 import { api, ErroApi } from '@/lib/api'
 import {
   useEnviarFoto,
@@ -115,6 +116,7 @@ export function Matriz() {
   // Uma matriz por categoria (/matriz/pos, /matriz/coletor…)
   const { slug = 'pos' } = useParams<{ slug: string }>()
   const navegar = useNavigate()
+  const { usuario, ehParceiro } = useAuth()
 
   const { data, isLoading, isError, error } = useMatriz(slug)
   const salvarCelula = useSalvarCelula(slug)
@@ -302,23 +304,31 @@ export function Matriz() {
     // O status aplica direto, sem passar pelo painel: durante a homologação
     // interna o técnico marca o que observou na hora e a justificativa vem
     // depois, com o retorno do dev. Quem quiser justificar agora tem a opção
-    // "Justificativa" no próprio menu da célula.
+    // "Justificativa" no próprio menu da célula (restrita a técnicos Mobiltec).
+    const justId = ehParceiro
+      ? null
+      : escolha
+        ? escolha.justificativaId
+        : exigeJustificativa(status)
+          ? (atual?.justificativaId ?? null)
+          : null
+
+    const justTexto = ehParceiro
+      ? null
+      : escolha
+        ? escolha.justificativaTexto
+        : exigeJustificativa(status)
+          ? (atual?.justificativaTexto ?? null)
+          : null
+
     salvarCelula.mutate(
       {
         homologacaoId: coluna.homologacao.id,
         itemId: item.id,
         status,
         observacao: atual?.observacao ?? null,
-        justificativaId: escolha
-          ? escolha.justificativaId
-          : exigeJustificativa(status)
-            ? (atual?.justificativaId ?? null)
-            : null,
-        justificativaTexto: escolha
-          ? escolha.justificativaTexto
-          : exigeJustificativa(status)
-            ? (atual?.justificativaTexto ?? null)
-            : null,
+        justificativaId: justId,
+        justificativaTexto: justTexto,
       },
       {
         onError: (err) =>
@@ -684,21 +694,25 @@ export function Matriz() {
                         modelo={c.homologacao.dispositivo.nomeComercial}
                         acoes={[
                           { rotulo: 'Configuração', aoClicar: () => setConfigurar(c) },
-                          {
+                          (!ehParceiro || c.homologacao.status === 'APROVADO' || c.homologacao.status === 'PUBLICADO') && {
                             rotulo: 'Certificado',
                             aoClicar: () =>
                               navegar(`/homologacoes/${c.homologacao.id}/certificado`),
                           },
-                          { rotulo: 'Reteste', aoClicar: () => setReteste(c) },
+                          !ehParceiro && { rotulo: 'Reteste', aoClicar: () => setReteste(c) },
                           {
                             rotulo: 'Observação',
                             aoClicar: () => setObservacoes(c),
                             marcado: !!c.homologacao.observacoes?.trim(),
                           },
-                          ehSomenteLeitura(c.homologacao.status)
-                            ? { rotulo: 'Reabrir', aoClicar: () => setReabrir(c), destaque: true }
-                            : { rotulo: 'Finalizar', aoClicar: () => setFinalizar(c), destaque: true },
-                        ]}
+                          ehSomenteLeitura(c.homologacao.status, usuario?.papel)
+                            ? (!ehParceiro ? { rotulo: 'Reabrir', aoClicar: () => setReabrir(c), destaque: true } : null)
+                            : {
+                                rotulo: ehParceiro ? 'Enviar para Validação' : 'Finalizar',
+                                aoClicar: () => setFinalizar(c),
+                                destaque: true,
+                              },
+                        ].filter(Boolean) as any[]}
                       />
                       </div>
                     </div>
@@ -811,7 +825,7 @@ export function Matriz() {
                       <td key={c.homologacao.id} className="border p-0">
                         <CelulaStatus
                           resultado={c.homologacao.resultadosPorItem[item.id]}
-                          somenteLeitura={ehSomenteLeitura(c.homologacao.status)}
+                          somenteLeitura={ehSomenteLeitura(c.homologacao.status, usuario?.papel)}
                           aoEscolher={(s) => aplicarStatus(c, item, s)}
                           aoAbrirObservacao={() => setObservacao({ coluna: c, item })}
                           aoAbrirJustificativa={() =>
