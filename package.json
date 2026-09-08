@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "npx prisma generate --schema=sistema/backend/prisma/schema.prisma && npm --prefix sistema/frontend install && npm run build --prefix sistema/frontend"
+    "build": "npx prisma generate --schema=sistema/backend/prisma/schema.prisma && npm --prefix sistema/frontend install --include=dev && npm run build --prefix sistema/frontend"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.1",
@@ -16,12 +16,12 @@
     "dotenv": "^17.4.2",
     "fastify": "^4.28.1",
     "fastify-plugin": "^4.5.1",
+    "prisma": "^5.22.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.9.0",
-    "prisma": "^5.22.0",
     "typescript": "^5.6.3"
   }
 }
