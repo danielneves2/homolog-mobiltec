@@ -1,0 +1,282 @@
+import { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { api, ErroApi } from '@/lib/api'
+import {
+  useDashboard,
+  useEditarDivergencia,
+  useHomologacao,
+  useSalvarDadosCertificado,
+} from '@/hooks/useHomologacao'
+import { PainelFontesAssinaturas } from '@/componentes/certificado/PainelFontesAssinaturas'
+import {
+  ModalEditarTexto,
+  type EdicaoCertificado,
+} from '@/componentes/certificado/ModalEditarTexto'
+import { ROTULO_STATUS_HOMOLOGACAO, ehSomenteLeitura } from '@/lib/tipos'
+
+interface CertificadoEmitido {
+  id: string
+  formato: 'PDF' | 'PPTX'
+  arquivoUrl: string
+  emitidoEm: string
+  usuario: { nome: string }
+}
+
+/**
+ * Preview e exportação do certificado (spec §10.6).
+ *
+ * O preview é o HTML gerado pelo backend a partir dos dados atuais — mexeu na
+ * matriz ou no checklist, recarregou aqui, o documento já reflete. Emitir é
+ * outra coisa: arquiva o PDF e um snapshot imutável (spec §11.3).
+ */
+export function Certificado() {
+  const { id = '' } = useParams()
+  const qc = useQueryClient()
+  const { data: homologacao } = useHomologacao(id)
+  const { data: dashboard } = useDashboard(id)
+  const [baixando, setBaixando] = useState(false)
+  const [aviso, setAviso] = useState<string | null>(null)
+
+  const editarDivergencia = useEditarDivergencia(id)
+  const salvarDados = useSalvarDadosCertificado(id)
+  const [edicao, setEdicao] = useState<EdicaoCertificado | null>(null)
+
+  const somenteLeitura = homologacao ? ehSomenteLeitura(homologacao.status) : false
+
+  const { data: html, isLoading, isError, error } = useQuery({
+    queryKey: ['certificado', id, 'preview', somenteLeitura],
+    queryFn: () =>
+      api.getTexto(
+        // Os lápis só entram no preview editável — o PDF nunca os recebe.
+        `/homologacoes/${id}/certificado/preview${somenteLeitura ? '' : '?editavel=1'}`,
+      ),
+  })
+
+  // O preview roda num iframe srcDoc (mesma origem) e avisa por postMessage
+  // qual texto o usuário quer editar.
+  useEffect(() => {
+    function aoReceber(e: MessageEvent) {
+      const d = e.data
+      if (d?.fonte !== 'certificado') return
+      setEdicao({ tipo: d.tipo, chave: d.chave ?? '', textoAtual: d.textoAtual ?? '' })
+    }
+    window.addEventListener('message', aoReceber)
+    return () => window.removeEventListener('message', aoReceber)
+  }, [])
+
+  function salvarEdicao(texto: string) {
+    if (!edicao) return
+    const aoTerminar = {
+      onSuccess: () => setEdicao(null),
+      onError: (e: unknown) =>
+        setAviso(e instanceof ErroApi ? e.message : 'Não foi possível salvar o texto.'),
+    }
+
+    if (edicao.tipo === 'divergencia') {
+      editarDivergencia.mutate(
+        { itemIds: edicao.chave.split(',').filter(Boolean), texto },
+        aoTerminar,
+      )
+    } else {
+      salvarDados.mutate({ [edicao.tipo]: texto.trim() || null }, aoTerminar)
+    }
+  }
+
+  const { data: emitidos } = useQuery({
+    queryKey: ['certificado', id, 'emitidos'],
+    queryFn: () => api.get<CertificadoEmitido[]>(`/homologacoes/${id}/certificados`),
+  })
+
+  const emitir = useMutation({
+    mutationFn: () => api.post<{ aviso: string | null }>(`/homologacoes/${id}/certificados`, { formato: 'PDF' }),
+    onSuccess: (r) => {
+      setAviso(r.aviso ?? 'Certificado emitido e arquivado.')
+      qc.invalidateQueries({ queryKey: ['certificado', id, 'emitidos'] })
+    },
+    onError: (e) => setAviso(e instanceof ErroApi ? e.message : 'Falha ao emitir.'),
+  })
+
+  async function baixarPdf() {
+    setBaixando(true)
+    setAviso(null)
+    try {
+      const blob = await api.getBlob(`/homologacoes/${id}/certificado/pdf`)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `certificado-${homologacao?.dispositivo?.modelo ?? id}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      setAviso(e instanceof ErroApi ? e.message : 'Não foi possível gerar o PDF.')
+    } finally {
+      setBaixando(false)
+    }
+  }
+
+  const naoTestados = dashboard?.contagem.naoTestado ?? 0
+  // Divergência sem justificativa também sai em branco do documento
+  const semJustificativa = (homologacao?.resultados ?? []).filter(
+    (r) =>
+      ['FALHA', 'NAO_SUPORTADO', 'COM_RESSALVA'].includes(r.status) &&
+      !r.justificativaTexto?.trim() &&
+      !r.justificativa?.texto?.trim(),
+  ).length
+  const pendentes = naoTestados + semJustificativa
+
+  return (
+    <div className="h-screen flex flex-col">
+      <header className="px-6 py-3 border-b flex items-center justify-between gap-4 shrink-0">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <Link to="/matriz" className="text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
+              ←
+            </Link>
+            <h1 className="text-lg font-semibold truncate">
+              Certificado · {homologacao?.dispositivo?.nomeComercial ?? '…'}
+            </h1>
+            {homologacao && (
+              <span
+                className="px-2 py-0.5 rounded-full text-xs font-semibold shrink-0"
+                style={{ background: 'var(--color-muted)', color: 'var(--color-muted-foreground)' }}
+              >
+                {ROTULO_STATUS_HOMOLOGACAO[homologacao.status]}
+              </span>
+            )}
+          </div>
+          <p className="mt-0.5 text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
+            Gerado a partir dos dados atuais — atualiza junto com a matriz.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={baixarPdf}
+            disabled={baixando}
+            className="px-4 py-2 rounded-md text-sm font-medium border disabled:opacity-50"
+            style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
+          >
+            {baixando ? 'Gerando…' : 'Baixar PDF'}
+          </button>
+          <button
+            type="button"
+            onClick={() => emitir.mutate()}
+            disabled={emitir.isPending}
+            title="Arquiva o PDF e um snapshot imutável dos dados"
+            className="px-4 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50"
+            style={{ background: 'var(--color-primary)' }}
+          >
+            {emitir.isPending ? 'Emitindo…' : 'Emitir e arquivar'}
+          </button>
+        </div>
+      </header>
+
+      {pendentes > 0 && (
+        <div
+          className="mx-6 mt-3 px-4 py-2.5 rounded-md text-sm shrink-0"
+          style={{ background: 'var(--color-warning-soft)', color: 'var(--color-warning-fg)' }}
+        >
+          <strong>{pendentes} item(ns) saem em branco no certificado.</strong>{' '}
+          {[
+            naoTestados > 0 && `${naoTestados} não testado(s)`,
+            semJustificativa > 0 && `${semJustificativa} com divergência mas sem justificativa`,
+          ]
+            .filter(Boolean)
+            .join(' e ')}
+          . O documento só afirma o que foi avaliado e explicado — preencha a justificativa para
+          o status aparecer.
+        </div>
+      )}
+
+      {aviso && (
+        <div
+          role="alert"
+          className="mx-6 mt-3 px-4 py-2.5 rounded-md text-sm shrink-0"
+          style={{ background: 'var(--color-info-soft)', color: 'var(--color-info-fg)' }}
+        >
+          {aviso}
+        </div>
+      )}
+
+      {emitidos && emitidos.length > 0 && (
+        <div className="mx-6 mt-3 text-xs shrink-0" style={{ color: 'var(--color-muted-foreground)' }}>
+          Emissões arquivadas:{' '}
+          {emitidos.map((c, i) => (
+            <span key={c.id}>
+              {i > 0 && ' · '}
+              <a
+                href={`/api${c.arquivoUrl}`}
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2"
+              >
+                {new Date(c.emitidoEm).toLocaleString('pt-BR')} ({c.usuario.nome})
+              </a>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="flex-1 flex min-h-0">
+        {/* Fontes e assinaturas ficam ao lado do preview — são os dois campos
+            de rodapé do certificado (spec §8.3) e o admin costuma ir e voltar
+            entre editar e conferir o resultado. */}
+        <aside
+          className="w-72 shrink-0 border-r overflow-y-auto p-5"
+          style={{ background: 'var(--color-card)' }}
+        >
+          {homologacao ? (
+            <PainelFontesAssinaturas homologacao={homologacao} somenteLeitura={somenteLeitura} />
+          ) : (
+            <p className="text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
+              Carregando…
+            </p>
+          )}
+        </aside>
+
+        <div className="flex-1 overflow-auto p-6" style={{ background: '#DDD9DE' }}>
+          {isLoading && (
+            <p className="text-sm text-center" style={{ color: 'var(--color-muted-foreground)' }}>
+              Gerando preview…
+            </p>
+          )}
+          {isError && (
+            <p className="text-sm text-center" style={{ color: 'var(--color-destructive)' }}>
+              {error instanceof ErroApi ? error.message : 'Não foi possível gerar o preview.'}
+            </p>
+          )}
+          {html && (
+            <>
+              {!somenteLeitura && (
+                <p
+                  className="text-xs text-center mb-3 mx-auto"
+                  style={{ color: 'var(--color-muted-foreground)', maxWidth: 900 }}
+                >
+                  Clique no <span style={{ color: 'var(--color-primary)' }}>✎</span> ao lado de um
+                  texto para editá-lo. Os botões não saem no PDF.
+                </p>
+              )}
+              <iframe
+                title="Preview do certificado"
+                srcDoc={html}
+                className="w-full border-0 mx-auto block"
+                style={{ height: '100%', minHeight: '80vh', maxWidth: 900 }}
+              />
+            </>
+          )}
+        </div>
+      </div>
+
+      {edicao && (
+        <ModalEditarTexto
+          edicao={edicao}
+          salvando={editarDivergencia.isPending || salvarDados.isPending}
+          aoSalvar={salvarEdicao}
+          aoFechar={() => setEdicao(null)}
+        />
+      )}
+    </div>
+  )
+}

@@ -1,0 +1,66 @@
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+sistema/servidor/logs/
+sistema/postgres.log
+
+# Node dependencies
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+sistema/backend/node_modules/
+sistema/frontend/node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+dist-ssr/
+build/
+sistema/frontend/dist/
+*.tsbuildinfo
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+*.env
+backend/.env
+frontend/.env
+sistema/backend/.env
+sistema/frontend/.env
+
+# PostgreSQL portable binaries and database storage (MUST NOT be committed)
+*.zip
+sistema/postgres-portable.zip
+sistema/pgsql/
+sistema/pgdata/
+pgsql/
+pgdata/
+
+# Uploaded files & runtime storage
+sistema/backend/uploads/certificados/*
+!sistema/backend/uploads/certificados/.gitkeep
+sistema/backend/uploads/fotos/*
+!sistema/backend/uploads/fotos/.gitkeep
+
+# Verification screenshots & temp files
+sistema/.verificacao/
+.verificacao/
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.bak

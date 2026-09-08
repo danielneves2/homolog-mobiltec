@@ -1,0 +1,71 @@
+{
+  "name": "homolog-backend",
+  "version": "1.0.0",
+  "description": "Sistema de Homologação Mobiltec — Backend",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:prod": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:importar-planilha": "tsx prisma/importar-planilha.ts",
+    "db:studio": "prisma studio",
+    "db:reset": "prisma migrate reset --force && tsx prisma/seed.ts",
+    "verificar:matriz": "node scripts/verificar-matriz.mjs",
+    "verificar:certificado": "node scripts/verificar-certificado.mjs",
+    "verificar:fluxo": "node scripts/verificar-fluxo-completo.mjs",
+    "verificar:foto-reteste": "node scripts/verificar-foto-reteste.mjs",
+    "verificar:fontes": "node scripts/verificar-fontes-assinaturas.mjs",
+    "verificar:filtros": "node scripts/verificar-filtros-edicao.mjs",
+    "verificar:finalizar": "node scripts/verificar-finalizar-logo.mjs",
+    "verificar:ciclo": "node scripts/verificar-ciclo-finalizar.mjs",
+    "verificar:dropdown": "node scripts/verificar-dropdown-acoes.mjs",
+    "verificar:rail": "node scripts/verificar-rail.mjs",
+    "verificar:home": "node scripts/verificar-home-menu.mjs",
+    "verificar:catalogo": "node scripts/verificar-card-catalogo.mjs",
+    "verificar:marca": "node scripts/verificar-marca-detalhe.mjs",
+    "verificar:login": "node scripts/verificar-login.mjs",
+    "verificar:livre": "node scripts/verificar-finalizar-livre.mjs",
+    "verificar:sem-imei": "node scripts/verificar-certificado-sem-imei.mjs",
+    "verificar:linhas": "node scripts/verificar-linhas-matriz.mjs",
+    "verificar:observacoes": "node scripts/verificar-observacoes.mjs",
+    "verificar:secoes": "node scripts/verificar-secoes.mjs",
+    "verificar:nao-testado": "node scripts/verificar-nao-testado.mjs",
+    "verificar:registro": "node scripts/verificar-registro-tipo.mjs",
+    "verificar:analise": "node scripts/verificar-analise-bateria.mjs",
+    "alinhar:itens": "node scripts/alinhar-itens-pos.mjs"
+  },
+  "dependencies": {
+    "@fastify/cors": "^9.0.1",
+    "@fastify/jwt": "^8.0.1",
+    "@fastify/multipart": "^8.3.0",
+    "@fastify/static": "^7.0.4",
+    "@prisma/client": "^5.22.0",
+    "bcrypt": "^5.1.1",
+    "dotenv": "^17.4.2",
+    "fastify": "^4.28.1",
+    "fastify-plugin": "^4.5.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/node": "^22.9.0",
+    "pino-pretty": "^13.0.0",
+    "playwright": "^1.62.1",
+    "prisma": "^5.22.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "allowScripts": {
+    "@prisma/client@5.22.0": true,
+    "@prisma/engines@5.22.0": true,
+    "bcrypt@5.1.1": true,
+    "esbuild@0.28.2": true,
+    "prisma@5.22.0": true
+  }
+}

@@ -1,0 +1,178 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Mobiltec Design System v1.0.0
+   Fonte: design-system.md (raiz do repositório).
+   REGRA: nunca hardcode hex em componente — sempre var(--token)
+   ou a utility Tailwind gerada a partir do @theme abaixo.
+   ============================================================ */
+
+@theme {
+  /* --- Identidade da marca (DS §1) --- */
+  --color-primary: #7e2065;
+  --color-primary-foreground: #ffffff;
+  --color-brand-purple: #6e226b;
+  /* Variante profunda: rails laterais e gradientes, onde o roxo padrão
+     não dá contraste suficiente contra texto branco pequeno. */
+  --color-brand-purple-deep: #4a1240;
+  --color-brand-orange: #f37804;
+  --color-brand-red: #ca3546;
+  --color-hero-accent: #d987c1;
+
+  /* --- Estados funcionais (DS §2) --- */
+  --color-info: #2563eb;
+  --color-info-soft: #eff6ff;
+  --color-info-fg: #1e40af;
+  --color-success: #16a34a;
+  --color-success-soft: #f0fdf4;
+  --color-success-fg: #166534;
+  --color-warning: #ca8a04;
+  --color-warning-soft: #fefce8;
+  --color-warning-fg: #854d0e;
+  --color-destructive: #dc2626;
+  --color-destructive-soft: #fef2f2;
+  --color-destructive-fg: #991b1b;
+
+  /* --- Surfaces (DS §3) --- */
+  --color-background: #ffffff;
+  --color-foreground: #0f0f12;
+  --color-card: #ffffff;
+  --color-popover: #ffffff;
+  --color-sidebar: #f9f9fb;
+  --color-muted: #f4f4f6;
+  --color-muted-foreground: #6b7080;
+  --color-border: #e5e5ea;
+  --color-input: #e5e5ea;
+
+  /* --- Tipografia (DS §4) --- */
+  --font-sans: Geist, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", "Fira Code", "JetBrains Mono", Consolas, monospace;
+
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-lg: 17px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+  --text-4xl: 36px;
+
+  /* --- Espaçamento (DS §5) — escala 4-8-12-16-20-24-32-40-48-64 --- */
+  --spacing: 4px;
+
+  /* --- Raios (DS §6) --- */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  /* --- Sombras (DS §7) --- */
+  --shadow-xs: 0 1px 2px rgba(15, 15, 18, 0.04);
+  --shadow-sm: 0 1px 3px rgba(15, 15, 18, 0.08), 0 1px 2px rgba(15, 15, 18, 0.04);
+  --shadow-md: 0 4px 8px rgba(15, 15, 18, 0.08);
+  --shadow-lg: 0 10px 20px rgba(15, 15, 18, 0.10);
+  --shadow-xl: 0 20px 32px rgba(15, 15, 18, 0.12);
+
+  /* --- Motion (DS §8) --- */
+  --t-fast: 120ms ease;
+  --t-base: 200ms ease;
+
+  /* --- Layout (DS §9) --- */
+  --topbar-h: 60px;
+  --sidebar-w: 280px;
+
+  --ds-version: "1.0.0";
+}
+
+/* --- Cores por status de resultado (spec §5) ---------------------
+   Cada StatusResultado tem uma cor fixa, usada no checklist, na matriz
+   e nos badges. Derivadas dos estados funcionais do DS §2, exceto
+   NAO_SUPORTADO, que é laranja de marca para NÃO se confundir com
+   FALHA — a spec é explícita que os dois não podem parecer a mesma coisa.
+
+   O preenchimento (`-fill`) é o que a célula da matriz usa: saturado o
+   bastante para ler de relance numa grade de 48x7, como fazia o
+   preenchimento sólido da planilha Excel. O `-soft` é para áreas maiores,
+   onde o mesmo tom cansaria.
+   ---------------------------------------------------------------- */
+@theme {
+  --color-status-ok: #15803d;
+  --color-status-ok-fill: #dcfce7;
+  --color-status-ok-soft: #f0fdf4;
+
+  --color-status-falha: #b91c1c;
+  --color-status-falha-fill: #fee2e2;
+  --color-status-falha-soft: #fef2f2;
+
+  --color-status-nao-suportado: #c2410c;
+  --color-status-nao-suportado-fill: #ffedd5;
+  --color-status-nao-suportado-soft: #fff7ed;
+
+  --color-status-ressalva: #a16207;
+  --color-status-ressalva-fill: #fef3c7;
+  --color-status-ressalva-soft: #fefce8;
+
+  --color-status-nao-aplicavel: #64748b;
+  --color-status-nao-aplicavel-fill: #e2e8f0;
+  --color-status-nao-aplicavel-soft: #f1f5f9;
+
+  /* Cinza legível: em #94a3b8 o rótulo "Não testado" sumia dentro do card.
+     O preenchimento é mais escuro que o de "Não aplicável" (#e2e8f0) de
+     propósito: pendente pesa mais que inexistente, e a célula em branco que
+     havia aqui antes não se distinguia de uma linha vazia da planilha. */
+  --color-status-nao-testado: #334155;
+  --color-status-nao-testado-fill: #cbd5e1;
+  --color-status-nao-testado-soft: #f8fafc;
+}
+
+/* Tema claro fixo.
+   O DS define uma paleta escura, mas as telas operacionais — matriz e
+   checklist — são grades densas lidas o dia inteiro, e o usuário pediu
+   explicitamente a leitura clara. Se o modo escuro voltar, ele precisa
+   ser uma escolha na aplicação, não herdada do sistema operacional. */
+:root {
+  color-scheme: light;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    letter-spacing: -0.01em;
+  }
+
+  /* Foco visível — o checklist é operado por teclado (spec §10.4) */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  /* Marcado fica roxo com o certinho branco, e não no azul do sistema.
+     `accent-color` faz isso no controle nativo — sem desenhar caixa falsa,
+     que custaria o comportamento de teclado e de leitor de tela. */
+  input[type='checkbox'],
+  input[type='radio'] {
+    accent-color: var(--color-primary);
+    width: 15px;
+    height: 15px;
+  }
+}
+
+@layer utilities {
+  .label-caps {
+    font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted-foreground);
+  }
+}

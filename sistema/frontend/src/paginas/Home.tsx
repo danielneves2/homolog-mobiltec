@@ -1,0 +1,296 @@
+﻿import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useVitrine } from '@/hooks/useVitrine'
+import { Icone } from '@/componentes/Icone'
+import { CardDispositivo } from '@/componentes/vitrine/CardDispositivo'
+import { CardEmHomologacao } from '@/componentes/vitrine/CardEmHomologacao'
+import { ehSomenteLeitura } from '@/lib/tipos'
+import { ErroApi } from '@/lib/api'
+import type { DispositivoVitrine } from '@/lib/tipos'
+
+type Aba = 'homologados' | 'em-homologacao' | 'revalidados'
+
+/**
+ * Modelo usado como exemplo enquanto nenhuma homologação real foi finalizada.
+ *
+ * O card é montado a partir do dispositivo de verdade — versão do agente,
+ * Android, foto, contagens — em vez de dados inventados: o que se vê aqui é o
+ * estado atual dele. O selo "Exemplo" continua, porque a homologação ainda não
+ * está fechada; o card some sozinho quando existir modelo finalizado.
+ */
+const MODELO_EXEMPLO = /l400/i
+
+/**
+ * Painel de homologação — as duas visões que o parceiro terá do catálogo.
+ *
+ * Nada aqui edita: o que aparece vem da matriz, sozinho, conforme os testes
+ * avançam e as homologações são finalizadas.
+ */
+export function Home() {
+  const { data, isLoading, isError, error } = useVitrine()
+  const [aba, setAba] = useState<Aba>('homologados')
+  const [busca, setBusca] = useState('')
+  const [categoria, setCategoria] = useState('')
+
+  const { finalizados, exemplos, emAndamento, retestados, contagemPorCategoria } = useMemo(() => {
+    const reais = data?.dispositivos ?? []
+
+    const contagem = new Map<string, number>()
+    for (const d of reais) {
+      contagem.set(d.categoriaSlug, (contagem.get(d.categoriaSlug) ?? 0) + 1)
+    }
+
+    const termo = busca.trim().toLowerCase()
+    const passa = (d: DispositivoVitrine) => {
+      if (categoria && d.categoriaSlug !== categoria) return false
+      if (!termo) return true
+      return [d.nomeComercial, d.fabricante, d.modelo, d.versaoAgente, d.versaoSo]
+        .join(' ')
+        .toLowerCase()
+        .includes(termo)
+    }
+
+    const filtrados = reais.filter(passa)
+    const prontos = filtrados.filter((d) => ehSomenteLeitura(d.status))
+
+    // O exemplo só existe enquanto a seção estaria vazia
+    const base = prontos.length === 0 ? filtrados.find((d) => MODELO_EXEMPLO.test(d.modelo)) : undefined
+
+    return {
+      finalizados: prontos,
+      exemplos: base ? [base] : [],
+      emAndamento: filtrados.filter((d) => !ehSomenteLeitura(d.status)),
+      // Modelos que voltaram para a bancada com outra versão do agente:
+      // aparecem aqui além da sua aba de origem, porque a pergunta é outra
+      // ("o que foi revalidado?"), não um estágio diferente.
+      retestados: filtrados.filter((d) => d.numeroHomologacao > 1),
+      contagemPorCategoria: contagem,
+    }
+  }, [data, busca, categoria])
+
+  if (isLoading) {
+    return (
+      <div className="p-8 text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
+        Carregando dispositivos…
+      </div>
+    )
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="p-8 text-sm" style={{ color: 'var(--color-destructive)' }}>
+        {error instanceof ErroApi ? error.message : 'Não foi possível carregar os dispositivos.'}
+      </div>
+    )
+  }
+
+  const total = data.dispositivos.length
+  const cardsHomologados = [...finalizados, ...exemplos]
+
+  return (
+    // Conteúdo centralizado com largura máxima: em tela larga, tudo encostado
+    // à esquerda deixava metade do painel vazia.
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto w-full max-w-[76rem]">
+      {/* Sem título aqui: quem nomeia a seção é a trilha da barra do card */}
+      <header className="px-8 pt-6 pb-5">
+        <p className="flex flex-wrap items-center gap-1.5 text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
+          {total} modelos no
+          {/* Aqui o fundo é claro, então a marca aparece nas cores dela: roxo
+              no nome, laranja no "4". A pastilha é de vidro — véu translúcido
+              com desfoque, não um bloco de cor chapado. */}
+          <span
+            data-marca
+            className="inline-flex items-center rounded-full border px-2 py-0.5 text-[13px] font-bold tracking-tight"
+            style={{
+              background: 'rgba(126,32,101,.07)',
+              borderColor: 'rgba(126,32,101,.16)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              color: 'var(--color-primary)',
+            }}
+          >
+            cloud
+            <span style={{ color: 'var(--color-brand-orange)' }}>4</span>
+            mobile
+          </span>
+          · {emAndamento.length} em homologação agora.
+        </p>
+
+        {/* Linha 1: que dispositivos entram na tela */}
+        <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span
+            className="text-xs font-semibold uppercase"
+            style={{ color: 'var(--color-muted-foreground)', letterSpacing: '0.08em' }}
+          >
+            Dispositivos
+          </span>
+          <div className="h-5 w-px" style={{ background: 'var(--color-border)' }} />
+          <BotaoCategoria
+            ativo={categoria === ''}
+            aoClicar={() => setCategoria('')}
+            rotulo="Todos"
+            contagem={total}
+          />
+          {data.categorias.map((c) => (
+            <BotaoCategoria
+              key={c.slug}
+              ativo={categoria === c.slug}
+              aoClicar={() => setCategoria(c.slug)}
+              rotulo={c.nome}
+              contagem={contagemPorCategoria.get(c.slug) ?? 0}
+            />
+          ))}
+        </div>
+
+        {/* Linha 2: em que ponto da homologação eles estão — e a busca ao lado */}
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div
+            className="inline-flex rounded-lg border p-0.5"
+            style={{ background: 'var(--color-muted)' }}
+            role="tablist"
+          >
+            {(
+              [
+                ['homologados', 'Homologados', cardsHomologados.length],
+                ['em-homologacao', 'Em homologação', emAndamento.length],
+                ['revalidados', 'Revalidados', retestados.length],
+              ] as [Aba, string, number][]
+            ).map(([valor, rotulo, n]) => (
+              <button
+                key={valor}
+                type="button"
+                role="tab"
+                aria-selected={aba === valor}
+                onClick={() => setAba(valor)}
+                className="rounded-[6px] px-4 py-1.5 text-sm font-medium transition-colors"
+                style={{
+                  background: aba === valor ? 'var(--color-card)' : 'transparent',
+                  color: aba === valor ? 'var(--color-foreground)' : 'var(--color-muted-foreground)',
+                  boxShadow: aba === valor ? '0 1px 2px rgba(0,0,0,.06)' : undefined,
+                }}
+              >
+                {rotulo}
+                <span className="ml-1.5 opacity-60">{n}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Largura do texto do próprio placeholder, sem sobra à direita */}
+          <label className="relative block w-full max-w-[16.5rem]">
+            <span
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+              style={{ color: 'var(--color-muted-foreground)' }}
+            >
+              <Icone nome="busca" className="h-4 w-4" />
+            </span>
+            <input
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar modelo, fabricante, versão…"
+              className="w-full rounded-lg border py-1.5 pl-9 pr-3 text-sm"
+              style={{ background: 'var(--color-card)' }}
+            />
+          </label>
+        </div>
+      </header>
+
+      <div className="px-8 pb-10">
+        {aba === 'homologados' ? (
+          <>
+            {cardsHomologados.length === 0 ? (
+              <Vazio>Nenhum modelo finalizado com esses filtros.</Vazio>
+            ) : (
+              <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,312px)]">
+                {cardsHomologados.map((d) => (
+                  <CardDispositivo key={d.homologacaoId} dispositivo={d} />
+
+                ))}
+              </div>
+            )}
+          </>
+        ) : aba === 'em-homologacao' ? (
+          <>
+            {emAndamento.length === 0 ? (
+              <Vazio>Nenhum modelo em teste com esses filtros.</Vazio>
+            ) : (
+              <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+                {emAndamento.map((d) => (
+                  <CardEmHomologacao key={d.homologacaoId} dispositivo={d} />
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {retestados.length === 0 ? (
+              <Vazio>
+                Nenhum modelo foi retestado ainda. Um reteste começa pela matriz, no botão
+                "Reteste" da coluna do modelo.
+              </Vazio>
+            ) : (
+              // Cada um com o card do seu estágio: retestado e finalizado é
+              // catálogo; retestado e em teste ainda é andamento.
+              <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,312px)]">
+                {retestados.map((d) =>
+                  ehSomenteLeitura(d.status) ? (
+                    <CardDispositivo key={d.homologacaoId} dispositivo={d} />
+
+                  ) : (
+                    <CardEmHomologacao key={d.homologacaoId} dispositivo={d} />
+                  ),
+                )}
+              </div>
+            )}
+          </>
+        )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Vazio({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border p-8 text-center" style={{ background: 'var(--color-card)' }}>
+      <p className="text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
+        {children}
+      </p>
+      <Link
+        to="/matriz/pos"
+        className="mt-3 inline-block text-sm underline underline-offset-2"
+        style={{ color: 'var(--color-primary)' }}
+      >
+        Ir para a matriz
+      </Link>
+    </div>
+  )
+}
+
+function BotaoCategoria({
+  ativo,
+  aoClicar,
+  rotulo,
+  contagem,
+}: {
+  ativo: boolean
+  aoClicar: () => void
+  rotulo: string
+  contagem: number
+}) {
+  return (
+    <button
+      type="button"
+      onClick={aoClicar}
+      className="rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors"
+      style={{
+        background: ativo ? 'var(--color-primary)' : 'var(--color-card)',
+        color: ativo ? '#fff' : 'var(--color-muted-foreground)',
+        borderColor: ativo ? 'var(--color-primary)' : 'var(--color-border)',
+      }}
+    >
+      {rotulo}
+      <span className="ml-1.5 opacity-60">{contagem}</span>
+    </button>
+  )
+}

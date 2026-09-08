@@ -1,0 +1,269 @@
+// Prisma Schema — Sistema de Homologação Mobiltec
+// Decisão: enums em português para alinhar com a spec e o catálogo de itens
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum GrupoItem {
+  TELEMETRIA
+  COLETA
+  COMANDOS
+  PERFIS
+}
+
+enum StatusResultado {
+  OK
+  FALHA
+  NAO_SUPORTADO
+  COM_RESSALVA
+  NAO_TESTADO
+  NAO_APLICAVEL
+}
+
+enum TipoGerenciamento {
+  ANDROID_LEGADO
+  ANDROID_ENTERPRISE
+}
+
+enum StatusHomologacao {
+  RASCUNHO
+  EM_REVISAO
+  APROVADO
+  PUBLICADO
+}
+
+enum FormatoCertificado {
+  PDF
+  PPTX
+}
+
+enum PapelUsuario {
+  ADMIN
+  HOMOLOGADOR
+  LEITOR
+}
+
+// ============================================================
+// MODELOS
+// ============================================================
+
+model Categoria {
+  id              String         @id @default(uuid())
+  nome            String
+  slug            String         @unique
+  icone           String
+  ordem           Int            @default(0)
+  /// Categoria fora de operação some do menu, mas continua no banco — o
+  /// histórico de dispositivos e certificados dela não pode ser perdido.
+  ativo           Boolean        @default(true)
+  /// Linhas da ficha que este tipo de dispositivo mostra na planilha, pelas
+  /// chaves de LINHAS_FICHA no front. O técnico escolhe no registro do tipo:
+  /// impressora não tem IMEI, coletor não tem versão de PoS. Vazio significa
+  /// "a ficha inteira" — é o estado das categorias criadas antes do registro.
+  camposFicha     String[]       @default([]) @map("campos_ficha")
+  dispositivos    Dispositivo[]
+  baterias        BateriaTeste[]
+
+  @@map("categoria")
+}
+
+model Usuario {
+  id                    String          @id @default(uuid())
+  nome                  String
+  email                 String          @unique
+  cargo                 String
+  senhaHash             String          @map("senha_hash")
+  papel                 PapelUsuario    @default(HOMOLOGADOR)
+  ativo                 Boolean         @default(true)
+  criadoEm              DateTime        @default(now()) @map("criado_em")
+  homologacoesResponsavel Homologacao[] @relation("Responsavel")
+  homologacoesGerente   Homologacao[]   @relation("Gerente")
+  homologacoesApoio     Homologacao[]   @relation("Apoio")
+  certificadosEmitidos  CertificadoEmitido[]
+  reaberturasLog        LogReabertura[]
+
+  @@map("usuario")
+}
+
+model Dispositivo {
+  id             String        @id @default(uuid())
+  categoriaId    String        @map("categoria_id")
+  fabricante     String
+  modelo         String
+  nomeComercial  String        @map("nome_comercial")
+  fotoUrl        String?       @map("foto_url")
+  linkFabricante String?       @map("link_fabricante")
+  ativo          Boolean       @default(true)
+  criadoEm      DateTime       @default(now()) @map("criado_em")
+  categoria      Categoria     @relation(fields: [categoriaId], references: [id])
+  homologacoes   Homologacao[]
+
+  @@unique([fabricante, modelo])
+  @@map("dispositivo")
+}
+
+model ItemTeste {
+  id            String       @id @default(uuid())
+  grupo         GrupoItem
+  nome          String
+  descricaoAcao String       @map("descricao_acao")
+  ordem         Int          @default(0)
+  ativo         Boolean      @default(true)
+  bateriaItems  BateriaItem[]
+  resultados    Resultado[]
+
+  @@map("item_teste")
+}
+
+model BateriaTeste {
+  id          String        @id @default(uuid())
+  categoriaId String        @map("categoria_id")
+  nome        String
+  descricao   String?
+  ativo       Boolean       @default(true)
+  categoria   Categoria     @relation(fields: [categoriaId], references: [id])
+  itens       BateriaItem[]
+  homologacoes Homologacao[]
+
+  @@map("bateria_teste")
+}
+
+model BateriaItem {
+  bateriaId   String       @map("bateria_id")
+  itemId      String       @map("item_id")
+  ordem       Int          @default(0)
+  obrigatorio Boolean      @default(true)
+  bateria     BateriaTeste @relation(fields: [bateriaId], references: [id])
+  item        ItemTeste    @relation(fields: [itemId], references: [id])
+
+  @@id([bateriaId, itemId])
+  @@map("bateria_item")
+}
+
+model Justificativa {
+  id              String             @id @default(uuid())
+  titulo          String
+  texto           String
+  fontes          Json               @default("[]")
+  itensSugeridos  String[]           @map("itens_sugeridos")
+  androidMin      Int?               @map("android_min")
+  gerenciamento   TipoGerenciamento?
+  usoCount        Int                @default(0) @map("uso_count")
+  ativo           Boolean            @default(true)
+  resultados      Resultado[]
+
+  @@map("justificativa")
+}
+
+model Homologacao {
+  id                   String             @id @default(uuid())
+  dispositivoId        String             @map("dispositivo_id")
+  bateriaId            String             @map("bateria_id")
+  numeroSerie          String             @map("numero_serie")
+  imei1                String?            @map("imei_1")
+  imei2                String?            @map("imei_2")
+  versaoSo             String             @map("versao_so")
+  gerenciamento        TipoGerenciamento
+  tipoAgente           String             @map("tipo_agente")
+  versaoAgente         String             @map("versao_agente")
+  /// Variante do build do agente testado: PROD, DEBUG, PROTOTIPO. Coluna "Versão PoS" da planilha.
+  versaoPos            String?            @map("versao_pos")
+  ferramenta           String?
+  metodoInscricao      String             @map("metodo_inscricao")
+  assinaturaAgente     Boolean            @default(false) @map("assinatura_agente")
+  precisaAssinaturaDev Boolean            @default(false) @map("precisa_assinatura_dev")
+  dataInicio           DateTime           @map("data_inicio") @db.Date
+  dataFim              DateTime?          @map("data_fim") @db.Date
+  responsavelId        String             @map("responsavel_id")
+  gerenteId            String?            @map("gerente_id")
+  apoioId              String?            @map("apoio_id")
+  status               StatusHomologacao  @default(RASCUNHO)
+  homologado           Boolean?
+  localEmissao         String             @default("São Paulo") @map("local_emissao")
+  /// Lista de referências do certificado — [{label, url}], adicionada manualmente na tela do certificado.
+  /// Somada (não substitui) às fontes derivadas das justificativas usadas.
+  fontes               Json               @default("[]")
+  /// Nome que assina a linha "Responsável Técnico" no certificado. Vazio → cai para responsavel.nome.
+  assinaturaResponsavel String?           @map("assinatura_responsavel")
+  /// Nome que assina "Gerente de Validação". gerenteId raramente é preenchido (exige Usuario cadastrado),
+  /// então este é o caminho normal para esse campo aparecer no certificado.
+  assinaturaGerente     String?           @map("assinatura_gerente")
+  /// Nome que assina "Apoio Adicional" — mesma lógica do gerente.
+  assinaturaApoio       String?           @map("assinatura_apoio")
+  /// Rascunho do técnico durante a homologação: comportamentos observados que
+  /// ainda não viraram justificativa. É a anotação que vai para o dev; do que
+  /// ele responder sai a justificativa formal do item. Não entra no certificado.
+  observacoes           String?
+  /// Blocos da "Análise das Divergências" quando o técnico assume a seção.
+  /// NULO = automático: o certificado monta a análise a partir das
+  /// justificativas, como sempre fez. Preenchido = manual: sai exatamente o
+  /// que está aqui — [{ id, titulo, subtitulo, texto }] —, o que permite
+  /// editar e apagar até os blocos que vieram por padrão e acrescentar temas
+  /// próprios daquele modelo. Volta ao automático zerando o campo.
+  analiseDivergencias   Json?             @map("analise_divergencias")
+  criadoEm             DateTime           @default(now()) @map("criado_em")
+  atualizadoEm         DateTime           @updatedAt @map("atualizado_em")
+  dispositivo          Dispositivo        @relation(fields: [dispositivoId], references: [id])
+  bateria              BateriaTeste       @relation(fields: [bateriaId], references: [id])
+  responsavel          Usuario            @relation("Responsavel", fields: [responsavelId], references: [id])
+  gerente              Usuario?           @relation("Gerente", fields: [gerenteId], references: [id])
+  apoio                Usuario?           @relation("Apoio", fields: [apoioId], references: [id])
+  resultados           Resultado[]
+  certificados         CertificadoEmitido[]
+  reaberturasLog       LogReabertura[]
+
+  @@map("homologacao")
+}
+
+model Resultado {
+  id                  String          @id @default(uuid())
+  homologacaoId       String          @map("homologacao_id")
+  itemId              String          @map("item_id")
+  status              StatusResultado @default(NAO_TESTADO)
+  observacao          String?
+  justificativaId     String?         @map("justificativa_id")
+  justificativaTexto  String?         @map("justificativa_texto")
+  atualizadoEm        DateTime        @updatedAt @map("atualizado_em")
+  homologacao         Homologacao     @relation(fields: [homologacaoId], references: [id])
+  item                ItemTeste       @relation(fields: [itemId], references: [id])
+  justificativa       Justificativa?  @relation(fields: [justificativaId], references: [id])
+
+  @@unique([homologacaoId, itemId])
+  @@map("resultado")
+}
+
+model CertificadoEmitido {
+  id            String             @id @default(uuid())
+  homologacaoId String             @map("homologacao_id")
+  formato       FormatoCertificado
+  arquivoUrl    String             @map("arquivo_url")
+  snapshot      Json
+  emitidoPor    String             @map("emitido_por")
+  emitidoEm     DateTime           @default(now()) @map("emitido_em")
+  homologacao   Homologacao        @relation(fields: [homologacaoId], references: [id])
+  usuario       Usuario            @relation(fields: [emitidoPor], references: [id])
+
+  @@map("certificado_emitido")
+}
+
+model LogReabertura {
+  id            String      @id @default(uuid())
+  homologacaoId String      @map("homologacao_id")
+  usuarioId     String      @map("usuario_id")
+  motivo        String
+  criadoEm     DateTime     @default(now()) @map("criado_em")
+  homologacao   Homologacao @relation(fields: [homologacaoId], references: [id])
+  usuario       Usuario     @relation(fields: [usuarioId], references: [id])
+
+  @@map("log_reabertura")
+}

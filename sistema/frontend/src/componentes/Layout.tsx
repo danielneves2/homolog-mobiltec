@@ -1,0 +1,393 @@
+import { useEffect, useRef, useState } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { useAuth } from '@/contextos/AuthContext'
+import { useCategorias } from '@/hooks/useVitrine'
+import { ancorarMenu } from '@/lib/ancorarMenu'
+import { LogoMobiltec } from './LogoMobiltec'
+import { Icone, iconeDaCategoria, type NomeIcone } from './Icone'
+
+const CHAVE_MENU = 'homolog.menu-aberto'
+
+interface ItemMenuDados {
+  para: string
+  rotulo: string
+  icone: NomeIcone
+  fim: boolean
+}
+
+/** Uma linha do menu lateral — recolhido, sobra só o ícone e o rótulo vira title */
+function ItemMenu({ item, aberto }: { item: ItemMenuDados; aberto: boolean }) {
+  return (
+    <NavLink
+      to={item.para}
+      end={item.fim}
+      title={aberto ? undefined : item.rotulo}
+      className="flex items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium transition-colors"
+      style={({ isActive }) => ({
+        background: isActive ? 'var(--color-primary)' : 'transparent',
+        color: isActive ? '#fff' : 'var(--color-muted-foreground)',
+        justifyContent: aberto ? 'flex-start' : 'center',
+      })}
+    >
+      <Icone nome={item.icone} className="h-[18px] w-[18px] shrink-0" />
+      {aberto && <span className="truncate">{item.rotulo}</span>}
+    </NavLink>
+  )
+}
+
+/**
+ * Item do menu que abre um grupo de opções, e não uma tela.
+ *
+ * Com o menu aberto o grupo se desdobra no lugar, recuado, como na
+ * documentação do Cloud4Mobile. Recolhido não há onde desdobrar — aí as opções
+ * saem num painel ao lado, ancorado no ícone.
+ */
+function GrupoMenu({
+  item,
+  filhos,
+  aberto,
+}: {
+  item: Omit<ItemMenuDados, 'fim'>
+  filhos: ItemMenuDados[]
+  aberto: boolean
+}) {
+  const { pathname } = useLocation()
+  const noGrupo = filhos.some((f) => pathname === f.para || pathname.startsWith(`${f.para}/`))
+  const [expandido, setExpandido] = useState(noGrupo)
+  const [flutuante, setFlutuante] = useState<{ x: number; y: number } | null>(null)
+  const refBotao = useRef<HTMLButtonElement>(null)
+  const refPainel = useRef<HTMLDivElement>(null)
+
+  // Navegar para dentro do grupo o abre — inclusive quando quem navegou foi o
+  // formulário, ao terminar um cadastro
+  useEffect(() => {
+    if (noGrupo) setExpandido(true)
+  }, [noGrupo])
+
+  // Recolher o menu fecha o desdobramento: ele não tem onde caber em 64px
+  useEffect(() => {
+    if (!aberto) setExpandido(false)
+    else setFlutuante(null)
+  }, [aberto])
+
+  useEffect(() => {
+    if (!flutuante) return
+    const fechar = (e: MouseEvent) => {
+      const alvo = e.target as Node
+      if (refBotao.current?.contains(alvo) || refPainel.current?.contains(alvo)) return
+      setFlutuante(null)
+    }
+    const aoTeclar = (e: KeyboardEvent) => e.key === 'Escape' && setFlutuante(null)
+    document.addEventListener('mousedown', fechar)
+    document.addEventListener('keydown', aoTeclar)
+    return () => {
+      document.removeEventListener('mousedown', fechar)
+      document.removeEventListener('keydown', aoTeclar)
+    }
+  }, [flutuante])
+
+  function alternar() {
+    if (aberto) return setExpandido((v) => !v)
+    const r = refBotao.current?.getBoundingClientRect()
+    if (!r) return
+    if (flutuante) return setFlutuante(null)
+    // Ao lado do ícone, não embaixo dele: o menu recolhido é uma coluna
+    // estreita. As medidas vão num objeto novo — DOMRect guarda as
+    // propriedades no protótipo, e espalhar uma com `...` devolve vazio.
+    const aoLado = {
+      top: r.top,
+      bottom: r.top,
+      left: r.right + 6,
+      right: r.right + 6,
+      width: 0,
+    } as DOMRect
+    setFlutuante(ancorarMenu(aoLado, { largura: 200, altura: filhos.length * 34 + 8 }))
+  }
+
+  return (
+    <>
+      <button
+        ref={refBotao}
+        type="button"
+        onClick={alternar}
+        aria-expanded={aberto ? expandido : !!flutuante}
+        title={aberto ? undefined : item.rotulo}
+        data-grupo-menu={item.rotulo}
+        className="flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium transition-colors"
+        style={{
+          background: noGrupo ? 'var(--color-primary)' : 'transparent',
+          color: noGrupo ? '#fff' : 'var(--color-muted-foreground)',
+          justifyContent: aberto ? 'flex-start' : 'center',
+        }}
+      >
+        <Icone nome={item.icone} className="h-[18px] w-[18px] shrink-0" />
+        {aberto && (
+          <>
+            <span className="flex-1 truncate text-left">{item.rotulo}</span>
+            <svg
+              viewBox="0 0 16 16"
+              className="h-3.5 w-3.5 shrink-0 transition-transform"
+              style={{ transform: expandido ? 'rotate(180deg)' : 'none' }}
+              aria-hidden
+            >
+              <path
+                d="M4 6.5 8 10.5l4-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </>
+        )}
+      </button>
+
+      {aberto && expandido && (
+        // O fio à esquerda amarra as opções ao grupo, como na doc do produto
+        <div className="mt-1 ml-5 space-y-1 border-l pl-2">
+          {filhos.map((f) => (
+            <NavLink
+              key={f.para}
+              to={f.para}
+              end={f.fim}
+              className="block truncate rounded-md px-2.5 py-1.5 text-sm transition-colors"
+              style={({ isActive }) => ({
+                background: isActive ? 'var(--color-muted)' : 'transparent',
+                color: isActive ? 'var(--color-primary)' : 'var(--color-muted-foreground)',
+                fontWeight: isActive ? 600 : 400,
+              })}
+            >
+              {f.rotulo}
+            </NavLink>
+          ))}
+        </div>
+      )}
+
+      {!aberto && flutuante && (
+        <div
+          ref={refPainel}
+          role="menu"
+          data-menu-flutuante
+          className="fixed z-50 min-w-50 rounded-lg border py-1 shadow-lg"
+          style={{
+            left: flutuante.x,
+            top: flutuante.y,
+            background: 'var(--color-popover)',
+            color: 'var(--color-foreground)',
+          }}
+        >
+          {filhos.map((f) => (
+            <NavLink
+              key={f.para}
+              to={f.para}
+              end={f.fim}
+              role="menuitem"
+              onClick={() => setFlutuante(null)}
+              className="block px-3 py-1.5 text-sm transition-opacity hover:opacity-80"
+              style={({ isActive }) => ({
+                background: isActive ? 'var(--color-muted)' : 'transparent',
+                color: isActive ? 'var(--color-primary)' : 'inherit',
+                fontWeight: isActive ? 600 : 400,
+              })}
+            >
+              {f.rotulo}
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
+/**
+ * Nome do registro, ao centro da barra.
+ *
+ * Só nas telas de planilha: é o rótulo do documento que a bateria de testes
+ * produz. No painel não faz sentido — ali não se registra nada, só se lê o
+ * que já foi homologado.
+ */
+const NOME_REGISTRO = 'Registro de Testes Internos'
+
+/**
+ * Casca do sistema: menu retrátil à esquerda, conteúdo à direita.
+ *
+ * O menu é montado a partir das categorias ativas — cadastrar uma nova
+ * categoria no banco a faz aparecer aqui sozinha, sem mexer no código.
+ */
+export function Layout() {
+  const { usuario, sair } = useAuth()
+  const { data: categorias } = useCategorias()
+  const { pathname } = useLocation()
+
+  const [aberto, setAberto] = useState(() => {
+    try {
+      return localStorage.getItem(CHAVE_MENU) !== 'false'
+    } catch {
+      return true
+    }
+  })
+
+  function alternar() {
+    setAberto((v) => {
+      try {
+        localStorage.setItem(CHAVE_MENU, String(!v))
+      } catch {
+        /* navegador sem storage: o menu só não lembra o estado */
+      }
+      return !v
+    })
+  }
+
+  const itens: ItemMenuDados[] = [
+    { para: '/', rotulo: 'Painel de Homologação', icone: 'home', fim: true },
+    ...(categorias ?? []).map((c) => ({
+      para: `/matriz/${c.slug}`,
+      rotulo: c.nome,
+      icone: iconeDaCategoria(c.icone),
+      fim: false,
+    })),
+  ]
+
+  /**
+   * Fica sempre abaixo dos tipos de dispositivo, separado por um traço: é de
+   * onde saem os itens acima dele, não mais um deles. Não é tela: abre as duas
+   * opções que operam a lista.
+   */
+  const registro = { para: '/registro', rotulo: 'Registro de dispositivo', icone: 'registro' as NomeIcone }
+  const opcoesRegistro: ItemMenuDados[] = [
+    { para: '/registro', rotulo: 'Registrar dispositivo', icone: 'registro', fim: true },
+    // `fim: false`: editar um tipo é `/registro/tipos/:id`, e a opção continua
+    // sendo esta. O item acima é `fim: true` para não engolir esta rota.
+    { para: '/registro/tipos', rotulo: 'Editar / remover dispositivo', icone: 'registro', fim: false },
+  ]
+
+  // 224px: o item mais largo é "Painel de Homologação" (~150px) mais ícone e
+  // recuo. Em 280 sobrava uma faixa vazia à direita de todos os itens.
+  const largura = aberto ? 224 : 64
+
+  /**
+   * Seção atual, para a trilha da barra superior.
+   *
+   * As opções do grupo vêm primeiro: `/registro/tipos` também casa com
+   * `/registro`, e a trilha tem de nomear a tela aberta, não o grupo.
+   */
+  const secao =
+    [...opcoesRegistro, ...itens].find((i) =>
+      i.fim ? pathname === i.para : pathname.startsWith(i.para),
+    ) ?? itens[0]
+
+  /** Só as telas de planilha registram testes */
+  const ehPlanilha = pathname.startsWith('/matriz')
+
+  return (
+    // O fundo da janela é o mesmo do menu: é a faixa que aparece em volta do
+    // card do painel e o que dá a ele o efeito de folha solta.
+    <div className="h-screen flex overflow-hidden" style={{ background: 'var(--color-sidebar)' }}>
+      <aside
+        className="flex flex-col shrink-0 transition-[width] duration-200"
+        style={{ width: largura, background: 'var(--color-sidebar)' }}
+      >
+        {/* Sem botão aqui dentro: aberto fica só o lockup, recolhido só o
+            símbolo — ambos centralizados. Quem abre e fecha é o botão da
+            borda, que não se confunde com a marca. */}
+        <div
+          className="flex items-center justify-center border-b px-3 shrink-0"
+          style={{ height: 'var(--topbar-h)' }}
+        >
+          {aberto ? (
+            <LogoMobiltec className="h-11 w-auto" />
+          ) : (
+            <LogoMobiltec variante="simbolo" className="h-7 w-7" />
+          )}
+        </div>
+
+        <nav className="flex-1 overflow-y-auto p-2 space-y-1">
+          {itens.map((item) => (
+            <ItemMenu key={item.para} item={item} aberto={aberto} />
+          ))}
+
+          {/* O traço marca a mudança de natureza: acima, os tipos que já
+              existem; abaixo, quem cria e mantém a lista deles. */}
+          <div className="!mt-2 pt-2" style={{ borderTop: '1px solid var(--color-border)' }}>
+            <GrupoMenu item={registro} filhos={opcoesRegistro} aberto={aberto} />
+          </div>
+        </nav>
+
+        <div className="border-t p-2 shrink-0">
+          {aberto && (
+            <div className="px-2.5 py-1.5">
+              <p className="truncate text-sm font-medium">{usuario?.nome}</p>
+              <p className="truncate text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
+                {usuario?.cargo}
+              </p>
+            </div>
+          )}
+          <button
+            onClick={sair}
+            title="Sair"
+            className="flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-colors hover:opacity-70"
+            style={{
+              color: 'var(--color-muted-foreground)',
+              justifyContent: aberto ? 'flex-start' : 'center',
+            }}
+          >
+            <Icone nome="sair" className="h-[18px] w-[18px] shrink-0" />
+            {aberto && <span>Sair</span>}
+          </button>
+        </div>
+      </aside>
+
+      {/* O painel inteiro é um card: a folga de 8px em volta deixa aparecer a
+          faixa de fundo, e é ela que separa o card do menu — daí o `aside` ter
+          perdido a borda direita. */}
+      <main className="flex-1 min-w-0 p-2">
+        <div
+          className="flex h-full flex-col overflow-hidden rounded-xl border"
+          style={{ background: 'var(--color-card)' }}
+          data-painel
+        >
+          {/* Barra do topo do card. À esquerda, onde se está; ao centro, o
+              nome do sistema, igual em todas as telas — nenhuma página repete
+              o próprio título abaixo. O centro é absoluto para ficar no meio
+              da barra, e não no meio do que sobra depois da trilha. */}
+          <div className="relative flex shrink-0 items-center gap-3 border-b px-3 py-2">
+            <button
+              type="button"
+              onClick={alternar}
+              aria-label={aberto ? 'Recolher menu' : 'Expandir menu'}
+              title={aberto ? 'Recolher menu' : 'Expandir menu'}
+              className="grid h-8 w-8 place-items-center rounded-lg transition-colors hover:opacity-70"
+              style={{ color: 'var(--color-muted-foreground)' }}
+            >
+              <Icone nome="painel" className="h-[18px] w-[18px]" />
+            </button>
+
+            <div className="h-5 w-px" style={{ background: 'var(--color-border)' }} />
+
+            <div className="flex min-w-0 items-center gap-2">
+              <Icone nome={secao.icone} className="h-4 w-4 shrink-0" />
+              <h1 className="truncate text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
+                {secao.rotulo}
+              </h1>
+            </div>
+
+            {ehPlanilha && (
+              <span
+                data-registro
+                className="pointer-events-none absolute left-1/2 -translate-x-1/2 truncate text-sm font-semibold"
+                style={{ letterSpacing: '0.01em' }}
+              >
+                {NOME_REGISTRO}
+              </span>
+            )}
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <Outlet />
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}
