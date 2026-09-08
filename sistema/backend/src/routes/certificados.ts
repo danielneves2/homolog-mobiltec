@@ -67,19 +67,27 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
 
   /** Renderiza o HTML em PDF A4 com o Playwright (§8.4) */
   async function renderizarPdf(html: string): Promise<Buffer> {
-    // Import dinâmico: o Playwright é pesado e só é necessário na emissão.
-    const { chromium } = await import('playwright')
-    const navegador = await chromium.launch()
     try {
-      const pagina = await navegador.newPage()
-      await pagina.setContent(html, { waitUntil: 'networkidle' })
-      return await pagina.pdf({
-        format: 'A4',
-        printBackground: true,
-        margin: { top: '0', right: '0', bottom: '0', left: '0' },
-      })
-    } finally {
-      await navegador.close()
+      // Import dinâmico usando specifier dinâmico para evitar falhas de empacotamento em ambientes serverless
+      const moduleName = 'playwright'
+      const { chromium } = await import(moduleName)
+      const navegador = await chromium.launch()
+      try {
+        const pagina = await navegador.newPage()
+        await pagina.setContent(html, { waitUntil: 'networkidle' })
+        return await pagina.pdf({
+          format: 'A4',
+          printBackground: true,
+          margin: { top: '0', right: '0', bottom: '0', left: '0' },
+        })
+      } finally {
+        await navegador.close()
+      }
+    } catch (err: any) {
+      console.warn('Playwright não disponível:', err?.message)
+      throw new Error(
+        'Geração de PDF via servidor indisponível neste ambiente. Utilize o botão "Visualizar Certificado" e imprima como PDF (Ctrl+P).',
+      )
     }
   }
 

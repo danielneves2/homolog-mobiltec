@@ -4,7 +4,7 @@
  * bateria "PoS — Completa", 4 justificativas da biblioteca inicial
  */
 import { PrismaClient, GrupoItem, TipoGerenciamento, PapelUsuario } from '@prisma/client'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import { createHash } from 'node:crypto'
 
 const prisma = new PrismaClient()
