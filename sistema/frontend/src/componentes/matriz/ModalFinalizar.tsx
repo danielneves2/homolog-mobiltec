@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useAuth } from '@/contextos/AuthContext'
 import { useTransicaoStatus } from '@/hooks/useHomologacao'
 import { ErroApi } from '@/lib/api'
 import { exigeJustificativa } from '@/lib/tipos'
@@ -7,16 +8,8 @@ import type { ColunaMatriz } from '@/lib/tipos'
 /**
  * Finalizar = fechar a homologação (spec §7.5).
  *
- * O backend faz `RASCUNHO → EM_REVISAO → APROVADO` em dois passos; aqui as
- * duas transições são encadeadas.
- *
- * **A pendência não trava.** Item não testado e divergência sem justificativa
- * aparecem como checklist do que ficou para trás, mas os dois botões seguem
- * ativos: quem fecha é o time de homologação, quem valida e assina é o
- * gerente de produto (decisão do usuário — DECISOES, Etapa 33).
- *
- * `homologado` é decisão manual (spec §11.5) — daí os dois botões distintos,
- * em vez de deduzir do resultado dos testes.
+ * Para parceiros: envia para AGUARDANDO_ANALISE e permite incluir nome como Apoio.
+ * Para Mobiltec: RASCUNHO / AGUARDANDO_ANALISE / EM_REVISAO → APROVADO com veredito manual.
  */
 export function ModalFinalizar({
   coluna,
@@ -27,8 +20,10 @@ export function ModalFinalizar({
   aoFechar: () => void
   aoFinalizar: () => void
 }) {
+  const { ehParceiro } = useAuth()
   const transicao = useTransicaoStatus(coluna.homologacao.id)
   const [erro, setErro] = useState<string | null>(null)
+  const [nomeApoio, setNomeApoio] = useState(coluna.homologacao.assinaturaApoio ?? '')
 
   const resultados = coluna.homologacao.resultados
   const naoTestados = resultados.filter((r) => r.status === 'NAO_TESTADO').length
@@ -41,16 +36,30 @@ export function ModalFinalizar({
 
   const pendencias = [
     naoTestados > 0 && `${naoTestados} item(ns) ainda não testado(s)`,
-    semJustificativa > 0 &&
+    !ehParceiro &&
+      semJustificativa > 0 &&
       `${semJustificativa} divergência(s) sem justificativa — saem em branco no certificado`,
   ].filter(Boolean) as string[]
 
   const completa = pendencias.length === 0
 
+  function enviarParaAnalise() {
+    setErro(null)
+    transicao.mutate(
+      {
+        novoStatus: 'AGUARDANDO_ANALISE',
+        assinaturaApoio: nomeApoio.trim() || null,
+      },
+      {
+        onSuccess: aoFinalizar,
+        onError: (e) =>
+          setErro(e instanceof ErroApi ? e.message : 'Não foi possível enviar para validação.'),
+      },
+    )
+  }
+
   function finalizar(homologado: boolean) {
     setErro(null)
-    // RASCUNHO → EM_REVISAO → APROVADO. Se já estiver em revisão, o primeiro
-    // passo devolve 422 de transição inválida — daí o encadeamento tolerante.
     const aprovar = () =>
       transicao.mutate(
         { novoStatus: 'APROVADO', homologado },
@@ -90,7 +99,9 @@ export function ModalFinalizar({
         style={{ background: 'var(--color-popover)' }}
       >
         <div className="p-5 border-b">
-          <h2 className="text-lg font-semibold">Finalizar homologação</h2>
+          <h2 className="text-lg font-semibold">
+            {ehParceiro ? 'Enviar para Validação Mobiltec' : 'Finalizar homologação'}
+          </h2>
           <p className="text-sm mt-0.5" style={{ color: 'var(--color-muted-foreground)' }}>
             {coluna.homologacao.dispositivo.nomeComercial} · agente{' '}
             {coluna.homologacao.versaoAgente}
@@ -98,49 +109,93 @@ export function ModalFinalizar({
         </div>
 
         <div className="p-5 space-y-4">
-          {completa ? (
-            <div
-              className="px-3 py-2.5 rounded-md text-sm"
-              style={{ background: 'var(--color-status-ok-soft)', color: 'var(--color-status-ok)' }}
-            >
-              ✓ Todos os {resultados.length} itens avaliados e todas as divergências justificadas.
-            </div>
+          {ehParceiro ? (
+            <>
+              <div
+                className="px-3.5 py-3 rounded-md text-sm leading-relaxed"
+                style={{ background: 'var(--color-info-soft)', color: 'var(--color-info-fg)' }}
+              >
+                Ao concluir esta etapa, a homologação mudará para <strong>Aguardando Análise</strong>.
+                Um técnico da Mobiltec revisará as notas de observação e emitirá o certificado oficial.
+              </div>
+
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="nome-apoio-input"
+                  className="block text-xs font-semibold uppercase tracking-wider"
+                  style={{ color: 'var(--color-muted-foreground)' }}
+                >
+                  Seu nome para constar como Apoio Técnico (opcional)
+                </label>
+                <input
+                  id="nome-apoio-input"
+                  type="text"
+                  value={nomeApoio}
+                  onChange={(e) => setNomeApoio(e.target.value)}
+                  placeholder="Ex: Carlos Silva (Fabricante X)"
+                  className="w-full px-3 py-2 text-sm rounded-md border bg-transparent outline-none focus:ring-1"
+                  style={{ borderColor: 'var(--color-input)' }}
+                />
+                <p className="text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
+                  Se preenchido, seu nome será impresso no certificado oficial na seção "Apoio Adicional".
+                </p>
+              </div>
+
+              {naoTestados > 0 && (
+                <div
+                  className="px-3 py-2 rounded-md text-xs"
+                  style={{ background: 'var(--color-warning-soft)', color: 'var(--color-warning-fg)' }}
+                >
+                  Atenção: ainda restam {naoTestados} item(ns) não testados nesta bateria.
+                </div>
+              )}
+            </>
           ) : (
-            // Aviso, não bloqueio: a cor é âmbar e os botões continuam ativos.
-            <div
-              data-pendencias
-              className="px-3 py-2.5 rounded-md text-sm"
-              style={{ background: 'var(--color-warning-soft)', color: 'var(--color-warning-fg)' }}
-            >
-              <p className="font-semibold mb-1">Fica pendente:</p>
-              <ul className="list-disc pl-5 space-y-0.5">
-                {pendencias.map((b) => (
-                  <li key={b}>{b}</li>
-                ))}
-              </ul>
-              <p className="mt-1.5 opacity-90">
-                Dá para finalizar assim — a validação e a assinatura são do gerente de produto.
-              </p>
-            </div>
-          )}
+            <>
+              {completa ? (
+                <div
+                  className="px-3 py-2.5 rounded-md text-sm"
+                  style={{ background: 'var(--color-status-ok-soft)', color: 'var(--color-status-ok)' }}
+                >
+                  ✓ Todos os {resultados.length} itens avaliados e todas as divergências justificadas.
+                </div>
+              ) : (
+                <div
+                  data-pendencias
+                  className="px-3 py-2.5 rounded-md text-sm"
+                  style={{ background: 'var(--color-warning-soft)', color: 'var(--color-warning-fg)' }}
+                >
+                  <p className="font-semibold mb-1">Fica pendente:</p>
+                  <ul className="list-disc pl-5 space-y-0.5">
+                    {pendencias.map((b) => (
+                      <li key={b}>{b}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-1.5 opacity-90">
+                    Dá para finalizar assim — a validação e a assinatura são do gerente de produto.
+                  </p>
+                </div>
+              )}
 
-          {semAssinatura && (
-            <div
-              className="px-3 py-2.5 rounded-md text-sm"
-              style={{ background: 'var(--color-warning-soft)', color: 'var(--color-warning-fg)' }}
-            >
-              O certificado está sem nome na assinatura do Responsável Técnico. Dá para finalizar
-              assim, mas o documento sai com a linha em branco.
-            </div>
-          )}
+              {semAssinatura && (
+                <div
+                  className="px-3 py-2.5 rounded-md text-sm"
+                  style={{ background: 'var(--color-warning-soft)', color: 'var(--color-warning-fg)' }}
+                >
+                  O certificado está sem nome na assinatura do Responsável Técnico. Dá para finalizar
+                  assim, mas o documento sai com a linha em branco.
+                </div>
+              )}
 
-          <div
-            className="px-3 py-2.5 rounded-md text-sm"
-            style={{ background: 'var(--color-muted)', color: 'var(--color-muted-foreground)' }}
-          >
-            Depois de finalizada, a homologação fica <strong>somente leitura</strong>. Para mexer
-            de novo é preciso reabrir, e a reabertura fica registrada em log.
-          </div>
+              <div
+                className="px-3 py-2.5 rounded-md text-sm"
+                style={{ background: 'var(--color-muted)', color: 'var(--color-muted-foreground)' }}
+              >
+                Depois de finalizada, a homologação fica <strong>somente leitura</strong>. Para mexer
+                de novo é preciso reabrir, e a reabertura fica registrada em log.
+              </div>
+            </>
+          )}
 
           {erro && (
             <div
@@ -165,30 +220,42 @@ export function ModalFinalizar({
           >
             Cancelar
           </button>
-          <div className="flex gap-2">
+          {ehParceiro ? (
             <button
               type="button"
               disabled={transicao.isPending}
-              onClick={() => finalizar(false)}
-              title="Fecha a homologação registrando que o dispositivo NÃO foi homologado"
-              className="px-4 py-2 rounded-md text-sm font-medium border disabled:opacity-50"
-              style={{
-                borderColor: 'var(--color-status-falha)',
-                color: 'var(--color-status-falha)',
-              }}
-            >
-              Não homologado
-            </button>
-            <button
-              type="button"
-              disabled={transicao.isPending}
-              onClick={() => finalizar(true)}
+              onClick={enviarParaAnalise}
               className="px-4 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50"
-              style={{ background: 'var(--color-status-ok)' }}
+              style={{ background: 'var(--color-primary)' }}
             >
-              {transicao.isPending ? 'Finalizando…' : 'Homologado'}
+              {transicao.isPending ? 'Enviando…' : 'Enviar para Validação Mobiltec'}
             </button>
-          </div>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={transicao.isPending}
+                onClick={() => finalizar(false)}
+                title="Fecha a homologação registrando que o dispositivo NÃO foi homologado"
+                className="px-4 py-2 rounded-md text-sm font-medium border disabled:opacity-50"
+                style={{
+                  borderColor: 'var(--color-status-falha)',
+                  color: 'var(--color-status-falha)',
+                }}
+              >
+                Não homologado
+              </button>
+              <button
+                type="button"
+                disabled={transicao.isPending}
+                onClick={() => finalizar(true)}
+                className="px-4 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50"
+                style={{ background: 'var(--color-status-ok)' }}
+              >
+                {transicao.isPending ? 'Finalizando…' : 'Homologado'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

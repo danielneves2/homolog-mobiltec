@@ -8,6 +8,7 @@ import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify'
 declare module 'fastify' {
   interface FastifyInstance {
     autenticar: (request: FastifyRequest, reply: FastifyReply) => Promise<void>
+    exigirPapeis: (papeisPermitidos: string[]) => (request: FastifyRequest, reply: FastifyReply) => Promise<void>
   }
 }
 
@@ -29,6 +30,19 @@ const jwtPlugin: FastifyPluginAsync = async (fastify) => {
       await request.jwtVerify()
     } catch (err) {
       reply.status(401).send({ erro: 'Token inválido ou expirado' })
+    }
+  })
+
+  fastify.decorate('exigirPapeis', function (papeisPermitidos: string[]) {
+    return async function (request: FastifyRequest, reply: FastifyReply) {
+      try {
+        await request.jwtVerify()
+      } catch (err) {
+        return reply.status(401).send({ erro: 'Token inválido ou expirado' })
+      }
+      if (!papeisPermitidos.includes(request.user.papel)) {
+        return reply.status(403).send({ erro: 'Acesso não autorizado para o seu perfil.' })
+      }
     }
   })
 }

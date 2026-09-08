@@ -12,10 +12,16 @@ export type StatusResultado =
   | 'NAO_TESTADO'
   | 'NAO_APLICAVEL'
 
-export type StatusHomologacao = 'RASCUNHO' | 'EM_REVISAO' | 'APROVADO' | 'PUBLICADO'
+export type StatusHomologacao =
+  | 'RASCUNHO'
+  | 'AGUARDANDO_ANALISE'
+  | 'EM_REVISAO'
+  | 'APROVADO'
+  | 'REPROVADO'
+  | 'PUBLICADO'
 export type TipoGerenciamento = 'ANDROID_LEGADO' | 'ANDROID_ENTERPRISE'
 export type GrupoItem = 'TELEMETRIA' | 'COLETA' | 'COMANDOS' | 'PERFIS'
-export type PapelUsuario = 'ADMIN' | 'HOMOLOGADOR' | 'LEITOR'
+export type PapelUsuario = 'ADMIN' | 'HOMOLOGADOR' | 'PARCEIRO' | 'LEITOR'
 export type FormatoCertificado = 'PDF' | 'PPTX'
 
 /** Status que EXIGEM justificativa (spec §5 — regra central) */
@@ -163,8 +169,10 @@ export const GRUPO_ORDEM: GrupoItem[] = ['TELEMETRIA', 'COLETA', 'COMANDOS', 'PE
 
 export const ROTULO_STATUS_HOMOLOGACAO: Record<StatusHomologacao, string> = {
   RASCUNHO: 'Rascunho',
+  AGUARDANDO_ANALISE: 'Aguardando Análise',
   EM_REVISAO: 'Em revisão',
   APROVADO: 'Aprovado',
+  REPROVADO: 'Reprovado',
   PUBLICADO: 'Publicado',
 }
 
@@ -183,6 +191,7 @@ export interface Usuario {
   email: string
   cargo: string
   papel: PapelUsuario
+  empresa?: string | null
 }
 
 export interface Categoria {
@@ -492,7 +501,19 @@ export function somenteVersaoAndroid(versaoSo: string): string {
   return versaoSo.replace(/^\s*android\s*/i, '').trim() || versaoSo
 }
 
-/** APROVADO e PUBLICADO são somente-leitura (spec §11.4) */
-export function ehSomenteLeitura(status: StatusHomologacao): boolean {
-  return status === 'APROVADO' || status === 'PUBLICADO'
+/**
+ * Determina se uma homologação está em estado somente-leitura.
+ *
+ * @param status - Status atual da homologação.
+ * @param papel - Papel do usuário logado (opcional).
+ *   - Se `undefined` ou Mobiltec (ADMIN/HOMOLOGADOR): estados terminais (`APROVADO`, `PUBLICADO`, `REPROVADO`)
+ *     são somente-leitura; estados em andamento (`RASCUNHO`, `AGUARDANDO_ANALISE`, `EM_REVISAO`) permitem edição.
+ *   - Se `PARCEIRO`: além dos estados terminais, `AGUARDANDO_ANALISE` e `EM_REVISAO` também são
+ *     bloqueados para edição, pois a homologação já foi submetida e está sob custódia da Mobiltec.
+ *     O parceiro só pode editar enquanto o status for `RASCUNHO`.
+ */
+export function ehSomenteLeitura(status: StatusHomologacao, papel?: PapelUsuario): boolean {
+  if (status === 'APROVADO' || status === 'PUBLICADO' || status === 'REPROVADO') return true
+  if (papel === 'PARCEIRO' && (status === 'AGUARDANDO_ANALISE' || status === 'EM_REVISAO')) return true
+  return false
 }

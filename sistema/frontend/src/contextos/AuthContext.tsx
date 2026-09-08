@@ -11,6 +11,11 @@ interface RespostaLogin {
 interface ValorAuth {
   usuario: Usuario | null
   autenticado: boolean
+  ehMobiltec: boolean
+  ehParceiro: boolean
+  ehAdmin: boolean
+  podeEmitirCertificado: boolean
+  podeJustificar: boolean
   entrar: (email: string, senha: string) => Promise<void>
   sair: () => void
 }
@@ -38,9 +43,23 @@ export function ProvedorAuth({ children }: { children: ReactNode }) {
     setUsuario(resposta.usuario)
   }, [])
 
+  const ehMobiltec = usuario?.papel === 'ADMIN' || usuario?.papel === 'HOMOLOGADOR'
+  const ehParceiro = usuario?.papel === 'PARCEIRO'
+  const ehAdmin = usuario?.papel === 'ADMIN'
+
   const valor = useMemo<ValorAuth>(
-    () => ({ usuario, autenticado: usuario !== null, entrar, sair }),
-    [usuario, entrar, sair],
+    () => ({
+      usuario,
+      autenticado: usuario !== null,
+      ehMobiltec,
+      ehParceiro,
+      ehAdmin,
+      podeEmitirCertificado: ehMobiltec,
+      podeJustificar: ehMobiltec,
+      entrar,
+      sair,
+    }),
+    [usuario, ehMobiltec, ehParceiro, ehAdmin, entrar, sair],
   )
 
   return <AuthContext.Provider value={valor}>{children}</AuthContext.Provider>

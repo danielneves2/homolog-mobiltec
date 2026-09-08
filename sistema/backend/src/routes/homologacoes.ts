@@ -12,6 +12,7 @@
 import { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { StatusResultado, StatusHomologacao } from '@prisma/client'
+import { TRANSICOES_PERMITIDAS, validarTransicao } from '../lib/transicoes.js'
 
 // Status que EXIGEM justificativa (regra central da spec)
 const STATUS_COM_JUSTIFICATIVA_OBRIGATORIA: StatusResultado[] = [
@@ -162,13 +163,31 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
 
     const atual = await fastify.prisma.homologacao.findUnique({
       where: { id },
-      select: { status: true },
+      select: { status: true, responsavelId: true, apoioId: true },
     })
     if (!atual) return reply.status(404).send({ erro: 'Homologação não encontrada' })
 
     // Mesma regra dos resultados: aprovada é somente leitura (spec §11.4)
     if (atual.status === StatusHomologacao.APROVADO || atual.status === StatusHomologacao.PUBLICADO) {
       return reply.status(403).send({ erro: 'Homologação aprovada é somente leitura. Reabra para editar.' })
+    }
+
+    // Parceiro só pode alterar dados enquanto em RASCUNHO e apenas de homologações próprias
+    if (request.user.papel === 'PARCEIRO') {
+      if (atual.responsavelId !== request.user.id && atual.apoioId !== request.user.id) {
+        return reply.status(403).send({ erro: 'Parceiros só podem editar homologações atribuídas a eles.' })
+      }
+      if (atual.status !== StatusHomologacao.RASCUNHO) {
+        return reply.status(403).send({ erro: 'Homologação em análise ou finalizada é somente leitura para parceiros.' })
+      }
+      // Parceiro não edita assinaturas oficiais nem fontes — rejeitar explicitamente
+      const camposRestritos = ['fontes', 'assinaturaResponsavel', 'assinaturaGerente'] as const
+      const tentouEditar = camposRestritos.filter(c => (body as Record<string, unknown>)[c] !== undefined)
+      if (tentouEditar.length > 0) {
+        return reply.status(403).send({
+          erro: `Parceiros não possuem permissão para alterar: ${tentouEditar.join(', ')}. Esses campos são gerenciados exclusivamente pela equipe Mobiltec.`,
+        })
+      }
     }
 
     return fastify.prisma.homologacao.update({ where: { id }, data: body as any })
@@ -293,11 +312,27 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
     // Verificar se a homologação está em estado editável
     const homologacao = await fastify.prisma.homologacao.findUnique({
       where: { id },
-      select: { status: true },
+      select: { status: true, responsavelId: true, apoioId: true },
     })
     if (!homologacao) return reply.status(404).send({ erro: 'Homologação não encontrada' })
     if (homologacao.status === StatusHomologacao.APROVADO || homologacao.status === StatusHomologacao.PUBLICADO) {
       return reply.status(403).send({ erro: 'Homologação aprovada é somente leitura. Reabra para editar.' })
+    }
+
+    // Regras RBAC para Parceiro:
+    if (request.user.papel === 'PARCEIRO') {
+      // Ownership check: parceiro só opera em homologações atribuídas a ele
+      if (homologacao.responsavelId !== request.user.id && homologacao.apoioId !== request.user.id) {
+        return reply.status(403).send({ erro: 'Parceiros só podem editar resultados de homologações atribuídas a eles.' })
+      }
+      if (homologacao.status !== StatusHomologacao.RASCUNHO) {
+        return reply.status(403).send({ erro: 'Homologação em análise ou finalizada é somente leitura para parceiros.' })
+      }
+      if (body.justificativaId || body.justificativaTexto) {
+        return reply.status(403).send({
+          erro: 'Parceiros não possuem permissão para registrar justificativas técnicas oficiais. Utilize o campo de observações.',
+        })
+      }
     }
 
     // A justificativa NÃO trava mais a marcação do status (decisão do usuário,
@@ -341,16 +376,19 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
 
   // ============================================================
   // POST /homologacoes/:id/status — Transição de status
-  // RASCUNHO → EM_REVISAO → APROVADO
+  // RASCUNHO → AGUARDANDO_ANALISE → EM_REVISAO → APROVADO
   // ============================================================
   fastify.post('/homologacoes/:id/status', {
     onRequest: [fastify.autenticar],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
-    const { novoStatus, homologado } = request.body as {
-      novoStatus: StatusHomologacao
-      homologado?: boolean
-    }
+    const statusSchema = z.object({
+      novoStatus: z.enum(['RASCUNHO', 'AGUARDANDO_ANALISE', 'EM_REVISAO', 'APROVADO', 'REPROVADO', 'PUBLICADO']),
+      homologado: z.boolean().optional(),
+      assinaturaApoio: z.string().optional().nullable(),
+      motivo: z.string().optional().nullable(),
+    })
+    const { novoStatus, homologado, assinaturaApoio, motivo } = statusSchema.parse(request.body)
 
     const homologacao = await fastify.prisma.homologacao.findUnique({
       where: { id },
@@ -364,18 +402,22 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
     })
     if (!homologacao) return reply.status(404).send({ erro: 'Homologação não encontrada' })
 
-    // Validar transições permitidas
-    const transicoesPermitidas: Partial<Record<StatusHomologacao, StatusHomologacao[]>> = {
-      RASCUNHO: ['EM_REVISAO'],
-      EM_REVISAO: ['APROVADO', 'RASCUNHO'],
-      APROVADO: ['PUBLICADO'],
+    const ehParceiro = request.user.papel === 'PARCEIRO'
+
+    // Ownership check: parceiro só pode transicionar homologações atribuídas a ele
+    if (ehParceiro) {
+      if (homologacao.responsavelId !== request.user.id && homologacao.apoioId !== request.user.id) {
+        return reply.status(403).send({ erro: 'Parceiros só podem submeter homologações atribuídas a eles.' })
+      }
     }
 
-    const permitidas = transicoesPermitidas[homologacao.status] ?? []
-    if (!permitidas.includes(novoStatus)) {
-      return reply.status(422).send({
-        erro: `Transição inválida: ${homologacao.status} → ${novoStatus}`,
-        transicoesPermitidas: permitidas,
+    // Validar transição usando o módulo canônico de máquina de estados
+    const resultado = validarTransicao(request.user.papel, homologacao.status, novoStatus)
+    if (!resultado.permitida) {
+      const statusCode = ehParceiro ? 403 : 422
+      return reply.status(statusCode).send({
+        erro: resultado.erro,
+        ...(statusCode === 422 ? { transicoesPermitidas: TRANSICOES_PERMITIDAS[homologacao.status] ?? [] } : {}),
       })
     }
 
@@ -402,16 +444,33 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
       })
     }
 
-    const atualizado = await fastify.prisma.homologacao.update({
-      where: { id },
-      data: {
-        status: novoStatus,
-        ...(novoStatus === StatusHomologacao.APROVADO ? {
-          homologado,
-          dataFim: homologado ? new Date() : undefined,
-        } : {}),
-      },
-    })
+    // Atualiza homologação e registra histórico de transição
+    const [atualizado] = await fastify.prisma.$transaction([
+      fastify.prisma.homologacao.update({
+        where: { id },
+        data: {
+          status: novoStatus,
+          ...(assinaturaApoio !== undefined ? { assinaturaApoio } : {}),
+          ...(novoStatus === StatusHomologacao.APROVADO ? {
+            homologado,
+            dataFim: homologado ? new Date() : undefined,
+          } : {}),
+          ...(novoStatus === StatusHomologacao.REPROVADO ? {
+            homologado: false,
+            dataFim: new Date(),
+          } : {}),
+        },
+      }),
+      fastify.prisma.historicoStatus.create({
+        data: {
+          homologacaoId: id,
+          statusAnterior: homologacao.status,
+          statusNovo: novoStatus,
+          usuarioId: request.user.id,
+          motivo: motivo ?? null,
+        },
+      }),
+    ])
 
     // As pendências vão junto na resposta: quem fechou com item em aberto
     // fica sabendo o que ficou para trás, e o gerente de produto tem o que

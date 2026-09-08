@@ -95,11 +95,20 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
     const h = await carregar(id)
     if (!h) return reply.status(404).send({ erro: 'Homologação não encontrada' })
 
+    // Parceiro só visualiza certificado se homologação estiver aprovada ou publicada
+    if (request.user.papel === 'PARCEIRO') {
+      if (h.status !== 'APROVADO' && h.status !== 'PUBLICADO') {
+        return reply.status(403).send({ erro: 'O certificado só fica disponível para parceiros após aprovação oficial pela Mobiltec.' })
+      }
+    }
+
+    const podeEditar = request.user.papel !== 'PARCEIRO' && editavel === '1'
+
     return reply
       .type('text/html; charset=utf-8')
       .send(
         gerarCertificadoHtml(h as unknown as HomologacaoCertificado, {
-          editavel: editavel === '1',
+          editavel: podeEditar,
         }),
       )
   })
@@ -110,9 +119,10 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
   // compartilham o parágrafo, sem tocar na justificativa da biblioteca.
   // ============================================================
   fastify.put('/homologacoes/:id/certificado/divergencia', {
-    onRequest: [fastify.autenticar],
+    onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR'])],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
+
     const { itemIds, texto } = z
       .object({
         itemIds: z.array(z.string().uuid()).min(1),
@@ -185,9 +195,10 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
   })
 
   fastify.put('/homologacoes/:id/certificado/analise', {
-    onRequest: [fastify.autenticar],
+    onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR'])],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
+
     const { blocos, vistos } = z
       .object({
         // `null` devolve a seção ao automático
@@ -240,6 +251,13 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
     const h = await carregar(id)
     if (!h) return reply.status(404).send({ erro: 'Homologação não encontrada' })
 
+    // Parceiro só faz download se a homologação estiver aprovada ou publicada
+    if (request.user.papel === 'PARCEIRO') {
+      if (h.status !== 'APROVADO' && h.status !== 'PUBLICADO') {
+        return reply.status(403).send({ erro: 'O download do certificado só é permitido após aprovação formal pela Mobiltec.' })
+      }
+    }
+
     const pdf = await renderizarPdf(gerarCertificadoHtml(h as unknown as HomologacaoCertificado))
     // O S/N saiu do nome do arquivo junto com o corpo do documento: o nome
     // viaja com o PDF e vazaria o identificador do aparelho do mesmo jeito.
@@ -259,9 +277,10 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
   // POST — emite e arquiva (imutável)
   // ============================================================
   fastify.post('/homologacoes/:id/certificados', {
-    onRequest: [fastify.autenticar],
+    onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR'])],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
+
     const { formato } = z
       .object({ formato: z.enum(['PDF', 'PPTX']).default('PDF') })
       .parse(request.body ?? {})
