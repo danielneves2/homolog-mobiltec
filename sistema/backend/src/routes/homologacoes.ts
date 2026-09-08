@@ -12,6 +12,7 @@
 import { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { StatusResultado, StatusHomologacao } from '@prisma/client'
+import { TRANSICOES_PERMITIDAS, validarTransicao } from '../lib/transicoes.js'
 
 // Status que EXIGEM justificativa (regra central da spec)
 const STATUS_COM_JUSTIFICATIVA_OBRIGATORIA: StatusResultado[] = [
@@ -162,7 +163,7 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
 
     const atual = await fastify.prisma.homologacao.findUnique({
       where: { id },
-      select: { status: true },
+      select: { status: true, responsavelId: true, apoioId: true },
     })
     if (!atual) return reply.status(404).send({ erro: 'Homologação não encontrada' })
 
@@ -171,15 +172,22 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(403).send({ erro: 'Homologação aprovada é somente leitura. Reabra para editar.' })
     }
 
-    // Parceiro só pode alterar dados enquanto em RASCUNHO
+    // Parceiro só pode alterar dados enquanto em RASCUNHO e apenas de homologações próprias
     if (request.user.papel === 'PARCEIRO') {
+      if (atual.responsavelId !== request.user.id && atual.apoioId !== request.user.id) {
+        return reply.status(403).send({ erro: 'Parceiros só podem editar homologações atribuídas a eles.' })
+      }
       if (atual.status !== StatusHomologacao.RASCUNHO) {
         return reply.status(403).send({ erro: 'Homologação em análise ou finalizada é somente leitura para parceiros.' })
       }
-      // Parceiro não edita assinaturas oficiais nem fontes
-      delete body.fontes
-      delete body.assinaturaResponsavel
-      delete body.assinaturaGerente
+      // Parceiro não edita assinaturas oficiais nem fontes — rejeitar explicitamente
+      const camposRestritos = ['fontes', 'assinaturaResponsavel', 'assinaturaGerente'] as const
+      const tentouEditar = camposRestritos.filter(c => (body as Record<string, unknown>)[c] !== undefined)
+      if (tentouEditar.length > 0) {
+        return reply.status(403).send({
+          erro: `Parceiros não possuem permissão para alterar: ${tentouEditar.join(', ')}. Esses campos são gerenciados exclusivamente pela equipe Mobiltec.`,
+        })
+      }
     }
 
     return fastify.prisma.homologacao.update({ where: { id }, data: body as any })
@@ -304,7 +312,7 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
     // Verificar se a homologação está em estado editável
     const homologacao = await fastify.prisma.homologacao.findUnique({
       where: { id },
-      select: { status: true },
+      select: { status: true, responsavelId: true, apoioId: true },
     })
     if (!homologacao) return reply.status(404).send({ erro: 'Homologação não encontrada' })
     if (homologacao.status === StatusHomologacao.APROVADO || homologacao.status === StatusHomologacao.PUBLICADO) {
@@ -313,6 +321,10 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Regras RBAC para Parceiro:
     if (request.user.papel === 'PARCEIRO') {
+      // Ownership check: parceiro só opera em homologações atribuídas a ele
+      if (homologacao.responsavelId !== request.user.id && homologacao.apoioId !== request.user.id) {
+        return reply.status(403).send({ erro: 'Parceiros só podem editar resultados de homologações atribuídas a eles.' })
+      }
       if (homologacao.status !== StatusHomologacao.RASCUNHO) {
         return reply.status(403).send({ erro: 'Homologação em análise ou finalizada é somente leitura para parceiros.' })
       }
@@ -391,33 +403,32 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
     if (!homologacao) return reply.status(404).send({ erro: 'Homologação não encontrada' })
 
     const ehParceiro = request.user.papel === 'PARCEIRO'
+
+    // Ownership check: parceiro só pode transicionar homologações atribuídas a ele
     if (ehParceiro) {
-      // Parceiro SÓ pode transicionar de RASCUNHO para AGUARDANDO_ANALISE
-      if (homologacao.status !== StatusHomologacao.RASCUNHO || novoStatus !== StatusHomologacao.AGUARDANDO_ANALISE) {
-        return reply.status(403).send({
-          erro: 'Parceiros só possuem permissão para submeter homologações em rascunho para Aguardando Análise.',
-        })
+      if (homologacao.responsavelId !== request.user.id && homologacao.apoioId !== request.user.id) {
+        return reply.status(403).send({ erro: 'Parceiros só podem submeter homologações atribuídas a eles.' })
       }
     }
 
-    // Validar transições permitidas
-    const transicoesPermitidas: Partial<Record<StatusHomologacao, StatusHomologacao[]>> = {
-      RASCUNHO: [StatusHomologacao.EM_REVISAO, StatusHomologacao.AGUARDANDO_ANALISE],
-      AGUARDANDO_ANALISE: [StatusHomologacao.EM_REVISAO, StatusHomologacao.APROVADO, StatusHomologacao.REPROVADO, StatusHomologacao.RASCUNHO],
-      EM_REVISAO: [StatusHomologacao.APROVADO, StatusHomologacao.REPROVADO, StatusHomologacao.RASCUNHO, StatusHomologacao.AGUARDANDO_ANALISE],
-      APROVADO: [StatusHomologacao.PUBLICADO, StatusHomologacao.RASCUNHO],
-      REPROVADO: [StatusHomologacao.RASCUNHO],
-    }
-
-    const permitidas = transicoesPermitidas[homologacao.status] ?? []
-    if (!permitidas.includes(novoStatus)) {
-      return reply.status(422).send({
-        erro: `Transição inválida: ${homologacao.status} → ${novoStatus}`,
-        transicoesPermitidas: permitidas,
+    // Validar transição usando o módulo canônico de máquina de estados
+    const resultado = validarTransicao(request.user.papel, homologacao.status, novoStatus)
+    if (!resultado.permitida) {
+      const statusCode = ehParceiro ? 403 : 422
+      return reply.status(statusCode).send({
+        erro: resultado.erro,
+        ...(statusCode === 422 ? { transicoesPermitidas: TRANSICOES_PERMITIDAS[homologacao.status] ?? [] } : {}),
       })
     }
 
     // Pendências: item não testado ou divergência sem justificativa.
+    //
+    // NÃO bloqueiam a transição — decisão do usuário (ver DECISOES, Etapa 33):
+    // quem fecha a homologação é o time de homologação, e quem valida e
+    // assina é o gerente de produto. O checklist continua existindo, mas
+    // como informação, não como trava. A pendência segue visível em três
+    // lugares: no modal de finalizar, no contador da barra de filtros e no
+    // certificado, onde a linha sem justificativa sai em branco (spec §5).
     const pendentes = homologacao.resultados.filter(r => {
       if (r.status === StatusResultado.NAO_TESTADO) return true
       if (STATUS_COM_JUSTIFICATIVA_OBRIGATORIA.includes(r.status)) {
@@ -461,6 +472,9 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
       }),
     ])
 
+    // As pendências vão junto na resposta: quem fechou com item em aberto
+    // fica sabendo o que ficou para trás, e o gerente de produto tem o que
+    // conferir antes de assinar.
     return {
       ...atualizado,
       pendencias: pendentes.map(r => ({ itemId: r.itemId, status: r.status })),

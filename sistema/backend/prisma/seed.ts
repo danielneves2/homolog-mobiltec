@@ -61,6 +61,8 @@ async function main() {
   // ============================================================
   // USUÁRIO PARCEIRO PADRÃO
   // ============================================================
+  // NOTA: Em produção, cada conta terá hash próprio gerado no momento do cadastro.
+  // O hash compartilhado ('admin123') é utilizado estritamente no seed de demonstração/testes locais.
   const parceiro = await prisma.usuario.upsert({
     where: { email: 'parceiro@fabricante.com' },
     update: { nome: 'Carlos Silva (Parceiro)' },

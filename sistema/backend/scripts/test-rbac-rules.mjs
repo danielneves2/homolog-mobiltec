@@ -6,15 +6,28 @@ import assert from 'node:assert/strict'
 
 console.log('=== INICIANDO TESTES DE VERIFICAÇÃO RBAC & MÁQUINA DE ESTADOS ===\n')
 
-// 1. Teste de Validação de Domínio Oficial Mobiltec
-const DOMINIOS_MOBILTEC = ['mobiltec.com.br', 'mobiltec.com']
-function ehDominioOficial(email) {
-  const dominio = email.split('@')[1]?.toLowerCase()
-  if (!dominio) return false
-  return DOMINIOS_MOBILTEC.some((d) => dominio === d || dominio.endsWith(`.${d}`))
+// Importa das fontes canônicas (src/lib ou dist/lib)
+let ehDominioOficial, DOMINIOS_MOBILTEC, validarTransicao, TRANSICOES_PERMITIDAS
+
+try {
+  const dom = await import('../dist/lib/dominios.js')
+  ehDominioOficial = dom.ehDominioOficial
+  DOMINIOS_MOBILTEC = dom.DOMINIOS_MOBILTEC
+
+  const trans = await import('../dist/lib/transicoes.js')
+  validarTransicao = trans.validarTransicao
+  TRANSICOES_PERMITIDAS = trans.TRANSICOES_PERMITIDAS
+} catch {
+  const dom = await import('../src/lib/dominios.ts')
+  ehDominioOficial = dom.ehDominioOficial
+  DOMINIOS_MOBILTEC = dom.DOMINIOS_MOBILTEC
+
+  const trans = await import('../src/lib/transicoes.ts')
+  validarTransicao = trans.validarTransicao
+  TRANSICOES_PERMITIDAS = trans.TRANSICOES_PERMITIDAS
 }
 
-console.log('1. Testando validação de domínios corporativos...')
+console.log('1. Testando validação de domínios corporativos (módulo canônico src/lib/dominios)...')
 assert.equal(ehDominioOficial('admin@mobiltec.com.br'), true, 'admin@mobiltec.com.br deve ser válido')
 assert.equal(ehDominioOficial('tecnico@mobiltec.com'), true, 'tecnico@mobiltec.com deve ser válido')
 assert.equal(ehDominioOficial('homolog@corp.mobiltec.com.br'), true, 'subdomínio mobiltec deve ser válido')
@@ -23,30 +36,8 @@ assert.equal(ehDominioOficial('hacker@gmail.com'), false, 'gmail.com deve ser in
 assert.equal(ehDominioOficial('mobiltec@fake.com'), false, 'fake.com deve ser inválido')
 console.log('   ✓ Validação de domínio corporativo passou em todos os casos.\n')
 
-// 2. Teste da Máquina de Estados (Transições permitidas por papel)
+// 2. Teste da Máquina de Estados (Transições permitidas por papel — módulo canônico src/lib/transicoes)
 console.log('2. Testando máquina de estados e regras por papel...')
-const transicoesMobiltec = {
-  RASCUNHO: ['EM_REVISAO', 'AGUARDANDO_ANALISE'],
-  AGUARDANDO_ANALISE: ['EM_REVISAO', 'APROVADO', 'REPROVADO', 'RASCUNHO'],
-  EM_REVISAO: ['APROVADO', 'REPROVADO', 'RASCUNHO', 'AGUARDANDO_ANALISE'],
-  APROVADO: ['PUBLICADO', 'RASCUNHO'],
-  REPROVADO: ['RASCUNHO'],
-}
-
-function validarTransicao(papel, statusAtual, novoStatus) {
-  if (papel === 'PARCEIRO') {
-    if (statusAtual !== 'RASCUNHO' || novoStatus !== 'AGUARDANDO_ANALISE') {
-      return { permitida: false, erro: 'Parceiros só podem submeter de RASCUNHO para AGUARDANDO_ANALISE' }
-    }
-    return { permitida: true }
-  }
-
-  const permitidas = transicoesMobiltec[statusAtual] ?? []
-  if (!permitidas.includes(novoStatus)) {
-    return { permitida: false, erro: `Transição inválida: ${statusAtual} → ${novoStatus}` }
-  }
-  return { permitida: true }
-}
 
 // Parceiro
 assert.equal(validarTransicao('PARCEIRO', 'RASCUNHO', 'AGUARDANDO_ANALISE').permitida, true)

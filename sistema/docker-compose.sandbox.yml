@@ -1,24 +1,23 @@
-version: '3.9'
-
 # Configuração isolada do PostgreSQL para Ambiente de Testes (Sandbox)
 # Porta externa: 5433 (não conflita com produção na 5432)
 # Volume e banco de dados totalmente desacoplados da base de produção
+#
+# CREDENCIAIS: carregadas do arquivo .env.sandbox (não commitado).
+# Copie .env.sandbox.example para .env.sandbox e preencha suas credenciais.
 
 services:
   postgres_sandbox:
     image: postgres:16-alpine
     container_name: homolog_postgres_sandbox
     restart: unless-stopped
-    environment:
-      POSTGRES_USER: homolog_sandbox
-      POSTGRES_PASSWORD: sandbox_secret_123
-      POSTGRES_DB: homologacao_sandbox
+    env_file:
+      - .env.sandbox
     ports:
       - "5433:5432"
     volumes:
       - postgres_sandbox_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U homolog_sandbox -d homologacao_sandbox"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-homolog_sandbox} -d ${POSTGRES_DB:-homologacao_sandbox}"]
       interval: 5s
       timeout: 5s
       retries: 5

@@ -1,5 +1,10 @@
 // Prisma Schema — Sistema de Homologação Mobiltec
 // Decisão: enums em português para alinhar com a spec e o catálogo de itens
+//
+// NOTA DE SINCRONIZAÇÃO:
+// O fluxo de desenvolvimento e testes locais utiliza `npx prisma db push` para aplicar alterações
+// de schema diretamente sem gerar migrations versionadas incrementais a cada PR.
+// Para ambientes produtivos com versionamento estrito, utilizar `prisma migrate`.
 
 generator client {
   provider = "prisma-client-js"

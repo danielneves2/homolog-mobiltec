@@ -282,8 +282,7 @@ export function Layout() {
 
   const ehSandbox =
     import.meta.env.VITE_AMBIENTE === 'sandbox' ||
-    window.location.hostname.includes('sandbox') ||
-    window.location.port === '3002'
+    window.location.hostname.includes('sandbox')
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">

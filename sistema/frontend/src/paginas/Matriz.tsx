@@ -16,7 +16,7 @@ import { ModalReteste } from '@/componentes/matriz/ModalReteste'
 import { ModalFinalizar } from '@/componentes/matriz/ModalFinalizar'
 import { ModalObservacao } from '@/componentes/matriz/ModalObservacao'
 import { ModalObservacoesHomologacao } from '@/componentes/matriz/ModalObservacoesHomologacao'
-import { MenuColuna } from '@/componentes/matriz/MenuColuna'
+import { MenuColuna, type AcaoColuna } from '@/componentes/matriz/MenuColuna'
 import { ModalReabrir } from '@/componentes/matriz/ModalReabrir'
 import { SeletorFiltro } from '@/componentes/matriz/SeletorFiltro'
 import { PainelJustificativa } from '@/componentes/matriz/PainelJustificativa'
@@ -712,7 +712,7 @@ export function Matriz() {
                                 aoClicar: () => setFinalizar(c),
                                 destaque: true,
                               },
-                        ].filter(Boolean) as any[]}
+                        ].filter(Boolean) as AcaoColuna[]}
                       />
                       </div>
                     </div>

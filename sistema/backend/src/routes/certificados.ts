@@ -119,13 +119,9 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
   // compartilham o parágrafo, sem tocar na justificativa da biblioteca.
   // ============================================================
   fastify.put('/homologacoes/:id/certificado/divergencia', {
-    onRequest: [fastify.autenticar],
+    onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR'])],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
-
-    if (request.user.papel === 'PARCEIRO') {
-      return reply.status(403).send({ erro: 'Parceiros não possuem permissão para editar certificados.' })
-    }
 
     const { itemIds, texto } = z
       .object({
@@ -199,13 +195,9 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
   })
 
   fastify.put('/homologacoes/:id/certificado/analise', {
-    onRequest: [fastify.autenticar],
+    onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR'])],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
-
-    if (request.user.papel === 'PARCEIRO') {
-      return reply.status(403).send({ erro: 'Parceiros não possuem permissão para editar a análise de divergências.' })
-    }
 
     const { blocos, vistos } = z
       .object({
@@ -285,13 +277,9 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
   // POST — emite e arquiva (imutável)
   // ============================================================
   fastify.post('/homologacoes/:id/certificados', {
-    onRequest: [fastify.autenticar],
+    onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR'])],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
-
-    if (request.user.papel === 'PARCEIRO') {
-      return reply.status(403).send({ erro: 'Parceiros não possuem permissão para emitir certificados.' })
-    }
 
     const { formato } = z
       .object({ formato: z.enum(['PDF', 'PPTX']).default('PDF') })

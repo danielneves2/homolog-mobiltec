@@ -41,11 +41,13 @@ cd "C:\Users\MOBILTEC\Desktop\Homolog Mobiltec\sistema"
 ```powershell
 cd backend
 
-# Gerar cliente Prisma e rodar migrations
+# Sincronização do schema e geração do cliente Prisma
+# (Em desenvolvimento/sandbox utiliza-se `npx prisma db push` para sincronizar o schema;
+# em produção versionada utiliza-se `npx prisma migrate deploy`)
 $env:PATH = "C:\Program Files\nodejs;" + $env:PATH
-npx prisma migrate dev --name init
+npx prisma db push
 
-# Popular banco com dados iniciais (48 itens, categorias, justificativas)
+# Popular banco com dados iniciais (48 itens, categorias, justificativas, usuários)
 npx prisma db seed
 
 # Iniciar servidor em modo desenvolvimento
