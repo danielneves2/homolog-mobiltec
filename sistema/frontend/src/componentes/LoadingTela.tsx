@@ -9,17 +9,17 @@ interface LoadingTelaProps {
 }
 
 const CONFIG_TAMANHO = {
-  sm: { caixa: 'w-8 h-8', setas: 'w-3.5 h-3.5', stroke: 2, raio: 22, dash: '28 110' },
-  md: { caixa: 'w-11 h-11', setas: 'w-5 h-5', stroke: 2.2, raio: 23, dash: '34 111' },
-  lg: { caixa: 'w-14 h-14', setas: 'w-6 h-6', stroke: 2.5, raio: 24, dash: '40 111' },
+  sm: { caixa: 'w-8 h-8', setas: 'w-2.5 h-2.5', stroke: 2, raio: 22, dash: '28 110' },
+  md: { caixa: 'w-11 h-11', setas: 'w-3.5 h-3.5', stroke: 2.2, raio: 23, dash: '34 111' },
+  lg: { caixa: 'w-14 h-14', setas: 'w-4.5 h-4.5', stroke: 2.5, raio: 24, dash: '40 111' },
 } as const
 
 /**
  * Indicador de carregamento refinado, minimalista e fluido:
- * - Ícone compacto com proporções equilibradas
- * - As 2 setinhas laranja em tom limpo e moderno (#F97316 / #FB923C)
+ * - Círculo no tamanho ideal (44px)
+ * - As 2 setinhas >> em tamanho reduzido e opacidade sutil e suave
  * - Borda circular roxa fina e fluida em rotação contínua
- * - Tipografia clean e sutil logo abaixo
+ * - Tipografia clean logo abaixo
  */
 export function LoadingTela({
   mensagem = 'Carregando…',
@@ -60,9 +60,9 @@ export function LoadingTela({
           />
         </svg>
 
-        {/* As 2 setinhas da logo em laranja clean / minimalista */}
+        {/* As 2 setinhas >> menores com opacidade clarinha e sutil */}
         <svg
-          className={`${dim.setas} shrink-0`}
+          className={`${dim.setas} shrink-0 opacity-65 transition-opacity`}
           viewBox="96 98 126 116"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
@@ -70,8 +70,8 @@ export function LoadingTela({
         >
           <defs>
             <linearGradient id="setasLaranjaMinimalista" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#FB923C" />
-              <stop offset="100%" stopColor="#F97316" />
+              <stop offset="0%" stopColor="#FDBA74" />
+              <stop offset="100%" stopColor="#FB923C" />
             </linearGradient>
           </defs>
           <path
