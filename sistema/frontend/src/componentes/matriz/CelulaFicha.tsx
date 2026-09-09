@@ -62,6 +62,7 @@ export function CelulaFicha({
   // --- Foto do dispositivo: entra no certificado (spec §8.1) ---
   if (linha.edicao === 'foto') {
     const url = valorBruto as string | null
+    const srcImg = url ? (url.startsWith('http://') || url.startsWith('https://') ? url : `/api${url}`) : null
     return (
       <div className="p-1">
         <input
@@ -87,8 +88,13 @@ export function CelulaFicha({
             <span className="text-[10px]" style={{ color: 'var(--color-muted-foreground)' }}>
               enviando…
             </span>
-          ) : url ? (
-            <img src={`/api${url}`} alt="" className="max-h-full max-w-full object-contain" />
+          ) : srcImg ? (
+            <img
+              src={srcImg}
+              alt={homologacao.dispositivo.nomeComercial || ''}
+              className="max-h-full max-w-full object-contain"
+              crossOrigin="anonymous"
+            />
           ) : (
             <span className="text-[10px]" style={{ color: 'var(--color-muted-foreground)' }}>
               + foto
