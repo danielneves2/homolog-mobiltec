@@ -31,6 +31,13 @@ export function LoadingTela({
 
   const conteudo = (
     <div className={`flex flex-col items-center justify-center gap-3 ${className}`}>
+      <style>{`
+        @keyframes carregandoPulsoSuave {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.55; }
+        }
+      `}</style>
+
       {/* Contêiner circular do Loader */}
       <div className={`relative flex items-center justify-center ${dim.caixa}`}>
         {/* Borda circular roxa fluida */}
@@ -61,9 +68,12 @@ export function LoadingTela({
           />
         </svg>
 
-        {/* As 2 setinhas >> em roxo suave e elegante */}
+        {/* As 2 setinhas >> pulsando em perfeita sincronia com o texto */}
         <svg
-          className={`${dim.setas} shrink-0 transition-opacity`}
+          className={`${dim.setas} shrink-0`}
+          style={{
+            animation: 'carregandoPulsoSuave 2.4s ease-in-out infinite',
+          }}
           viewBox="96 98 126 116"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
@@ -71,36 +81,28 @@ export function LoadingTela({
         >
           <path
             fill="var(--color-brand-purple, #6e226b)"
-            fillOpacity="0.45"
+            fillOpacity="0.5"
             d="M107.93,210.81c-2.25,0-4.52-.86-6.25-2.59-3.48-3.45-3.48-9.06,0-12.52l44.99-45-46-46c-3.45-3.45-3.45-9.07,0-12.52,3.45-3.46,9.07-3.46,12.52,0l52.25,52.26c3.46,3.45,3.46,9.07,0,12.52l-51.24,51.25c-1.73,1.72-4.01,2.59-6.28,2.59h.02Z"
           />
           <path
             fill="var(--color-brand-purple, #6e226b)"
-            fillOpacity="0.45"
+            fillOpacity="0.5"
             d="M216.02,156.84l-51.24,51.25c-1.73,1.72-4,2.59-6.27,2.59s-4.54-.86-6.25-2.59c-3.48-3.45-3.48-9.06,0-12.52l44.99-45-46-46c-3.46-3.45-3.46-9.07,0-12.52,3.45-3.46,9.04-3.46,12.52,0l52.25,52.27c3.48,3.45,3.48,9.07,0,12.52Z"
           />
         </svg>
       </div>
 
-      {/* Texto referente ao carregamento da tela com respiração lenta e suave */}
+      {/* Texto referente ao carregamento da tela com respiração sincronizada */}
       {mensagem && (
-        <>
-          <style>{`
-            @keyframes carregandoPulsoSuave {
-              0%, 100% { opacity: 1; }
-              50% { opacity: 0.65; }
-            }
-          `}</style>
-          <p
-            className="text-xs font-medium tracking-tight text-center"
-            style={{
-              color: 'var(--color-muted-foreground)',
-              animation: 'carregandoPulsoSuave 2.4s ease-in-out infinite',
-            }}
-          >
-            {mensagem}
-          </p>
-        </>
+        <p
+          className="text-xs font-medium tracking-tight text-center"
+          style={{
+            color: 'var(--color-muted-foreground)',
+            animation: 'carregandoPulsoSuave 2.4s ease-in-out infinite',
+          }}
+        >
+          {mensagem}
+        </p>
       )}
     </div>
   )
