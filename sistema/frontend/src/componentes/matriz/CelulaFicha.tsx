@@ -92,7 +92,9 @@ export function CelulaFicha({
             <img
               src={srcImg}
               alt={homologacao.dispositivo.nomeComercial || ''}
-              className="max-h-full max-w-full object-contain"
+              loading="lazy"
+              decoding="async"
+              className="max-h-full max-w-full object-contain transition-opacity duration-300"
               crossOrigin="anonymous"
             />
           ) : (

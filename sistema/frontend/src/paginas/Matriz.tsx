@@ -20,6 +20,7 @@ import { MenuColuna, type AcaoColuna } from '@/componentes/matriz/MenuColuna'
 import { ModalReabrir } from '@/componentes/matriz/ModalReabrir'
 import { SeletorFiltro } from '@/componentes/matriz/SeletorFiltro'
 import { PainelJustificativa } from '@/componentes/matriz/PainelJustificativa'
+import { LoadingTela } from '@/componentes/LoadingTela'
 import { RotuloGrupo } from '@/componentes/matriz/RotuloGrupo'
 import { CelulaFicha } from '@/componentes/matriz/CelulaFicha'
 import {
@@ -338,7 +339,7 @@ export function Matriz() {
   }
 
   if (isLoading) {
-    return <div className="p-8 text-sm" style={{ color: 'var(--color-muted-foreground)' }}>Carregando matriz…</div>
+    return <LoadingTela mensagem="Carregando planilha de homologação…" />
   }
 
   if (isError || !data) {

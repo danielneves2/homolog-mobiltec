@@ -1,15 +1,11 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { medirRecorte, transformDoRecorte } from '@/lib/recorteFoto'
 
 /**
  * Foto do modelo na vitrine.
  *
- * Nem todo dispositivo tem foto — em vez de um card quebrado, o vazio vira
- * um bloco com as iniciais do modelo, que ainda identifica o aparelho.
- *
- * A foto é aproximada até o aparelho ocupar a caixa: sem isso, quem manda no
- * tamanho na tela é a margem branca de cada arquivo, e modelos vizinhos
- * apareciam em escalas diferentes sem motivo. Ver `lib/recorteFoto`.
+ * Carregamento e decodificação 100% assíncronos (loading="lazy", decoding="async")
+ * para garantir rolagem fluida e livre de engasgos no navegador.
  */
 export function FotoDispositivo({
   url,
@@ -25,16 +21,24 @@ export function FotoDispositivo({
 }) {
   const refImg = useRef<HTMLImageElement>(null)
   const [transformacao, setTransformacao] = useState<string | undefined>()
+  const [carregada, setCarregada] = useState(false)
 
   const enquadrar = useCallback(() => {
     const img = refImg.current
     if (!img?.complete || !img.naturalWidth) return
-    const recorte = medirRecorte(img)
-    setTransformacao(recorte ? transformDoRecorte(img, recorte) : undefined)
+    // Usa requestAnimationFrame para desonerar a thread principal durante a rolagem
+    requestAnimationFrame(() => {
+      const recorte = medirRecorte(img)
+      setTransformacao(recorte ? transformDoRecorte(img, recorte) : undefined)
+      setCarregada(true)
+    })
   }, [])
 
-  // `onLoad` não dispara para imagem que veio do cache do navegador
-  useLayoutEffect(enquadrar, [enquadrar, url])
+  // useEffect em vez de useLayoutEffect para não bloquear o layout/paint durante o scroll
+  useEffect(() => {
+    setCarregada(false)
+    enquadrar()
+  }, [enquadrar, url])
 
   return (
     <div
@@ -45,23 +49,26 @@ export function FotoDispositivo({
       }}
     >
       {url ? (
-        // Posicionamento absoluto em vez de altura percentual: num contêiner
-        // centralizado, `h-full`/`max-h-full` não resolvem contra a altura da
-        // caixa e a foto vazava por cima do texto do card (medido: 300px numa
-        // caixa de 150px). O caminho vem como `/uploads/...`, servido pelo
-        // backend atrás do proxy `/api` do Vite.
-        <img
-          ref={refImg}
-          crossOrigin="anonymous"
-          src={url.startsWith('/uploads') ? `/api${url}` : url}
-          alt={nome}
-          loading="lazy"
-          onLoad={enquadrar}
-          // Dentro da pastilha do card o respiro é menor: a moldura já separa
-          // a foto do fundo, e o vão sobrando lia como distância dos dados.
-          className={`absolute inset-0 h-full w-full object-contain ${semBorda ? 'p-1.5' : 'p-3'}`}
-          style={{ transform: transformacao }}
-        />
+        <>
+          {/* Skeleton sutil enquanto a imagem decodifica de forma assíncrona */}
+          {!carregada && (
+            <div className="absolute inset-0 bg-muted/40 animate-pulse pointer-events-none" />
+          )}
+
+          <img
+            ref={refImg}
+            crossOrigin="anonymous"
+            src={url.startsWith('/uploads') ? `/api${url}` : url}
+            alt={nome}
+            loading="lazy"
+            decoding="async"
+            onLoad={enquadrar}
+            className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-300 ${
+              carregada ? 'opacity-100' : 'opacity-0'
+            } ${semBorda ? 'p-1.5' : 'p-3'}`}
+            style={{ transform: transformacao }}
+          />
+        </>
       ) : (
         <span
           className="absolute inset-0 grid place-items-center text-2xl font-semibold"

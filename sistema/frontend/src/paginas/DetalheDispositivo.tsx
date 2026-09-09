@@ -5,6 +5,7 @@ import { api, ErroApi } from '@/lib/api'
 import { FotoDispositivo } from '@/componentes/vitrine/FotoDispositivo'
 import { DicaJustificativa } from '@/componentes/DicaJustificativa'
 import { Icone } from '@/componentes/Icone'
+import { LoadingTela } from '@/componentes/LoadingTela'
 import {
   COLUNAS_GRUPO,
   GRUPO_ORDEM,
@@ -131,11 +132,7 @@ export function DetalheDispositivo() {
   }
 
   if (consulta.isLoading) {
-    return (
-      <div className="p-8 text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
-        Carregando homologação…
-      </div>
-    )
+    return <LoadingTela mensagem="Carregando detalhes do dispositivo…" />
   }
 
   if (!ficha) {

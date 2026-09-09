@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParceiros, useCriarParceiro, useAtualizarParceiro, useInativarParceiro } from '@/hooks/useParceiros'
 import { useCategorias } from '@/hooks/useVitrine'
 import { Icone, iconeDaCategoria } from '@/componentes/Icone'
+import { LoadingTela } from '@/componentes/LoadingTela'
 import type { Parceiro } from '@/lib/tipos'
 
 export function GerenciarParceiros() {
@@ -145,9 +146,7 @@ export function GerenciarParceiros() {
 
       {/* Lista de Parceiros */}
       {isLoading ? (
-        <div className="flex-1 flex items-center justify-center p-12 text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
-          Carregando parceiros cadastrados…
-        </div>
+        <LoadingTela mensagem="Carregando parceiros cadastrados…" />
       ) : parceiros.length === 0 ? (
         <div
           className="rounded-xl border border-dashed p-12 text-center flex flex-col items-center justify-center gap-3"

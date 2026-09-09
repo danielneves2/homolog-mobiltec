@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom'
 import { FormularioTipo } from '@/componentes/tipo/FormularioTipo'
 import { useTiposDispositivo } from '@/hooks/useTipoDispositivo'
+import { LoadingTela } from '@/componentes/LoadingTela'
 
 /**
  * Registrar um tipo de dispositivo — e, com `:id` na rota, editar um existente.
@@ -15,11 +16,7 @@ export function RegistroDispositivo() {
   if (!id) return <FormularioTipo />
 
   if (isLoading) {
-    return (
-      <div className="p-8 text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
-        Carregando o tipo…
-      </div>
-    )
+    return <LoadingTela mensagem="Carregando dados do tipo de dispositivo…" />
   }
 
   const tipo = tipos?.find((t) => t.id === id)

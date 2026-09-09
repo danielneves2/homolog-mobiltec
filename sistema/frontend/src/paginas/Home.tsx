@@ -1,9 +1,10 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useVitrine } from '@/hooks/useVitrine'
 import { Icone } from '@/componentes/Icone'
 import { CardDispositivo } from '@/componentes/vitrine/CardDispositivo'
 import { CardEmHomologacao } from '@/componentes/vitrine/CardEmHomologacao'
+import { LoadingTela } from '@/componentes/LoadingTela'
 import { ehSomenteLeitura } from '@/lib/tipos'
 import { ErroApi } from '@/lib/api'
 import type { DispositivoVitrine } from '@/lib/tipos'
@@ -69,11 +70,7 @@ export function Home() {
   }, [data, busca, categoria])
 
   if (isLoading) {
-    return (
-      <div className="p-8 text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
-        Carregando dispositivos…
-      </div>
-    )
+    return <LoadingTela mensagem="Carregando dispositivos homologados…" />
   }
 
   if (isError || !data) {

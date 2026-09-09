@@ -15,6 +15,7 @@ import {
   type EdicaoCertificado,
 } from '@/componentes/certificado/ModalEditarTexto'
 import { ROTULO_STATUS_HOMOLOGACAO, ehSomenteLeitura } from '@/lib/tipos'
+import { LoadingTela } from '@/componentes/LoadingTela'
 
 interface CertificadoEmitido {
   id: string
@@ -265,9 +266,9 @@ export function Certificado() {
         ) : (
           <div className="flex-1 overflow-auto p-6" style={{ background: '#DDD9DE' }}>
             {isLoading && (
-              <p className="text-sm text-center" style={{ color: 'var(--color-muted-foreground)' }}>
-                Gerando preview…
-              </p>
+              <div className="py-12">
+                <LoadingTela mensagem="Gerando visualização do certificado técnico…" />
+              </div>
             )}
             {isError && (
               <p className="text-sm text-center" style={{ color: 'var(--color-destructive)' }}>

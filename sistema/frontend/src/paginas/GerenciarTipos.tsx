@@ -9,6 +9,7 @@ import {
   type TipoDispositivo,
 } from '@/hooks/useTipoDispositivo'
 import { Icone, iconeDaCategoria } from '@/componentes/Icone'
+import { LoadingTela } from '@/componentes/LoadingTela'
 import { LINHAS_FICHA } from '@/lib/tipos'
 
 /**
@@ -58,11 +59,7 @@ export function GerenciarTipos() {
   }
 
   if (isLoading) {
-    return (
-      <div className="p-8 text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
-        Carregando tipos…
-      </div>
-    )
+    return <LoadingTela mensagem="Carregando tipos de dispositivo…" />
   }
 
   return (
