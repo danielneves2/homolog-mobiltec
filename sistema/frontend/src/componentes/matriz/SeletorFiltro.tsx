@@ -108,16 +108,20 @@ export function SeletorFiltro({
         // ele não serve para endereçar o filtro de fora
         data-filtro={rotuloCurto}
         title={ativo ? `${rotuloCurto}: ${selecionada?.rotulo}` : rotuloTodos}
-        className="px-2.5 py-2 rounded-md border text-sm flex items-center gap-1.5 max-w-44"
-        style={{
-          borderColor: ativo ? 'var(--color-primary)' : 'var(--color-border)',
-          color: ativo ? 'var(--color-primary)' : 'inherit',
-          fontWeight: ativo ? 600 : 400,
-          background: ativo ? 'var(--color-muted)' : 'transparent',
-        }}
+        className={`relative px-2.5 py-1.5 text-sm flex items-center gap-1.5 max-w-48 transition-colors select-none cursor-pointer rounded-md outline-none focus:outline-none focus-visible:outline-none ${
+          ativo
+            ? 'font-semibold text-[var(--color-primary)]'
+            : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.035]'
+        }`}
       >
         <span className="truncate">{ativo ? selecionada?.rotulo : rotuloCurto}</span>
-        <span className="text-[10px] shrink-0 opacity-60">▾</span>
+        <span className={`text-[10px] shrink-0 opacity-60 transition-transform duration-150 ${aberto ? 'rotate-180' : ''}`}>▾</span>
+        {ativo && (
+          <span
+            className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full"
+            style={{ background: 'var(--color-primary)' }}
+          />
+        )}
       </button>
 
       {aberto && posicao && (

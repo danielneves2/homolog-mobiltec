@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useVitrine } from '@/hooks/useVitrine'
 import { Icone } from '@/componentes/Icone'
@@ -32,6 +32,48 @@ export function Home() {
   const [aba, setAba] = useState<Aba>('homologados')
   const [busca, setBusca] = useState('')
   const [categoria, setCategoria] = useState('')
+
+  const containerLinhaRef = useRef<HTMLDivElement>(null)
+  const barraBuscaRef = useRef<HTMLLabelElement>(null)
+  const scrollCategoriasRef = useRef<HTMLDivElement>(null)
+  const [podeScrollEsq, setPodeScrollEsq] = useState(false)
+  const [podeScrollDir, setPodeScrollDir] = useState(false)
+  const [larguraLimite, setLarguraLimite] = useState<number | null>(null)
+
+  const verificarScroll = useCallback(() => {
+    const el = scrollCategoriasRef.current
+    if (!el) return
+    setPodeScrollEsq(el.scrollLeft > 2)
+    setPodeScrollDir(el.scrollLeft + el.clientWidth < el.scrollWidth - 4)
+  }, [])
+
+  const atualizarMedidas = useCallback(() => {
+    if (barraBuscaRef.current && containerLinhaRef.current) {
+      const containerLeft = containerLinhaRef.current.getBoundingClientRect().left
+      const buscaRight = barraBuscaRef.current.getBoundingClientRect().right
+      const delta = buscaRight - containerLeft
+      if (delta > 200) {
+        setLarguraLimite(Math.round(delta))
+      }
+    }
+    verificarScroll()
+  }, [verificarScroll])
+
+  useEffect(() => {
+    atualizarMedidas()
+    window.addEventListener('resize', atualizarMedidas)
+    return () => window.removeEventListener('resize', atualizarMedidas)
+  }, [atualizarMedidas, data])
+
+  function rolarCategorias(direcao: 'esq' | 'dir') {
+    if (!scrollCategoriasRef.current) return
+    const passo = 220
+    scrollCategoriasRef.current.scrollBy({
+      left: direcao === 'dir' ? passo : -passo,
+      behavior: 'smooth',
+    })
+    setTimeout(verificarScroll, 250)
+  }
 
   const { finalizados, exemplos, emAndamento, retestados, contagemPorCategoria } = useMemo(() => {
     const reais = data?.dispositivos ?? []
@@ -114,30 +156,72 @@ export function Home() {
           · {emAndamento.length} em homologação agora.
         </p>
 
-        {/* Linha 1: que dispositivos entram na tela */}
-        <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
+        {/* Linha 1: que dispositivos entram na tela - estilo clean com limite da barra de busca e setas */}
+        <div
+          ref={containerLinhaRef}
+          className="mt-5 flex items-center gap-3 border-b border-[var(--color-border)]"
+          style={{
+            maxWidth: larguraLimite ? `${larguraLimite}px` : '42.5rem',
+            width: '100%',
+          }}
+        >
           <span
-            className="text-xs font-semibold uppercase"
+            className="text-xs font-semibold uppercase shrink-0 pb-2.5"
             style={{ color: 'var(--color-muted-foreground)', letterSpacing: '0.08em' }}
           >
             Dispositivos
           </span>
-          <div className="h-5 w-px" style={{ background: 'var(--color-border)' }} />
-          <BotaoCategoria
-            ativo={categoria === ''}
-            aoClicar={() => setCategoria('')}
-            rotulo="Todos"
-            contagem={total}
-          />
-          {data.categorias.map((c) => (
-            <BotaoCategoria
-              key={c.slug}
-              ativo={categoria === c.slug}
-              aoClicar={() => setCategoria(c.slug)}
-              rotulo={c.nome}
-              contagem={contagemPorCategoria.get(c.slug) ?? 0}
-            />
-          ))}
+          <div className="h-4 w-px shrink-0 mb-2.5" style={{ background: 'var(--color-border)' }} />
+
+          <div className="relative flex-1 min-w-0 flex items-center overflow-hidden">
+            {podeScrollEsq && (
+              <button
+                type="button"
+                onClick={() => rolarCategorias('esq')}
+                aria-label="Rolar dispositivos para esquerda"
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-20 h-6 w-6 rounded-full flex items-center justify-center border shadow-xs bg-white text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-all cursor-pointer select-none"
+              >
+                <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="10 13 5 8 10 3" />
+                </svg>
+              </button>
+            )}
+
+            <div
+              ref={scrollCategoriasRef}
+              onScroll={verificarScroll}
+              className="flex items-center gap-5 overflow-x-auto scrollbar-none scroll-smooth w-full px-1"
+            >
+              <BotaoCategoria
+                ativo={categoria === ''}
+                aoClicar={() => setCategoria('')}
+                rotulo="Todos"
+                contagem={total}
+              />
+              {data.categorias.map((c) => (
+                <BotaoCategoria
+                  key={c.slug}
+                  ativo={categoria === c.slug}
+                  aoClicar={() => setCategoria(c.slug)}
+                  rotulo={c.nome}
+                  contagem={contagemPorCategoria.get(c.slug) ?? 0}
+                />
+              ))}
+            </div>
+
+            {podeScrollDir && (
+              <button
+                type="button"
+                onClick={() => rolarCategorias('dir')}
+                aria-label="Rolar dispositivos para direita"
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-20 h-6 w-6 rounded-full flex items-center justify-center border shadow-xs bg-white text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-all cursor-pointer select-none"
+              >
+                <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 3 11 8 6 13" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Linha 2: em que ponto da homologação eles estão — e a busca ao lado */}
@@ -174,7 +258,7 @@ export function Home() {
           </div>
 
           {/* Largura do texto do próprio placeholder, sem sobra à direita */}
-          <label className="relative block w-full max-w-[16.5rem]">
+          <label ref={barraBuscaRef} className="relative block w-full max-w-[16.5rem]">
             <span
               className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
               style={{ color: 'var(--color-muted-foreground)' }}
@@ -279,15 +363,22 @@ function BotaoCategoria({
     <button
       type="button"
       onClick={aoClicar}
-      className="rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors"
-      style={{
-        background: ativo ? 'var(--gradient-brand-purple)' : 'var(--color-card)',
-        color: ativo ? '#fff' : 'var(--color-muted-foreground)',
-        borderColor: ativo ? 'transparent' : 'var(--color-border)',
-      }}
+      className={`relative pb-2.5 pt-1 px-1 text-[13px] transition-colors whitespace-nowrap select-none cursor-pointer flex items-center gap-1.5 outline-none focus:outline-none focus-visible:outline-none ${
+        ativo
+          ? 'font-semibold text-[var(--color-primary)]'
+          : 'font-medium text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]'
+      }`}
     >
-      {rotulo}
-      <span className="ml-1.5 opacity-60">{contagem}</span>
+      <span>{rotulo}</span>
+      <span className={`text-xs ${ativo ? 'opacity-80 font-medium' : 'opacity-60 font-normal'}`}>
+        {contagem}
+      </span>
+      {ativo && (
+        <span
+          className="absolute bottom-0 left-0 right-0 h-[2.5px] rounded-full"
+          style={{ background: 'var(--color-primary)' }}
+        />
+      )}
     </button>
   )
 }

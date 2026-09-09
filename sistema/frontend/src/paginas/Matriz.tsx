@@ -401,17 +401,16 @@ export function Matriz() {
                   type="button"
                   onClick={() => setFiltroLinhas('todas')}
                   title="Voltar a mostrar todos os itens"
-                  className="px-2.5 py-2 rounded-md border text-sm font-medium flex items-center gap-1.5 whitespace-nowrap"
-                  style={{
-                    borderColor: 'var(--color-primary)',
-                    background: 'var(--color-primary)',
-                    color: '#fff',
-                  }}
+                  className="relative px-2.5 py-1.5 text-sm font-semibold flex items-center gap-1.5 whitespace-nowrap text-[var(--color-primary)] hover:opacity-80 select-none cursor-pointer"
                 >
-                  {ROTULO_FILTRO_LINHAS[filtroLinhas]}
-                  <span aria-hidden className="opacity-70">
+                  <span>{ROTULO_FILTRO_LINHAS[filtroLinhas]}</span>
+                  <span aria-hidden className="opacity-70 text-xs">
                     ✕
                   </span>
+                  <span
+                    className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full"
+                    style={{ background: 'var(--color-primary)' }}
+                  />
                 </button>
               )}
 
@@ -424,27 +423,25 @@ export function Matriz() {
                 // passou a apontar para lá
                 data-painel-divergencias
                 title={`${divergencias.total} divergência(s)${divergencias.semJustificativa > 0 ? `, ${divergencias.semJustificativa} sem justificativa` : ''}`}
-                className="px-2.5 py-2 rounded-md border text-sm font-medium flex items-center gap-1.5 whitespace-nowrap"
-                style={{
-                  borderColor:
-                    divergencias.semJustificativa > 0
-                      ? 'var(--color-destructive)'
-                      : 'var(--color-border)',
-                  color:
-                    divergencias.semJustificativa > 0
-                      ? 'var(--color-destructive-fg)'
-                      : 'var(--color-muted-foreground)',
-                  background:
-                    divergencias.semJustificativa > 0
-                      ? 'var(--color-destructive-soft)'
-                      : 'transparent',
-                }}
+                className={`relative px-2.5 py-1.5 text-sm font-medium flex items-center gap-1.5 whitespace-nowrap transition-colors rounded-md select-none cursor-pointer outline-none focus:outline-none focus-visible:outline-none ${
+                  divergencias.semJustificativa > 0
+                    ? 'text-red-700 bg-red-50 hover:bg-red-100'
+                    : painelDivergencias
+                      ? 'text-[var(--color-primary)] font-semibold'
+                      : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.035]'
+                }`}
               >
                 <span>
                   {divergencias.semJustificativa > 0 ? '⚠' : '◆'} {divergencias.total}
                 </span>
                 {divergencias.semJustificativa > 0 && (
-                  <span className="font-bold">· {divergencias.semJustificativa} sem justificar</span>
+                  <span className="font-semibold">· {divergencias.semJustificativa} sem justificar</span>
+                )}
+                {painelDivergencias && (
+                  <span
+                    className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full"
+                    style={{ background: divergencias.semJustificativa > 0 ? '#b91c1c' : 'var(--color-primary)' }}
+                  />
                 )}
               </button>
 
@@ -461,14 +458,20 @@ export function Matriz() {
                     ? 'Nenhum modelo foi retestado ainda'
                     : 'Mostrar só os modelos que já foram retestados com outra versão do agente'
                 }
-                className="px-2.5 py-2 rounded-md border text-sm font-medium whitespace-nowrap transition-colors disabled:opacity-45"
-                style={{
-                  borderColor: soRetestados ? 'var(--color-primary)' : 'var(--color-border)',
-                  background: soRetestados ? 'var(--color-primary)' : 'transparent',
-                  color: soRetestados ? '#fff' : 'var(--color-muted-foreground)',
-                }}
+                className={`relative px-2.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors disabled:opacity-45 select-none cursor-pointer rounded-md outline-none focus:outline-none focus-visible:outline-none ${
+                  soRetestados
+                    ? 'font-semibold text-[var(--color-primary)]'
+                    : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.035]'
+                }`}
               >
-                Revalidados <span className="opacity-70">{totalRetestados}</span>
+                <span>Revalidados</span>
+                <span className="ml-1 text-xs opacity-70 font-normal">{totalRetestados}</span>
+                {soRetestados && (
+                  <span
+                    className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full"
+                    style={{ background: 'var(--color-primary)' }}
+                  />
+                )}
               </button>
 
               <button
