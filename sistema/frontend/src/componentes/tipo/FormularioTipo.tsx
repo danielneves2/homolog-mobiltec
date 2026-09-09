@@ -340,7 +340,7 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
                     : undefined
               }
               className="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-              style={{ background: 'var(--color-primary)' }}
+              style={{ background: 'var(--gradient-brand-purple)' }}
             >
               {salvando
                 ? editando
@@ -442,7 +442,7 @@ function PainelGrupo({
           outro numa pilha de quatro. */}
       <div
         className="flex flex-wrap items-center gap-2 rounded-t-lg border-b px-3 py-2"
-        style={{ background: 'var(--color-primary)', color: '#fff' }}
+        style={{ background: 'var(--gradient-brand-purple)', color: '#fff' }}
       >
         <span className="text-sm font-semibold">{ROTULO_GRUPO[grupo]}</span>
         <span className="text-xs text-white/70">
@@ -477,7 +477,7 @@ function PainelGrupo({
           <div key={n.chave} className="flex items-center gap-2 py-0.5 text-sm">
             <span
               className="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase"
-              style={{ background: 'var(--color-primary)', color: '#fff' }}
+              style={{ background: 'var(--gradient-brand-purple)', color: '#fff' }}
             >
               novo
             </span>

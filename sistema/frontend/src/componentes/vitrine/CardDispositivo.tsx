@@ -89,8 +89,8 @@ export function CardDispositivo({ dispositivo: d }: { dispositivo: DispositivoVi
 
           <Link
             to={`/dispositivos/${d.homologacaoId}`}
-            className="mt-2 block w-full rounded-md py-1.5 text-center text-sm font-semibold text-white transition-opacity hover:opacity-90"
-            style={{ background: 'var(--color-primary)' }}
+            className="mt-2 block w-full rounded-md py-1.5 text-center text-sm font-semibold text-white transition-opacity hover:opacity-90 shadow-xs"
+            style={{ background: 'var(--gradient-brand-purple)' }}
           >
             Exibir informações
           </Link>

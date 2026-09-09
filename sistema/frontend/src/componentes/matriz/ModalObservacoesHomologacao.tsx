@@ -152,7 +152,7 @@ export function ModalObservacoesHomologacao({
               onClick={() => aoSalvar(texto)}
               disabled={salvando}
               className="rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-              style={{ background: 'var(--color-primary)' }}
+              style={{ background: 'var(--gradient-brand-purple)' }}
             >
               {salvando ? 'Salvando…' : 'Salvar'}
             </button>

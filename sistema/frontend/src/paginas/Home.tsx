@@ -281,9 +281,9 @@ function BotaoCategoria({
       onClick={aoClicar}
       className="rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors"
       style={{
-        background: ativo ? 'var(--color-primary)' : 'var(--color-card)',
+        background: ativo ? 'var(--gradient-brand-purple)' : 'var(--color-card)',
         color: ativo ? '#fff' : 'var(--color-muted-foreground)',
-        borderColor: ativo ? 'var(--color-primary)' : 'var(--color-border)',
+        borderColor: ativo ? 'transparent' : 'var(--color-border)',
       }}
     >
       {rotulo}

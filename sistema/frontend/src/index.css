@@ -132,6 +132,8 @@
    ser uma escolha na aplicação, não herdada do sistema operacional. */
 :root {
   color-scheme: light;
+  --gradient-brand-purple: linear-gradient(90deg, var(--color-brand-purple) 0%, var(--color-primary) 45%, var(--color-brand-purple-deep) 100%);
+  --gradient-brand-purple-v: linear-gradient(180deg, var(--color-brand-purple) 0%, var(--color-primary) 45%, var(--color-brand-purple-deep) 100%);
 }
 
 @layer base {
@@ -174,6 +176,12 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--color-muted-foreground);
+  }
+  .bg-brand-gradient {
+    background: var(--gradient-brand-purple);
+  }
+  .bg-brand-gradient-v {
+    background: var(--gradient-brand-purple-v);
   }
 }
 

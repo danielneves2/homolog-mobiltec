@@ -116,7 +116,7 @@ export function ModalReabrir({
             type="submit"
             disabled={curto || reabrir.isPending}
             className="px-4 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50"
-            style={{ background: 'var(--color-primary)' }}
+            style={{ background: 'var(--gradient-brand-purple)' }}
           >
             {reabrir.isPending ? 'Reabrindo…' : 'Reabrir'}
           </button>

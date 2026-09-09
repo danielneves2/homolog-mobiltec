@@ -205,7 +205,7 @@ export function DetalheDispositivo() {
               disabled={baixando}
               title="Baixar o certificado em PDF com os dados atuais"
               className="flex shrink-0 items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-45"
-              style={{ background: 'var(--color-primary)' }}
+              style={{ background: 'var(--gradient-brand-purple)' }}
             >
               <Icone nome="baixar" className="h-4 w-4 shrink-0" />
               {baixando ? 'Gerando…' : 'Certificado técnico'}
@@ -265,7 +265,7 @@ export function DetalheDispositivo() {
                 <div
                   className="px-4 py-2 text-xs font-semibold uppercase"
                   style={{
-                    background: 'var(--color-brand-purple-deep)',
+                    background: 'var(--gradient-brand-purple)',
                     color: '#fff',
                     letterSpacing: '0.08em',
                   }}

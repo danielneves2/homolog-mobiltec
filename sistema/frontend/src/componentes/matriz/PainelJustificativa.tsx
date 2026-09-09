@@ -266,7 +266,7 @@ export function PainelJustificativa({
                       disabled={!tituloBiblioteca.trim() || salvarNaBiblioteca.isPending}
                       onClick={salvarTextoNaBiblioteca}
                       className="px-3 py-1.5 rounded-md text-sm font-medium text-white disabled:opacity-50"
-                      style={{ background: 'var(--color-primary)' }}
+                      style={{ background: 'var(--gradient-brand-purple)' }}
                     >
                       {salvarNaBiblioteca.isPending ? 'Salvando…' : 'Salvar e aplicar'}
                     </button>
@@ -305,7 +305,7 @@ export function PainelJustificativa({
               onClick={confirmar}
               disabled={!podeConfirmar}
               className="px-4 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50"
-              style={{ background: 'var(--color-primary)' }}
+              style={{ background: 'var(--gradient-brand-purple)' }}
             >
               Aplicar {meta.rotulo}
             </button>

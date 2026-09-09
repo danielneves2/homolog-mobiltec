@@ -79,7 +79,7 @@ export function ModalObservacao({
               onClick={() => aoSalvar(texto)}
               disabled={salvando}
               className="px-4 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50"
-              style={{ background: 'var(--color-primary)' }}
+              style={{ background: 'var(--gradient-brand-purple)' }}
             >
               {salvando ? 'Salvando…' : 'Salvar'}
             </button>

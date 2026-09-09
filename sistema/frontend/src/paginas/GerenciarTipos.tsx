@@ -77,7 +77,7 @@ export function GerenciarTipos() {
           <Link
             to="/registro"
             className="rounded-md px-3 py-2 text-sm font-semibold text-white"
-            style={{ background: 'var(--color-primary)' }}
+            style={{ background: 'var(--gradient-brand-purple)' }}
           >
             + Registrar dispositivo
           </Link>
@@ -121,7 +121,7 @@ export function GerenciarTipos() {
               >
                 <span
                   className="grid h-9 w-9 shrink-0 place-items-center rounded-md"
-                  style={{ background: 'var(--color-primary)', color: '#fff' }}
+                  style={{ background: 'var(--gradient-brand-purple)', color: '#fff' }}
                 >
                   <Icone nome={iconeDaCategoria(tipo.icone)} className="h-[18px] w-[18px]" />
                 </span>

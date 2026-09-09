@@ -249,7 +249,7 @@ export function PainelAnaliseDivergencias({ homologacaoId }: { homologacaoId: st
                   data-trazer-novas
                   onClick={trazerNovas}
                   className="flex-1 rounded-md px-2.5 py-1.5 text-xs font-semibold text-white"
-                  style={{ background: 'var(--color-primary)' }}
+                  style={{ background: 'var(--gradient-brand-purple)' }}
                 >
                   Trazer para a análise
                 </button>
@@ -359,7 +359,7 @@ export function PainelAnaliseDivergencias({ homologacaoId }: { homologacaoId: st
               onClick={() => salvar.mutate({ blocos: rascunho, vistos: vistos ?? [] })}
               disabled={!sujo || salvar.isPending}
               className="flex-1 rounded-md px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-45"
-              style={{ background: 'var(--color-primary)' }}
+              style={{ background: 'var(--gradient-brand-purple)' }}
             >
               {salvar.isPending ? 'Salvando…' : sujo ? 'Salvar análise' : 'Salvo'}
             </button>

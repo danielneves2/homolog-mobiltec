@@ -172,7 +172,7 @@ export function Certificado() {
               disabled={emitir.isPending}
               title="Arquiva o PDF e um snapshot imutável dos dados"
               className="px-4 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50"
-              style={{ background: 'var(--color-primary)' }}
+              style={{ background: 'var(--gradient-brand-purple)' }}
             >
               {emitir.isPending ? 'Emitindo…' : 'Emitir e arquivar'}
             </button>

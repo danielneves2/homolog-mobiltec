@@ -56,27 +56,16 @@ const GRADIENTE_FAIXA =
   ' var(--color-brand-purple-deep) 100%)'
 
 /**
- * Estilo de uma célula da faixa do cabeçalho.
- *
- * O degradê do botão é horizontal — se cada `th` pintasse o seu, a faixa
- * viraria 32 degradês em sequência. Por isso o fundo é dimensionado à largura
- * da tabela inteira e deslocado pelo x da coluna: o que se vê é um degradê só,
- * contínuo, atravessando o cabeçalho.
- *
- * Os dois fios brancos — um à direita, separando as colunas, e outro fechando
- * a base da faixa — são `box-shadow`, não `border`: a tabela é
- * `border-collapse`, e nesse modelo a borda pertence à tabela, não à célula.
- * Ao rolar, ela ficava para trás enquanto o cabeçalho `sticky` seguia colado
- * no topo; a sombra é pintada pelo próprio `th` e acompanha.
+ * Estilo de cada célula/card da faixa do cabeçalho.
+ * Cada coluna recebe o gradiente completo de forma individual e elegante,
+ * idêntico ao efeito refinado visto ao filtrar modelos e no botão da tela de login.
  */
-const estiloFaixa = (deslocamento: number, larguraDaFaixa: number): React.CSSProperties => ({
-  backgroundImage: GRADIENTE_FAIXA,
-  backgroundSize: `${larguraDaFaixa}px 100%`,
-  backgroundPosition: `-${deslocamento}px 0`,
+const estiloFaixa: React.CSSProperties = {
+  background: GRADIENTE_FAIXA,
   borderColor: 'rgba(255,255,255,.14)',
   boxShadow: 'inset -1px 0 0 rgba(255,255,255,.32), inset 0 -1px 0 rgba(255,255,255,.7)',
   color: '#fff',
-})
+}
 
 /** Altura do hambúrguer: o texto do cabeçalho se centraliza contra ela */
 const ALTURA_ACAO = 'h-6'
@@ -483,8 +472,8 @@ export function Matriz() {
               <button
                 type="button"
                 onClick={() => setNovoModelo(true)}
-                className="px-3 py-2 rounded-md text-sm font-semibold text-white shadow-xs whitespace-nowrap"
-                style={{ background: 'var(--color-primary)' }}
+                className="h-8 px-3 rounded-md text-xs font-semibold text-white transition-opacity hover:opacity-90 inline-flex items-center gap-1.5 shadow-xs shrink-0"
+                style={{ background: GRADIENTE_FAIXA }}
               >
                 + Novo modelo
               </button>
@@ -568,7 +557,7 @@ export function Matriz() {
                   type="button"
                   onClick={() => setNovoModelo(true)}
                   className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm transition-all hover:opacity-90 active:scale-95"
-                  style={{ background: 'var(--color-primary)' }}
+                  style={{ background: GRADIENTE_FAIXA }}
                 >
                   <span>+</span>
                   <span>Cadastrar modelo</span>
@@ -628,7 +617,7 @@ export function Matriz() {
                 <th
                   colSpan={railVisivel ? 2 : 1}
                   className="sticky left-0 top-0 z-30 border px-3 py-1.5 text-left align-top"
-                  style={estiloFaixa(0, larguraTotal)}
+                  style={estiloFaixa}
                 >
                   {/* Altura fixa igual à do hambúrguer: assim o texto se
                       centraliza contra o botão aqui e nas colunas de modelo,
@@ -650,7 +639,7 @@ export function Matriz() {
                     />
                   </div>
                 </th>
-                {colunas.map((c, iCol) => (
+                {colunas.map((c) => (
                   <th
                     key={c.homologacao.id}
                     data-modelo={c.homologacao.dispositivo.nomeComercial}
@@ -659,10 +648,7 @@ export function Matriz() {
                     // — que ganha a linha do veredito e fica mais alta — para
                     // empurrar o nome de TODAS as outras 8px para baixo.
                     className="sticky top-0 z-20 border px-2 py-1.5 text-center align-top"
-                    style={estiloFaixa(
-                      recuoItem + LARGURA_ITEM + iCol * LARGURA_COLUNA,
-                      larguraTotal,
-                    )}
+                    style={estiloFaixa}
                   >
                     {/* Nome centralizado na coluna e o menu ancorado à direita.
                         Com `justify-between` o nome ficava centrado no espaço
@@ -803,12 +789,8 @@ export function Matriz() {
                       <td
                         rowSpan={itens.length}
                         className="sticky left-0 z-10 border p-0"
-                        // Roxo chapado, sem degradê: o rail fica logo abaixo da
-                        // ponta esquerda da faixa, e ali o degradê do topo vale
-                        // exatamente `brand-purple` — então a cor continua a
-                        // mesma, sem repetir a variação.
                         style={{
-                          background: 'var(--color-brand-purple)',
+                          background: GRADIENTE_FAIXA,
                           borderColor: 'rgba(255,255,255,.14)',
                           color: '#fff',
                         }}

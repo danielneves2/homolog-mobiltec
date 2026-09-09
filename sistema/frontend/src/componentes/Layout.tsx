@@ -24,7 +24,7 @@ function ItemMenu({ item, aberto }: { item: ItemMenuDados; aberto: boolean }) {
       title={aberto ? undefined : item.rotulo}
       className="flex items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium transition-colors"
       style={({ isActive }) => ({
-        background: isActive ? 'var(--color-primary)' : 'transparent',
+        background: isActive ? 'var(--gradient-brand-purple)' : 'transparent',
         color: isActive ? '#fff' : 'var(--color-muted-foreground)',
         justifyContent: aberto ? 'flex-start' : 'center',
       })}
@@ -115,7 +115,7 @@ function GrupoMenu({
         data-grupo-menu={item.rotulo}
         className="flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium transition-colors"
         style={{
-          background: noGrupo ? 'var(--color-primary)' : 'transparent',
+          background: noGrupo ? 'var(--gradient-brand-purple)' : 'transparent',
           color: noGrupo ? '#fff' : 'var(--color-muted-foreground)',
           justifyContent: aberto ? 'flex-start' : 'center',
         }}
