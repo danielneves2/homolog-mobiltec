@@ -68,13 +68,13 @@ export function LoadingTela({
           />
         </svg>
 
-        {/* As 2 setinhas >> no laranja sutil e baixa opacidade, com centralização óptica perfeita */}
+        {/* As 2 setinhas >> no laranja sutil e baixa opacidade, com centralização óptica equilibrada */}
         <svg
           className={`${dim.setas} shrink-0`}
           style={{
             animation: 'carregandoPulsoSuave 2.4s ease-in-out infinite',
           }}
-          viewBox="96 70.13 160 160"
+          viewBox="86.5 75.13 150 150"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           aria-hidden="true"
