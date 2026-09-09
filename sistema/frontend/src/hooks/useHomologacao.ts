@@ -159,3 +159,85 @@ export function useSalvarNaBiblioteca() {
     },
   })
 }
+
+export interface ItemListaHomologacao {
+  id: string
+  dispositivoId: string
+  bateriaId: string
+  numeroSerie: string
+  imei1: string | null
+  imei2: string | null
+  versaoSo: string
+  gerenciamento: TipoGerenciamento
+  tipoAgente: string
+  versaoAgente: string
+  versaoPos: string | null
+  ferramenta: string | null
+  metodoInscricao: string
+  assinaturaAgente: boolean
+  precisaAssinaturaDev: boolean
+  dataInicio: string
+  dataFim: string | null
+  status: StatusHomologacao
+  homologado: boolean | null
+  criadoEm: string
+  atualizadoEm: string
+  assinaturaApoio: string | null
+  dispositivo: {
+    id: string
+    nomeComercial: string
+    fabricante: string
+    modelo: string
+    fotoUrl: string | null
+    empresa: string | null
+    categoria: {
+      id: string
+      nome: string
+      slug: string
+      icone: string
+    }
+  }
+  responsavel?: {
+    id: string
+    nome: string
+    email: string
+    cargo: string
+    empresa: string | null
+    papel: string
+  }
+  apoio?: {
+    id: string
+    nome: string
+    email: string
+    cargo: string
+    empresa: string | null
+  }
+  gerente?: {
+    id: string
+    nome: string
+    cargo: string
+  }
+  bateria: {
+    id?: string
+    nome: string
+  }
+  _count: {
+    resultados: number
+    certificados: number
+  }
+  resultados?: {
+    id: string
+    status: string
+    justificativaId: string | null
+    justificativaTexto: string | null
+  }[]
+}
+
+export function useListaHomologacoes(filtros?: { status?: string; responsavelId?: string }) {
+  return useQuery({
+    queryKey: ['homologacoes', filtros],
+    queryFn: () => api.get<ItemListaHomologacao[]>('/homologacoes', filtros),
+    refetchInterval: 15_000,
+  })
+}
+

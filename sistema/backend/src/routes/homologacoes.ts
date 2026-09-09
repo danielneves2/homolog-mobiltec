@@ -115,9 +115,19 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
       },
       include: {
         dispositivo: { include: { categoria: true } },
-        responsavel: { select: { nome: true } },
-        bateria: { select: { nome: true } },
+        responsavel: { select: { id: true, nome: true, email: true, cargo: true, empresa: true, papel: true } },
+        apoio: { select: { id: true, nome: true, email: true, cargo: true, empresa: true } },
+        gerente: { select: { id: true, nome: true, cargo: true } },
+        bateria: { select: { id: true, nome: true } },
         _count: { select: { resultados: true, certificados: true } },
+        resultados: {
+          select: {
+            id: true,
+            status: true,
+            justificativaId: true,
+            justificativaTexto: true,
+          },
+        },
       },
       orderBy: { criadoEm: 'desc' },
     })

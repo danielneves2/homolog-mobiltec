@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contextos/AuthContext'
 import { useCategorias } from '@/hooks/useVitrine'
+import { useListaHomologacoes } from '@/hooks/useHomologacao'
 import { ancorarMenu } from '@/lib/ancorarMenu'
 import { LogoMobiltec } from './LogoMobiltec'
 import { Icone, iconeDaCategoria, type NomeIcone } from './Icone'
@@ -15,17 +16,22 @@ interface ItemMenuDados {
   fim: boolean
 }
 
-/** Uma linha do menu lateral — recolhido, sobra só o ícone e o rótulo vira title */
+/** Uma linha do menu lateral — recolhido, sobra só o ícone compacto centralizado e o rótulo vira title */
 function ItemMenu({ item, aberto }: { item: ItemMenuDados; aberto: boolean }) {
   return (
     <NavLink
       to={item.para}
       end={item.fim}
       title={aberto ? undefined : item.rotulo}
-      className="flex items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium transition-colors"
+      className={`flex items-center transition-all duration-150 ${
+        aberto
+          ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium leading-tight hover:bg-black/[0.03]'
+          : 'mx-auto h-9 w-9 items-center justify-center rounded-lg hover:bg-black/[0.04]'
+      }`}
       style={({ isActive }) => ({
         background: isActive ? 'var(--gradient-brand-purple)' : 'transparent',
         color: isActive ? '#fff' : 'var(--color-muted-foreground)',
+        boxShadow: isActive ? '0 2px 6px -1px rgba(126, 32, 101, 0.35)' : 'none',
         justifyContent: aberto ? 'flex-start' : 'center',
       })}
     >
@@ -46,10 +52,12 @@ function GrupoMenu({
   item,
   filhos,
   aberto,
+  totalPendentes = 0,
 }: {
   item: Omit<ItemMenuDados, 'fim'>
   filhos: ItemMenuDados[]
   aberto: boolean
+  totalPendentes?: number
 }) {
   const { pathname } = useLocation()
   const noGrupo = filhos.some((f) => pathname === f.para || pathname.startsWith(`${f.para}/`))
@@ -101,7 +109,7 @@ function GrupoMenu({
       right: r.right + 6,
       width: 0,
     } as DOMRect
-    setFlutuante(ancorarMenu(aoLado, { largura: 200, altura: filhos.length * 34 + 8 }))
+    setFlutuante(ancorarMenu(aoLado, { largura: 210, altura: filhos.length * 32 + 10 }))
   }
 
   return (
@@ -113,20 +121,39 @@ function GrupoMenu({
         aria-expanded={aberto ? expandido : !!flutuante}
         title={aberto ? undefined : item.rotulo}
         data-grupo-menu={item.rotulo}
-        className="flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium transition-colors"
+        className={`relative flex items-center transition-all duration-150 ${
+          aberto
+            ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium leading-tight hover:bg-black/[0.03]'
+            : 'mx-auto h-9 w-9 items-center justify-center rounded-lg hover:bg-black/[0.04]'
+        }`}
         style={{
           background: noGrupo ? 'var(--gradient-brand-purple)' : 'transparent',
           color: noGrupo ? '#fff' : 'var(--color-muted-foreground)',
+          boxShadow: noGrupo ? '0 2px 6px -1px rgba(126, 32, 101, 0.35)' : 'none',
           justifyContent: aberto ? 'flex-start' : 'center',
         }}
       >
         <Icone nome={item.icone} className="h-[18px] w-[18px] shrink-0" />
+        {!aberto && item.rotulo === 'Parceiros' && totalPendentes > 0 && (
+          <span
+            className="absolute top-1 right-1 h-2 w-2 rounded-full ring-2 shadow-xs"
+            style={{ background: '#F59E0B' }}
+          />
+        )}
         {aberto && (
           <>
             <span className="flex-1 truncate text-left">{item.rotulo}</span>
+            {item.rotulo === 'Parceiros' && totalPendentes > 0 && (
+              <span
+                className="px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white shadow-xs"
+                style={{ background: noGrupo ? '#F59E0B' : 'var(--gradient-brand-purple)' }}
+              >
+                {totalPendentes}
+              </span>
+            )}
             <svg
               viewBox="0 0 16 16"
-              className="h-3.5 w-3.5 shrink-0 transition-transform"
+              className="h-3.5 w-3.5 shrink-0 transition-transform opacity-75"
               style={{ transform: expandido ? 'rotate(180deg)' : 'none' }}
               aria-hidden
             >
@@ -144,23 +171,33 @@ function GrupoMenu({
       </button>
 
       {aberto && expandido && (
-        // O fio à esquerda amarra as opções ao grupo, como na doc do produto
-        <div className="mt-1 ml-5 space-y-1 border-l pl-2">
-          {filhos.map((f) => (
-            <NavLink
-              key={f.para}
-              to={f.para}
-              end={f.fim}
-              className="block truncate rounded-md px-2.5 py-1.5 text-sm transition-colors"
-              style={({ isActive }) => ({
-                background: isActive ? 'var(--color-muted)' : 'transparent',
-                color: isActive ? 'var(--color-primary)' : 'var(--color-muted-foreground)',
-                fontWeight: isActive ? 600 : 400,
-              })}
-            >
-              {f.rotulo}
-            </NavLink>
-          ))}
+        <div className="mt-1 ml-5 space-y-0.5 border-l pl-2" style={{ borderColor: 'var(--color-border)' }}>
+          {filhos.map((f) => {
+            const isCertificado = f.para.includes('validar-certificados')
+            return (
+              <NavLink
+                key={f.para}
+                to={f.para}
+                end={f.fim}
+                className="flex items-center justify-between truncate rounded-md px-2.5 py-1 text-[13px] font-medium leading-tight transition-colors"
+                style={({ isActive }) => ({
+                  background: isActive ? 'var(--color-muted)' : 'transparent',
+                  color: isActive ? 'var(--color-primary)' : 'var(--color-muted-foreground)',
+                  fontWeight: isActive ? 600 : 500,
+                })}
+              >
+                <span className="truncate">{f.rotulo}</span>
+                {isCertificado && totalPendentes > 0 && (
+                  <span
+                    className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white shrink-0"
+                    style={{ background: 'var(--gradient-brand-purple)' }}
+                  >
+                    {totalPendentes}
+                  </span>
+                )}
+              </NavLink>
+            )
+          })}
         </div>
       )}
 
@@ -169,7 +206,7 @@ function GrupoMenu({
           ref={refPainel}
           role="menu"
           data-menu-flutuante
-          className="fixed z-50 min-w-50 rounded-lg border py-1 shadow-lg"
+          className="fixed z-50 min-w-52 rounded-lg border py-1 shadow-lg"
           style={{
             left: flutuante.x,
             top: flutuante.y,
@@ -177,23 +214,34 @@ function GrupoMenu({
             color: 'var(--color-foreground)',
           }}
         >
-          {filhos.map((f) => (
-            <NavLink
-              key={f.para}
-              to={f.para}
-              end={f.fim}
-              role="menuitem"
-              onClick={() => setFlutuante(null)}
-              className="block px-3 py-1.5 text-sm transition-opacity hover:opacity-80"
-              style={({ isActive }) => ({
-                background: isActive ? 'var(--color-muted)' : 'transparent',
-                color: isActive ? 'var(--color-primary)' : 'inherit',
-                fontWeight: isActive ? 600 : 400,
-              })}
-            >
-              {f.rotulo}
-            </NavLink>
-          ))}
+          {filhos.map((f) => {
+            const isCertificado = f.para.includes('validar-certificados')
+            return (
+              <NavLink
+                key={f.para}
+                to={f.para}
+                end={f.fim}
+                role="menuitem"
+                onClick={() => setFlutuante(null)}
+                className="flex items-center justify-between px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80"
+                style={({ isActive }) => ({
+                  background: isActive ? 'var(--color-muted)' : 'transparent',
+                  color: isActive ? 'var(--color-primary)' : 'inherit',
+                  fontWeight: isActive ? 600 : 400,
+                })}
+              >
+                <span className="truncate">{f.rotulo}</span>
+                {isCertificado && totalPendentes > 0 && (
+                  <span
+                    className="ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white shrink-0"
+                    style={{ background: 'var(--gradient-brand-purple)' }}
+                  >
+                    {totalPendentes}
+                  </span>
+                )}
+              </NavLink>
+            )
+          })}
         </div>
       )}
     </>
@@ -218,7 +266,12 @@ const NOME_REGISTRO = 'Registro de Testes Internos'
 export function Layout() {
   const { usuario, ehParceiro, ehAdmin, sair } = useAuth()
   const { data: categorias } = useCategorias()
+  const { data: todasHomologacoes = [] } = useListaHomologacoes()
   const { pathname } = useLocation()
+
+  const totalPendentes = todasHomologacoes.filter(
+    (h) => h.status === 'AGUARDANDO_ANALISE' || h.status === 'EM_REVISAO',
+  ).length
 
   const [aberto, setAberto] = useState(() => {
     try {
@@ -267,9 +320,10 @@ export function Layout() {
     { para: '/registro/tipos', rotulo: 'Editar / remover dispositivo', icone: 'registro', fim: false },
   ]
 
-  const ambiente = { para: '/ambiente', rotulo: 'Ambiente', icone: 'ambiente' as NomeIcone }
-  const opcoesAmbiente: ItemMenuDados[] = [
-    { para: '/ambiente/parceiros', rotulo: 'Registrar parceiro', icone: 'ambiente', fim: true },
+  const parceiros = { para: '/parceiros', rotulo: 'Parceiros', icone: 'parceiros' as NomeIcone }
+  const opcoesParceiros: ItemMenuDados[] = [
+    { para: '/ambiente/parceiros', rotulo: 'Registrar parceiro', icone: 'parceiros', fim: true },
+    { para: '/parceiros/validar-certificados', rotulo: 'Validar certificado', icone: 'certificado', fim: true },
   ]
 
   // 224px: o item mais largo é "Painel de Homologação" (~150px) mais ícone e
@@ -283,7 +337,7 @@ export function Layout() {
    * `/registro`, e a trilha tem de nomear a tela aberta, não o grupo.
    */
   const secao =
-    [...opcoesRegistro, ...opcoesAmbiente, ...itens].find((i) =>
+    [...opcoesRegistro, ...opcoesParceiros, ...itens].find((i) =>
       i.fim ? pathname === i.para : pathname.startsWith(i.para),
     ) ?? itens[0]
 
@@ -337,7 +391,12 @@ export function Layout() {
               <div className="!mt-2 pt-2 space-y-1" style={{ borderTop: '1px solid var(--color-border)' }}>
                 <GrupoMenu item={registro} filhos={opcoesRegistro} aberto={aberto} />
                 {ehAdmin && (
-                  <GrupoMenu item={ambiente} filhos={opcoesAmbiente} aberto={aberto} />
+                  <GrupoMenu
+                    item={parceiros}
+                    filhos={opcoesParceiros}
+                    aberto={aberto}
+                    totalPendentes={totalPendentes}
+                  />
                 )}
               </div>
             )}
@@ -345,9 +404,9 @@ export function Layout() {
 
           <div className="border-t p-2 shrink-0">
             {aberto && (
-              <div className="px-2.5 py-1.5">
-                <p className="truncate text-sm font-medium">{usuario?.nome}</p>
-                <p className="truncate text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
+              <div className="px-2.5 py-1 mb-1">
+                <p className="truncate text-xs font-semibold">{usuario?.nome}</p>
+                <p className="truncate text-[11px]" style={{ color: 'var(--color-muted-foreground)' }}>
                   {usuario?.cargo}
                 </p>
               </div>
@@ -355,7 +414,11 @@ export function Layout() {
             <button
               onClick={sair}
               title="Sair"
-              className="flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-colors hover:opacity-70"
+              className={`flex items-center transition-all duration-150 hover:opacity-75 ${
+                aberto
+                  ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium leading-tight'
+                  : 'mx-auto h-9 w-9 items-center justify-center rounded-lg hover:bg-black/[0.04]'
+              }`}
               style={{
                 color: 'var(--color-muted-foreground)',
                 justifyContent: aberto ? 'flex-start' : 'center',

@@ -27,10 +27,12 @@ export type NomeIcone =
   | 'whatsapp'
   | 'email'
   | 'ambiente'
+  | 'parceiros'
 
 const TRACADOS: Record<NomeIcone, string> = {
   home: 'M3 10.5 12 3l9 7.5M5.5 9.5V20h13V9.5',
   ambiente: 'M3 21h18M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M15 11h4a2 2 0 0 1 2 2v8M9 7h2M9 11h2M9 15h2',
+  parceiros: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
   'credit-card': 'M2.5 6.5h19v11h-19zM2.5 10.5h19M6 14.5h4',
   printer: 'M6.5 9V3.5h11V9M6.5 17.5h-3v-6h17v6h-3M6.5 14h11v6.5h-11z',
   'scan-barcode': 'M3.5 7.5v-4h4M16.5 3.5h4v4M20.5 16.5v4h-4M7.5 20.5h-4v-4M8 8v8M11.5 8v8M15 8v8',
