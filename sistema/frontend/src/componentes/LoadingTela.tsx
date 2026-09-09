@@ -35,7 +35,7 @@ export function LoadingTela({
       <div className={`relative flex items-center justify-center ${dim.caixa}`}>
         {/* Borda circular roxa fluida */}
         <svg
-          className="absolute inset-0 w-full h-full animate-[spin_1.3s_linear_infinite]"
+          className="absolute inset-0 w-full h-full animate-[spin_1.8s_linear_infinite]"
           viewBox="0 0 54 54"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
@@ -46,7 +46,7 @@ export function LoadingTela({
             cy="27"
             r={dim.raio}
             stroke="var(--color-brand-purple, #6e226b)"
-            strokeOpacity="0.18"
+            strokeOpacity="0.12"
             strokeWidth={dim.stroke}
           />
           {/* Arco roxo ativo minimalista */}
@@ -61,7 +61,7 @@ export function LoadingTela({
           />
         </svg>
 
-        {/* As 2 setinhas >> com a MESMA opacidade e tom da borda de fundo */}
+        {/* As 2 setinhas >> em roxo suave e elegante */}
         <svg
           className={`${dim.setas} shrink-0 transition-opacity`}
           viewBox="96 98 126 116"
@@ -71,31 +71,31 @@ export function LoadingTela({
         >
           <path
             fill="var(--color-brand-purple, #6e226b)"
-            fillOpacity="0.18"
+            fillOpacity="0.45"
             d="M107.93,210.81c-2.25,0-4.52-.86-6.25-2.59-3.48-3.45-3.48-9.06,0-12.52l44.99-45-46-46c-3.45-3.45-3.45-9.07,0-12.52,3.45-3.46,9.07-3.46,12.52,0l52.25,52.26c3.46,3.45,3.46,9.07,0,12.52l-51.24,51.25c-1.73,1.72-4.01,2.59-6.28,2.59h.02Z"
           />
           <path
             fill="var(--color-brand-purple, #6e226b)"
-            fillOpacity="0.18"
+            fillOpacity="0.45"
             d="M216.02,156.84l-51.24,51.25c-1.73,1.72-4,2.59-6.27,2.59s-4.54-.86-6.25-2.59c-3.48-3.45-3.48-9.06,0-12.52l44.99-45-46-46c-3.46-3.45-3.46-9.07,0-12.52,3.45-3.46,9.04-3.46,12.52,0l52.25,52.27c3.48,3.45,3.48,9.07,0,12.52Z"
           />
         </svg>
       </div>
 
-      {/* Texto referente ao carregamento da tela com fade suave em sincronia com a rotação */}
+      {/* Texto referente ao carregamento da tela com respiração lenta e suave */}
       {mensagem && (
         <>
           <style>{`
             @keyframes carregandoPulsoSuave {
               0%, 100% { opacity: 1; }
-              50% { opacity: 0.45; }
+              50% { opacity: 0.65; }
             }
           `}</style>
           <p
             className="text-xs font-medium tracking-tight text-center"
             style={{
               color: 'var(--color-muted-foreground)',
-              animation: 'carregandoPulsoSuave 1.3s ease-in-out infinite',
+              animation: 'carregandoPulsoSuave 2.4s ease-in-out infinite',
             }}
           >
             {mensagem}
