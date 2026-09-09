@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { somenteVersaoAndroid } from '@/lib/tipos'
 import type { DispositivoVitrine } from '@/lib/tipos'
 import { FotoDispositivo } from './FotoDispositivo'
+import { BadgeHomologado } from '@/componentes/comum/BadgeHomologado'
 
 /**
  * Card de um modelo homologado.
@@ -46,17 +47,7 @@ export function CardDispositivo({ dispositivo: d }: { dispositivo: DispositivoVi
           </h3>
         </div>
 
-        <span
-          className="shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold whitespace-nowrap"
-          style={{
-            background: aprovado
-              ? 'var(--color-status-ok-fill)'
-              : 'var(--color-status-falha-fill)',
-            color: aprovado ? 'var(--color-status-ok)' : 'var(--color-status-falha)',
-          }}
-        >
-          {aprovado ? 'Homologado' : 'Não homologado'}
-        </span>
+        <BadgeHomologado homologado={aprovado} />
       </div>
 
       <div className="relative border-t" style={{ background: 'var(--color-sidebar)' }}>

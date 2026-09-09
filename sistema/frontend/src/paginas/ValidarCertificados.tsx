@@ -4,6 +4,7 @@ import { useListaHomologacoes, useTransicaoStatus, type ItemListaHomologacao } f
 import { Icone, iconeDaCategoria } from '@/componentes/Icone'
 import { LoadingTela } from '@/componentes/LoadingTela'
 import { ErroApi } from '@/lib/api'
+import { BadgeHomologado } from '@/componentes/comum/BadgeHomologado'
 
 type AbaFiltro = 'pendentes' | 'aprovados' | 'todos'
 
@@ -401,29 +402,27 @@ export function ValidarCertificados() {
                             {h.dispositivo.categoria?.nome || 'Dispositivo'}
                           </span>
 
-                          <span
-                            className="px-2 py-0.5 rounded-full text-[11px] font-bold"
-                            style={{
-                              background: isPendente
-                                ? 'var(--color-warning-soft)'
-                                : isAprovado
-                                ? 'var(--color-status-ok-soft)'
-                                : 'var(--color-muted)',
-                              color: isPendente
-                                ? 'var(--color-warning-fg)'
-                                : isAprovado
-                                ? 'var(--color-status-ok)'
-                                : 'var(--color-muted-foreground)',
-                            }}
-                          >
-                            {h.status === 'AGUARDANDO_ANALISE'
-                              ? 'Aguardando Análise'
-                              : h.status === 'EM_REVISAO'
-                              ? 'Em Revisão'
-                              : h.status === 'APROVADO'
-                              ? 'Aprovado / Homologado'
-                              : h.status}
-                          </span>
+                          {isAprovado ? (
+                            <BadgeHomologado homologado={true} />
+                          ) : (
+                            <span
+                              className="px-2 py-0.5 rounded-full text-[11px] font-bold"
+                              style={{
+                                background: isPendente
+                                  ? 'var(--color-warning-soft)'
+                                  : 'var(--color-muted)',
+                                color: isPendente
+                                  ? 'var(--color-warning-fg)'
+                                  : 'var(--color-muted-foreground)',
+                              }}
+                            >
+                              {h.status === 'AGUARDANDO_ANALISE'
+                                ? 'Aguardando Análise'
+                                : h.status === 'EM_REVISAO'
+                                ? 'Em Revisão'
+                                : h.status}
+                            </span>
+                          )}
 
                           <span
                             className="px-2 py-0.5 rounded text-[11px] font-medium"

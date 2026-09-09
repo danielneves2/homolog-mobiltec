@@ -50,15 +50,17 @@ type FiltroLinhas = 'todas' | 'faltam' | 'divergencias' | 'sem-justificativa'
 /** '' = todas as situações */
 type FiltroSituacao = '' | 'em-andamento' | 'finalizados'
 
-/** O mesmo degradê do botão "Entrar" da tela de login */
+/** Degradê sutil para as colunas de modelos do cabeçalho */
 const GRADIENTE_FAIXA =
-  'linear-gradient(90deg, var(--color-brand-purple) 0%, var(--color-primary) 45%,' +
-  ' var(--color-brand-purple-deep) 100%)'
+  'linear-gradient(90deg, #84236B 0%, #761D5E 45%, #62144D 100%)'
+
+/** Degradê vertical de cima para baixo nos cards do rail de grupos: sutil, leve e mantendo o tom roxo escuro */
+const GRADIENTE_RAIL_VERTICAL =
+  'linear-gradient(180deg, #84236B 0%, #721C5A 50%, #5E144A 100%)'
 
 /**
  * Estilo de cada célula/card da faixa do cabeçalho.
- * Cada coluna recebe o gradiente completo de forma individual e elegante,
- * idêntico ao efeito refinado visto ao filtrar modelos e no botão da tela de login.
+ * Cada coluna recebe o gradiente sutil individual e elegante.
  */
 const estiloFaixa: React.CSSProperties = {
   background: GRADIENTE_FAIXA,
@@ -790,7 +792,7 @@ export function Matriz() {
                         rowSpan={itens.length}
                         className="sticky left-0 z-10 border p-0"
                         style={{
-                          background: GRADIENTE_FAIXA,
+                          background: GRADIENTE_RAIL_VERTICAL,
                           borderColor: 'rgba(255,255,255,.14)',
                           color: '#fff',
                         }}
