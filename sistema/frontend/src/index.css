@@ -153,10 +153,25 @@
     letter-spacing: -0.01em;
   }
 
-  /* Foco visível — o checklist é operado por teclado (spec §10.4) */
-  :focus-visible {
+  /* Foco visível apenas para formulários e campos de entrada de dados.
+     Links e botões de navegação não devem apresentar outline roxo invasivo ao serem clicados ou ao pressionar caps-lock. */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
+  }
+
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:focus,
+  button:focus-visible,
+  a:focus,
+  a:focus-visible {
+    outline: none !important;
   }
 
   /* Marcado fica roxo com o certinho branco, e não no azul do sistema.
@@ -182,6 +197,65 @@
   }
   .bg-brand-gradient-v {
     background: var(--gradient-brand-purple-v);
+  }
+
+  /* Botões do menu lateral - micro-interações, hover sutil com elevação e sombra em cinza */
+  .btn-menu-lateral {
+    outline: none !important;
+    user-select: none;
+    transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .btn-menu-lateral:focus,
+  .btn-menu-lateral:focus-visible {
+    outline: none !important;
+  }
+  .btn-menu-lateral:not(.btn-menu-ativo):hover {
+    background-color: #ffffff !important;
+    color: var(--color-foreground) !important;
+    box-shadow: 0 2px 6px -1px rgba(15, 15, 18, 0.08), 0 1px 3px -1px rgba(15, 15, 18, 0.05) !important;
+    transform: translateY(-0.5px);
+  }
+  .btn-menu-lateral.btn-menu-ativo:hover {
+    filter: brightness(1.04);
+    box-shadow: 0 3px 8px -1px rgba(126, 32, 101, 0.42) !important;
+  }
+  .btn-menu-lateral:active {
+    transform: translateY(0) scale(0.99);
+  }
+
+  /* Subitens do menu desdobrável */
+  .btn-menu-subitem {
+    outline: none !important;
+    user-select: none;
+    transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .btn-menu-subitem:focus,
+  .btn-menu-subitem:focus-visible {
+    outline: none !important;
+  }
+  .btn-menu-subitem:not(.btn-subitem-ativo):hover {
+    background-color: #ffffff !important;
+    color: var(--color-foreground) !important;
+    box-shadow: 0 2px 5px -1px rgba(15, 15, 18, 0.08), 0 1px 2px -1px rgba(15, 15, 18, 0.05) !important;
+    transform: translateX(1.5px);
+  }
+  .btn-menu-subitem:active {
+    transform: translateX(1px) scale(0.99);
+  }
+
+  @keyframes menuDropdownSlideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .menu-subitens-dropdown {
+    animation: menuDropdownSlideDown 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 }
 

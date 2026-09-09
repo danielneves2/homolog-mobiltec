@@ -23,15 +23,20 @@ function ItemMenu({ item, aberto }: { item: ItemMenuDados; aberto: boolean }) {
       to={item.para}
       end={item.fim}
       title={aberto ? undefined : item.rotulo}
-      className={`flex items-center transition-all duration-150 ${
-        aberto
-          ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium leading-tight hover:bg-black/[0.03]'
-          : 'mx-auto h-9 w-9 items-center justify-center rounded-lg hover:bg-black/[0.04]'
-      }`}
+      className={({ isActive }) =>
+        `btn-menu-lateral flex items-center select-none outline-none focus:outline-none focus-visible:outline-none ${
+          aberto
+            ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium leading-tight'
+            : 'mx-auto h-9 w-9 items-center justify-center rounded-lg'
+        } ${
+          isActive
+            ? 'btn-menu-ativo text-white'
+            : 'text-[var(--color-muted-foreground)]'
+        }`
+      }
       style={({ isActive }) => ({
-        background: isActive ? 'var(--gradient-brand-purple)' : 'transparent',
-        color: isActive ? '#fff' : 'var(--color-muted-foreground)',
-        boxShadow: isActive ? '0 2px 6px -1px rgba(126, 32, 101, 0.35)' : 'none',
+        background: isActive ? 'var(--gradient-brand-purple)' : undefined,
+        boxShadow: isActive ? '0 2px 6px -1px rgba(126, 32, 101, 0.35)' : undefined,
         justifyContent: aberto ? 'flex-start' : 'center',
       })}
     >
@@ -44,9 +49,9 @@ function ItemMenu({ item, aberto }: { item: ItemMenuDados; aberto: boolean }) {
 /**
  * Item do menu que abre um grupo de opções, e não uma tela.
  *
- * Com o menu aberto o grupo se desdobra no lugar, recuado, como na
- * documentação do Cloud4Mobile. Recolhido não há onde desdobrar — aí as opções
- * saem num painel ao lado, ancorado no ícone.
+ * Com o menu aberto o grupo se desdobra no lugar, recuado, ao passar o mouse
+ * ou ao clicar (fixando o estado). Recolhido não há onde desdobrar — aí as opções
+ * saem num painel flutuante ancorado ao lado.
  */
 function GrupoMenu({
   item,
@@ -62,20 +67,24 @@ function GrupoMenu({
   const { pathname } = useLocation()
   const noGrupo = filhos.some((f) => pathname === f.para || pathname.startsWith(`${f.para}/`))
   const [expandido, setExpandido] = useState(noGrupo)
+  const [emHover, setEmHover] = useState(false)
   const [flutuante, setFlutuante] = useState<{ x: number; y: number } | null>(null)
   const refBotao = useRef<HTMLButtonElement>(null)
   const refPainel = useRef<HTMLDivElement>(null)
 
-  // Navegar para dentro do grupo o abre — inclusive quando quem navegou foi o
-  // formulário, ao terminar um cadastro
+  // Navegar para dentro do grupo o abre e o fixa aberto
   useEffect(() => {
     if (noGrupo) setExpandido(true)
   }, [noGrupo])
 
   // Recolher o menu fecha o desdobramento: ele não tem onde caber em 64px
   useEffect(() => {
-    if (!aberto) setExpandido(false)
-    else setFlutuante(null)
+    if (!aberto) {
+      setExpandido(false)
+      setEmHover(false)
+    } else {
+      setFlutuante(null)
+    }
   }, [aberto])
 
   useEffect(() => {
@@ -95,13 +104,17 @@ function GrupoMenu({
   }, [flutuante])
 
   function alternar() {
-    if (aberto) return setExpandido((v) => !v)
+    if (aberto) {
+      setExpandido((v) => {
+        const proximo = !v
+        if (!proximo) setEmHover(false)
+        return proximo
+      })
+      return
+    }
     const r = refBotao.current?.getBoundingClientRect()
     if (!r) return
     if (flutuante) return setFlutuante(null)
-    // Ao lado do ícone, não embaixo dele: o menu recolhido é uma coluna
-    // estreita. As medidas vão num objeto novo — DOMRect guarda as
-    // propriedades no protótipo, e espalhar uma com `...` devolve vazio.
     const aoLado = {
       top: r.top,
       bottom: r.top,
@@ -112,24 +125,37 @@ function GrupoMenu({
     setFlutuante(ancorarMenu(aoLado, { largura: 210, altura: filhos.length * 32 + 10 }))
   }
 
+  const abertoVisivel = expandido || emHover
+
   return (
-    <>
+    <div
+      className="relative"
+      onMouseEnter={() => {
+        if (aberto) setEmHover(true)
+      }}
+      onMouseLeave={() => {
+        if (aberto) setEmHover(false)
+      }}
+    >
       <button
         ref={refBotao}
         type="button"
         onClick={alternar}
-        aria-expanded={aberto ? expandido : !!flutuante}
+        aria-expanded={aberto ? abertoVisivel : !!flutuante}
         title={aberto ? undefined : item.rotulo}
         data-grupo-menu={item.rotulo}
-        className={`relative flex items-center transition-all duration-150 ${
+        className={`btn-menu-lateral relative flex items-center select-none outline-none focus:outline-none focus-visible:outline-none ${
           aberto
-            ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium leading-tight hover:bg-black/[0.03]'
-            : 'mx-auto h-9 w-9 items-center justify-center rounded-lg hover:bg-black/[0.04]'
+            ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium leading-tight'
+            : 'mx-auto h-9 w-9 items-center justify-center rounded-lg'
+        } ${
+          noGrupo
+            ? 'btn-menu-ativo text-white'
+            : 'text-[var(--color-muted-foreground)]'
         }`}
         style={{
-          background: noGrupo ? 'var(--gradient-brand-purple)' : 'transparent',
-          color: noGrupo ? '#fff' : 'var(--color-muted-foreground)',
-          boxShadow: noGrupo ? '0 2px 6px -1px rgba(126, 32, 101, 0.35)' : 'none',
+          background: noGrupo ? 'var(--gradient-brand-purple)' : undefined,
+          boxShadow: noGrupo ? '0 2px 6px -1px rgba(126, 32, 101, 0.35)' : undefined,
           justifyContent: aberto ? 'flex-start' : 'center',
         }}
       >
@@ -153,8 +179,8 @@ function GrupoMenu({
             )}
             <svg
               viewBox="0 0 16 16"
-              className="h-3.5 w-3.5 shrink-0 transition-transform opacity-75"
-              style={{ transform: expandido ? 'rotate(180deg)' : 'none' }}
+              className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 opacity-75"
+              style={{ transform: abertoVisivel ? 'rotate(180deg)' : 'none' }}
               aria-hidden
             >
               <path
@@ -170,8 +196,11 @@ function GrupoMenu({
         )}
       </button>
 
-      {aberto && expandido && (
-        <div className="mt-1 ml-5 space-y-0.5 border-l pl-2" style={{ borderColor: 'var(--color-border)' }}>
+      {aberto && abertoVisivel && (
+        <div
+          className="menu-subitens-dropdown mt-1 ml-5 space-y-0.5 border-l pl-2"
+          style={{ borderColor: 'var(--color-border)' }}
+        >
           {filhos.map((f) => {
             const isCertificado = f.para.includes('validar-certificados')
             return (
@@ -179,12 +208,13 @@ function GrupoMenu({
                 key={f.para}
                 to={f.para}
                 end={f.fim}
-                className="flex items-center justify-between truncate rounded-md px-2.5 py-1 text-[13px] font-medium leading-tight transition-colors"
-                style={({ isActive }) => ({
-                  background: isActive ? 'var(--color-muted)' : 'transparent',
-                  color: isActive ? 'var(--color-primary)' : 'var(--color-muted-foreground)',
-                  fontWeight: isActive ? 600 : 500,
-                })}
+                className={({ isActive }) =>
+                  `btn-menu-subitem flex items-center justify-between truncate rounded-md px-2.5 py-1.5 text-[13px] font-medium leading-tight outline-none focus:outline-none focus-visible:outline-none ${
+                    isActive
+                      ? 'btn-subitem-ativo bg-[var(--color-muted)] text-[var(--color-primary)] font-semibold'
+                      : 'text-[var(--color-muted-foreground)]'
+                  }`
+                }
               >
                 <span className="truncate">{f.rotulo}</span>
                 {isCertificado && totalPendentes > 0 && (
@@ -206,7 +236,7 @@ function GrupoMenu({
           ref={refPainel}
           role="menu"
           data-menu-flutuante
-          className="fixed z-50 min-w-52 rounded-lg border py-1 shadow-lg"
+          className="fixed z-50 min-w-52 rounded-lg border py-1 shadow-lg bg-white"
           style={{
             left: flutuante.x,
             top: flutuante.y,
@@ -223,7 +253,7 @@ function GrupoMenu({
                 end={f.fim}
                 role="menuitem"
                 onClick={() => setFlutuante(null)}
-                className="flex items-center justify-between px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80"
+                className="flex items-center justify-between px-3 py-1.5 text-xs font-medium transition-colors hover:bg-black/[0.04] outline-none focus:outline-none focus-visible:outline-none"
                 style={({ isActive }) => ({
                   background: isActive ? 'var(--color-muted)' : 'transparent',
                   color: isActive ? 'var(--color-primary)' : 'inherit',
@@ -244,7 +274,7 @@ function GrupoMenu({
           })}
         </div>
       )}
-    </>
+    </div>
   )
 }
 
@@ -414,13 +444,12 @@ export function Layout() {
             <button
               onClick={sair}
               title="Sair"
-              className={`flex items-center transition-all duration-150 hover:opacity-75 ${
+              className={`btn-menu-lateral flex items-center select-none outline-none focus:outline-none focus-visible:outline-none ${
                 aberto
                   ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium leading-tight'
-                  : 'mx-auto h-9 w-9 items-center justify-center rounded-lg hover:bg-black/[0.04]'
-              }`}
+                  : 'mx-auto h-9 w-9 items-center justify-center rounded-lg'
+              } text-[var(--color-muted-foreground)] hover:text-red-600`}
               style={{
-                color: 'var(--color-muted-foreground)',
                 justifyContent: aberto ? 'flex-start' : 'center',
               }}
             >
@@ -449,7 +478,7 @@ export function Layout() {
                 onClick={alternar}
                 aria-label={aberto ? 'Recolher menu' : 'Expandir menu'}
                 title={aberto ? 'Recolher menu' : 'Expandir menu'}
-                className="grid h-8 w-8 place-items-center rounded-lg transition-colors hover:opacity-70"
+                className="grid h-8 w-8 place-items-center rounded-lg transition-all duration-150 outline-none focus:outline-none focus-visible:outline-none hover:bg-black/[0.04] hover:shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
                 style={{ color: 'var(--color-muted-foreground)' }}
               >
                 <Icone nome="painel" className="h-[18px] w-[18px]" />
