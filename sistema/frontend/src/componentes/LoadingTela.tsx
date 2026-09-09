@@ -35,7 +35,7 @@ export function LoadingTela({
       <div className={`relative flex items-center justify-center ${dim.caixa}`}>
         {/* Borda circular roxa fluida */}
         <svg
-          className="absolute inset-0 w-full h-full animate-[spin_0.85s_linear_infinite]"
+          className="absolute inset-0 w-full h-full animate-[spin_1.3s_linear_infinite]"
           viewBox="0 0 54 54"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
