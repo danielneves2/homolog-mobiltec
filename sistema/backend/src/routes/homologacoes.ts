@@ -321,11 +321,12 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Regras RBAC para Parceiro:
     if (request.user.papel === 'PARCEIRO') {
-      // Ownership check: parceiro só opera em homologações atribuídas a ele
-      if (homologacao.responsavelId !== request.user.id && homologacao.apoioId !== request.user.id) {
+      const ehExcecaoHgomes = request.user.email?.toLowerCase() === 'hgomes@tnsi.com'
+      // Ownership check: parceiro só opera em homologações atribuídas a ele, exceto exceção hgomes@tnsi.com
+      if (!ehExcecaoHgomes && homologacao.responsavelId !== request.user.id && homologacao.apoioId !== request.user.id) {
         return reply.status(403).send({ erro: 'Parceiros só podem editar resultados de homologações atribuídas a eles.' })
       }
-      if (homologacao.status !== StatusHomologacao.RASCUNHO) {
+      if (!ehExcecaoHgomes && homologacao.status !== StatusHomologacao.RASCUNHO) {
         return reply.status(403).send({ erro: 'Homologação em análise ou finalizada é somente leitura para parceiros.' })
       }
       if (body.justificativaId || body.justificativaTexto) {

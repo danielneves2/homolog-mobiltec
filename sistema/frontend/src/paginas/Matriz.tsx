@@ -702,7 +702,7 @@ export function Matriz() {
                       <MenuColuna
                         modelo={c.homologacao.dispositivo.nomeComercial}
                         acoes={[
-                          { rotulo: 'Configuração', aoClicar: () => setConfigurar(c) },
+                          !ehParceiro && { rotulo: 'Configuração', aoClicar: () => setConfigurar(c) },
                           (!ehParceiro || c.homologacao.status === 'APROVADO' || c.homologacao.status === 'PUBLICADO') && {
                             rotulo: 'Certificado',
                             aoClicar: () =>

@@ -44,7 +44,13 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
       dispositivo: { categoriaId: categoria.id, ativo: true },
     }
 
-    if (ehParceiro) {
+    // Exceção solicitada: hgomes@tnsi.com recebe a mesma planilha de POS completa do admin
+    const ehExcecaoHgomesPos =
+      ehParceiro &&
+      request.user.email?.toLowerCase() === 'hgomes@tnsi.com' &&
+      categoriaSlug === 'pos'
+
+    if (ehParceiro && !ehExcecaoHgomesPos) {
       const empresa = usuarioParceiro?.empresa
       if (empresa) {
         whereHomologacao.OR = [
