@@ -40,12 +40,13 @@ export function LoadingTela({
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/* Trilho de fundo ultra-suave */}
+          {/* Trilho de fundo (borda sutil) */}
           <circle
             cx="27"
             cy="27"
             r={dim.raio}
-            stroke="rgba(110, 34, 107, 0.08)"
+            stroke="var(--color-brand-purple, #6e226b)"
+            strokeOpacity="0.18"
             strokeWidth={dim.stroke}
           />
           {/* Arco roxo ativo minimalista */}
@@ -60,26 +61,22 @@ export function LoadingTela({
           />
         </svg>
 
-        {/* As 2 setinhas >> em roxo escuro sutil */}
+        {/* As 2 setinhas >> com a MESMA opacidade e tom da borda de fundo */}
         <svg
-          className={`${dim.setas} shrink-0 opacity-75 transition-opacity`}
+          className={`${dim.setas} shrink-0 transition-opacity`}
           viewBox="96 98 126 116"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           aria-hidden="true"
         >
-          <defs>
-            <linearGradient id="setasRoxoEscuroSutil" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#5c184d" />
-              <stop offset="100%" stopColor="#3d0e34" />
-            </linearGradient>
-          </defs>
           <path
-            fill="url(#setasRoxoEscuroSutil)"
+            fill="var(--color-brand-purple, #6e226b)"
+            fillOpacity="0.18"
             d="M107.93,210.81c-2.25,0-4.52-.86-6.25-2.59-3.48-3.45-3.48-9.06,0-12.52l44.99-45-46-46c-3.45-3.45-3.45-9.07,0-12.52,3.45-3.46,9.07-3.46,12.52,0l52.25,52.26c3.46,3.45,3.46,9.07,0,12.52l-51.24,51.25c-1.73,1.72-4.01,2.59-6.28,2.59h.02Z"
           />
           <path
-            fill="url(#setasRoxoEscuroSutil)"
+            fill="var(--color-brand-purple, #6e226b)"
+            fillOpacity="0.18"
             d="M216.02,156.84l-51.24,51.25c-1.73,1.72-4,2.59-6.27,2.59s-4.54-.86-6.25-2.59c-3.48-3.45-3.48-9.06,0-12.52l44.99-45-46-46c-3.46-3.45-3.46-9.07,0-12.52,3.45-3.46,9.04-3.46,12.52,0l52.25,52.27c3.48,3.45,3.48,9.07,0,12.52Z"
           />
         </svg>
