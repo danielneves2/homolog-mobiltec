@@ -85,14 +85,25 @@ export function LoadingTela({
         </svg>
       </div>
 
-      {/* Texto referente ao carregamento da tela */}
+      {/* Texto referente ao carregamento da tela com fade suave em sincronia com a rotação */}
       {mensagem && (
-        <p
-          className="text-xs font-medium tracking-tight text-center"
-          style={{ color: 'var(--color-muted-foreground)' }}
-        >
-          {mensagem}
-        </p>
+        <>
+          <style>{`
+            @keyframes carregandoPulsoSuave {
+              0%, 100% { opacity: 1; }
+              50% { opacity: 0.45; }
+            }
+          `}</style>
+          <p
+            className="text-xs font-medium tracking-tight text-center"
+            style={{
+              color: 'var(--color-muted-foreground)',
+              animation: 'carregandoPulsoSuave 1.3s ease-in-out infinite',
+            }}
+          >
+            {mensagem}
+          </p>
+        </>
       )}
     </div>
   )
