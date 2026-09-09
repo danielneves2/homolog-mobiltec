@@ -58,7 +58,40 @@ async function main() {
   })
   console.log('✅ Usuário admin criado:', admin.email)
 
-  // ============================================================
+  // Usuários administradores da equipe Mobiltec
+  const senhaEquipeHash = await bcrypt.hash('Mobiltec@2026', 10)
+  const equipeMobiltec = [
+    { email: 'rcordeiro@mobiltec.com.br', nome: 'R Cordeiro' },
+    { email: 'amarinho@mobiltec.com.br', nome: 'A Marinho' },
+    { email: 'maraujo@mobiltec.com.br', nome: 'M Araujo' },
+    { email: 'juliasantos@mobiltec.com.br', nome: 'Julia Santos' },
+    { email: 'dvalente@mobiltec.com.br', nome: 'D Valente' },
+    { email: 'davidmorais@mobiltec.com.br', nome: 'David Morais' },
+  ]
+  for (const m of equipeMobiltec) {
+    await prisma.usuario.upsert({
+      where: { email: m.email },
+      update: {
+        nome: m.nome,
+        papel: PapelUsuario.ADMIN,
+        empresa: 'Mobiltec',
+        dominioCorporativo: 'mobiltec.com.br',
+        ativo: true,
+      },
+      create: {
+        nome: m.nome,
+        email: m.email,
+        cargo: 'Responsável Técnico',
+        senhaHash: senhaEquipeHash,
+        papel: PapelUsuario.ADMIN,
+        empresa: 'Mobiltec',
+        dominioCorporativo: 'mobiltec.com.br',
+        ativo: true,
+      },
+    })
+    console.log('✅ Usuário equipe Mobiltec criado/atualizado:', m.email)
+  }
+
   // USUÁRIO PARCEIRO PADRÃO
   // ============================================================
   // NOTA: Em produção, cada conta terá hash próprio gerado no momento do cadastro.
