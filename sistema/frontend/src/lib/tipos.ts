@@ -192,6 +192,36 @@ export interface Usuario {
   cargo: string
   papel: PapelUsuario
   empresa?: string | null
+  categoriasPermitidas?: string[]
+}
+
+export interface Parceiro {
+  id: string
+  nome: string
+  email: string
+  cargo: string
+  papel: PapelUsuario
+  empresa: string
+  categoriasPermitidas: string[]
+  ativo: boolean
+  criadoEm: string
+}
+
+export interface PayloadCriarParceiro {
+  empresa: string
+  nome: string
+  email: string
+  senha: string
+  categoriasPermitidas: string[]
+}
+
+export interface PayloadAtualizarParceiro {
+  empresa?: string
+  nome?: string
+  email?: string
+  senha?: string
+  categoriasPermitidas?: string[]
+  ativo?: boolean
 }
 
 export interface Categoria {

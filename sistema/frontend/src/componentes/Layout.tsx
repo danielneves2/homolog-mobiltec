@@ -216,7 +216,7 @@ const NOME_REGISTRO = 'Registro de Testes Internos'
  * categoria no banco a faz aparecer aqui sozinha, sem mexer no código.
  */
 export function Layout() {
-  const { usuario, ehParceiro, sair } = useAuth()
+  const { usuario, ehParceiro, ehAdmin, sair } = useAuth()
   const { data: categorias } = useCategorias()
   const { pathname } = useLocation()
 
@@ -239,9 +239,14 @@ export function Layout() {
     })
   }
 
+  const categoriasFiltradas = (categorias ?? []).filter((c) => {
+    if (!ehParceiro) return true
+    return usuario?.categoriasPermitidas?.includes(c.slug)
+  })
+
   const itens: ItemMenuDados[] = [
     { para: '/', rotulo: 'Painel de Homologação', icone: 'home', fim: true },
-    ...(categorias ?? []).map((c) => ({
+    ...categoriasFiltradas.map((c) => ({
       para: `/matriz/${c.slug}`,
       rotulo: c.nome,
       icone: iconeDaCategoria(c.icone),
@@ -262,6 +267,11 @@ export function Layout() {
     { para: '/registro/tipos', rotulo: 'Editar / remover dispositivo', icone: 'registro', fim: false },
   ]
 
+  const ambiente = { para: '/ambiente', rotulo: 'Ambiente', icone: 'ambiente' as NomeIcone }
+  const opcoesAmbiente: ItemMenuDados[] = [
+    { para: '/ambiente/parceiros', rotulo: 'Registrar parceiro', icone: 'ambiente', fim: true },
+  ]
+
   // 224px: o item mais largo é "Painel de Homologação" (~150px) mais ícone e
   // recuo. Em 280 sobrava uma faixa vazia à direita de todos os itens.
   const largura = aberto ? 224 : 64
@@ -273,7 +283,7 @@ export function Layout() {
    * `/registro`, e a trilha tem de nomear a tela aberta, não o grupo.
    */
   const secao =
-    [...opcoesRegistro, ...itens].find((i) =>
+    [...opcoesRegistro, ...opcoesAmbiente, ...itens].find((i) =>
       i.fim ? pathname === i.para : pathname.startsWith(i.para),
     ) ?? itens[0]
 
@@ -323,9 +333,14 @@ export function Layout() {
 
             {/* O traço marca a mudança de natureza: acima, os tipos que já
                 existem; abaixo, quem cria e mantém a lista deles. */}
-            <div className="!mt-2 pt-2" style={{ borderTop: '1px solid var(--color-border)' }}>
-              <GrupoMenu item={registro} filhos={opcoesRegistro} aberto={aberto} />
-            </div>
+            {!ehParceiro && (
+              <div className="!mt-2 pt-2 space-y-1" style={{ borderTop: '1px solid var(--color-border)' }}>
+                <GrupoMenu item={registro} filhos={opcoesRegistro} aberto={aberto} />
+                {ehAdmin && (
+                  <GrupoMenu item={ambiente} filhos={opcoesAmbiente} aberto={aberto} />
+                )}
+              </div>
+            )}
           </nav>
 
           <div className="border-t p-2 shrink-0">

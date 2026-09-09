@@ -26,8 +26,39 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
     })
     if (!categoria) return reply.status(404).send({ erro: 'Categoria não encontrada' })
 
+    const ehParceiro = request.user.papel === 'PARCEIRO'
+    let usuarioParceiro: { empresa: string | null; categoriasPermitidas: string[] } | null = null
+
+    if (ehParceiro) {
+      usuarioParceiro = await fastify.prisma.usuario.findUnique({
+        where: { id: request.user.id },
+        select: { empresa: true, categoriasPermitidas: true },
+      })
+
+      if (!usuarioParceiro?.categoriasPermitidas.includes(categoriaSlug)) {
+        return reply.status(403).send({ erro: 'Acesso não permitido a esta categoria de dispositivo' })
+      }
+    }
+
+    const whereHomologacao: any = {
+      dispositivo: { categoriaId: categoria.id, ativo: true },
+    }
+
+    if (ehParceiro) {
+      const empresa = usuarioParceiro?.empresa
+      if (empresa) {
+        whereHomologacao.OR = [
+          { dispositivo: { empresa } },
+          { responsavel: { empresa } },
+          { responsavelId: request.user.id },
+        ]
+      } else {
+        whereHomologacao.responsavelId = request.user.id
+      }
+    }
+
     const homologacoes = await fastify.prisma.homologacao.findMany({
-      where: { dispositivo: { categoriaId: categoria.id, ativo: true } },
+      where: whereHomologacao,
       include: {
         dispositivo: true,
         bateria: { select: { id: true, nome: true } },
@@ -157,6 +188,22 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
     if (!bateria) return reply.status(404).send({ erro: 'Bateria não encontrada' })
     if (!bateria.ativo) return reply.status(400).send({ erro: 'Bateria inativa' })
 
+    let empresaDispositivo: string | null = null
+    if (request.user.papel === 'PARCEIRO') {
+      const u = await fastify.prisma.usuario.findUnique({
+        where: { id: request.user.id },
+        select: { empresa: true, categoriasPermitidas: true },
+      })
+      const cat = await fastify.prisma.categoria.findUnique({
+        where: { id: categoriaId },
+        select: { slug: true },
+      })
+      if (!cat || !u?.categoriasPermitidas.includes(cat.slug)) {
+        return reply.status(403).send({ erro: 'Acesso não permitido a esta categoria de dispositivo' })
+      }
+      empresaDispositivo = u.empresa
+    }
+
     // Dispositivo e homologação nascem juntos: uma coluna da planilha sem
     // homologação não significa nada, e um dispositivo órfão sujaria a lista.
     try {
@@ -167,6 +214,7 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
           modelo,
           nomeComercial,
           linkFabricante,
+          empresa: empresaDispositivo,
           homologacoes: {
             create: {
               ...dadosHomologacao,

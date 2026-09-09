@@ -4,7 +4,7 @@
  * GET  /auth/me     → retorna usuário logado
  */
 import { FastifyPluginAsync } from 'fastify'
-import bcrypt from 'bcryptjs'
+import bcrypt from 'bcrypt'
 import { z } from 'zod'
 import { ehDominioOficial } from '../lib/dominios.js'
 
@@ -68,6 +68,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         cargo: usuario.cargo,
         papel: usuario.papel,
         empresa: usuario.empresa,
+        categoriasPermitidas: usuario.categoriasPermitidas,
       },
     }
   })
@@ -78,7 +79,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request) => {
     const usuario = await fastify.prisma.usuario.findUnique({
       where: { id: request.user.id },
-      select: { id: true, nome: true, email: true, cargo: true, papel: true, empresa: true },
+      select: { id: true, nome: true, email: true, cargo: true, papel: true, empresa: true, categoriasPermitidas: true },
     })
     return usuario
   })

@@ -23,6 +23,7 @@ import matrizRoutes from './routes/matriz.js'
 import tiposDispositivoRoutes from './routes/tipos-dispositivo.js'
 import certificadoRoutes from './routes/certificados.js'
 import vitrineRoutes from './routes/vitrine.js'
+import parceirosRoutes from './routes/parceiros.js'
 
 export async function criarApp(): Promise<FastifyInstance> {
   const fastify = Fastify({
@@ -68,6 +69,7 @@ export async function criarApp(): Promise<FastifyInstance> {
   await fastify.register(tiposDispositivoRoutes)
   await fastify.register(certificadoRoutes)
   await fastify.register(vitrineRoutes)
+  await fastify.register(parceirosRoutes)
 
   // Health check
   fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))

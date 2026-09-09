@@ -563,6 +563,15 @@ export function Matriz() {
                   Cadastre o primeiro modelo de {data.categoria.nome} para começar a preencher a
                   matriz.
                 </p>
+                <button
+                  type="button"
+                  onClick={() => setNovoModelo(true)}
+                  className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm transition-all hover:opacity-90 active:scale-95"
+                  style={{ background: 'var(--color-primary)' }}
+                >
+                  <span>+</span>
+                  <span>Cadastrar modelo</span>
+                </button>
               </>
             ) : (
               <>
