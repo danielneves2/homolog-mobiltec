@@ -51,7 +51,8 @@ export function Home() {
     if (barraBuscaRef.current && containerLinhaRef.current) {
       const containerLeft = containerLinhaRef.current.getBoundingClientRect().left
       const buscaRight = barraBuscaRef.current.getBoundingClientRect().right
-      const delta = buscaRight - containerLeft
+      // Folga extra para que o dispositivo (ex: Totem 1) apareça por completo antes da seta
+      const delta = buscaRight - containerLeft + 85
       if (delta > 200) {
         setLarguraLimite(Math.round(delta))
       }
@@ -161,7 +162,7 @@ export function Home() {
           ref={containerLinhaRef}
           className="mt-5 flex items-center gap-3 border-b border-[var(--color-border)]"
           style={{
-            maxWidth: larguraLimite ? `${larguraLimite}px` : '42.5rem',
+            maxWidth: larguraLimite ? `${larguraLimite}px` : '48.5rem',
             width: '100%',
           }}
         >
@@ -363,7 +364,7 @@ function BotaoCategoria({
     <button
       type="button"
       onClick={aoClicar}
-      className={`relative pb-2.5 pt-1 px-1 text-[13px] transition-colors whitespace-nowrap select-none cursor-pointer flex items-center gap-1.5 outline-none focus:outline-none focus-visible:outline-none ${
+      className={`relative shrink-0 pb-2.5 pt-1 px-1 text-[13px] transition-colors whitespace-nowrap select-none cursor-pointer flex items-center gap-1.5 outline-none focus:outline-none focus-visible:outline-none ${
         ativo
           ? 'font-semibold text-[var(--color-primary)]'
           : 'font-medium text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]'
