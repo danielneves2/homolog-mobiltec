@@ -32,7 +32,7 @@ export function CardDispositivo({ dispositivo: d }: { dispositivo: DispositivoVi
           divisória, e nomes longos ("P2_LITE_SE-B") passavam por baixo dela.
           Com esse recuo o título termina acima do topo da foto, e aí pode
           usar a largura toda até o selo sem sumir atrás de nada. */}
-      <div className="flex items-start justify-between gap-3 px-4 pt-2 pb-11">
+      <div className="flex items-start justify-between gap-2 pl-4 pr-3 pt-2 pb-11">
         <div className="min-w-0">
           <p
             className="truncate text-[11px] font-medium uppercase"

@@ -71,6 +71,7 @@ function GrupoMenu({
   const [flutuante, setFlutuante] = useState<{ x: number; y: number } | null>(null)
   const refBotao = useRef<HTMLButtonElement>(null)
   const refPainel = useRef<HTMLDivElement>(null)
+  const refTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Navegar para dentro do grupo o abre e o fixa aberto
   useEffect(() => {
@@ -86,6 +87,30 @@ function GrupoMenu({
       setFlutuante(null)
     }
   }, [aberto])
+
+  // Limpeza de timeout ao desmontar
+  useEffect(() => {
+    return () => {
+      if (refTimeout.current) clearTimeout(refTimeout.current)
+    }
+  }, [])
+
+  function aoEntrarMouse() {
+    if (!aberto) return
+    if (refTimeout.current) {
+      clearTimeout(refTimeout.current)
+      refTimeout.current = null
+    }
+    setEmHover(true)
+  }
+
+  function aoSairMouse() {
+    if (!aberto) return
+    if (refTimeout.current) clearTimeout(refTimeout.current)
+    refTimeout.current = setTimeout(() => {
+      setEmHover(false)
+    }, 130)
+  }
 
   useEffect(() => {
     if (!flutuante) return
@@ -130,12 +155,8 @@ function GrupoMenu({
   return (
     <div
       className="relative"
-      onMouseEnter={() => {
-        if (aberto) setEmHover(true)
-      }}
-      onMouseLeave={() => {
-        if (aberto) setEmHover(false)
-      }}
+      onMouseEnter={aoEntrarMouse}
+      onMouseLeave={aoSairMouse}
     >
       <button
         ref={refBotao}
@@ -196,38 +217,45 @@ function GrupoMenu({
         )}
       </button>
 
-      {aberto && abertoVisivel && (
+      {aberto && (
         <div
-          className="menu-subitens-dropdown mt-1 ml-5 space-y-0.5 border-l pl-2"
-          style={{ borderColor: 'var(--color-border)' }}
+          className="menu-accordion-wrapper"
+          data-aberto={abertoVisivel ? 'true' : 'false'}
         >
-          {filhos.map((f) => {
-            const isCertificado = f.para.includes('validar-certificados')
-            return (
-              <NavLink
-                key={f.para}
-                to={f.para}
-                end={f.fim}
-                className={({ isActive }) =>
-                  `btn-menu-subitem flex items-center justify-between truncate rounded-md px-2.5 py-1.5 text-[13px] font-medium leading-tight outline-none focus:outline-none focus-visible:outline-none ${
-                    isActive
-                      ? 'btn-subitem-ativo bg-[var(--color-muted)] text-[var(--color-primary)] font-semibold'
-                      : 'text-[var(--color-muted-foreground)]'
-                  }`
-                }
-              >
-                <span className="truncate">{f.rotulo}</span>
-                {isCertificado && totalPendentes > 0 && (
-                  <span
-                    className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white shrink-0"
-                    style={{ background: 'var(--gradient-brand-purple)' }}
+          <div className="menu-accordion-content">
+            <div
+              className="mt-1 ml-5 space-y-0.5 border-l pl-2"
+              style={{ borderColor: 'var(--color-border)' }}
+            >
+              {filhos.map((f) => {
+                const isCertificado = f.para.includes('validar-certificados')
+                return (
+                  <NavLink
+                    key={f.para}
+                    to={f.para}
+                    end={f.fim}
+                    className={({ isActive }) =>
+                      `btn-menu-subitem flex items-center justify-between truncate rounded-md px-2.5 py-1.5 text-[13px] font-medium leading-tight outline-none focus:outline-none focus-visible:outline-none ${
+                        isActive
+                          ? 'btn-subitem-ativo bg-[var(--color-muted)] text-[var(--color-primary)] font-semibold'
+                          : 'text-[var(--color-muted-foreground)]'
+                      }`
+                    }
                   >
-                    {totalPendentes}
-                  </span>
-                )}
-              </NavLink>
-            )
-          })}
+                    <span className="truncate">{f.rotulo}</span>
+                    {isCertificado && totalPendentes > 0 && (
+                      <span
+                        className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white shrink-0"
+                        style={{ background: 'var(--gradient-brand-purple)' }}
+                      >
+                        {totalPendentes}
+                      </span>
+                    )}
+                  </NavLink>
+                )
+              })}
+            </div>
+          </div>
         </div>
       )}
 
@@ -340,9 +368,9 @@ export function Layout() {
   /**
    * Fica sempre abaixo dos tipos de dispositivo, separado por um traço: é de
    * onde saem os itens acima dele, não mais um deles. Não é tela: abre as duas
-   * opções que operam a lista.
+   * opções que configuram a lista e os tipos de dispositivo.
    */
-  const registro = { para: '/registro', rotulo: 'Registro de dispositivo', icone: 'registro' as NomeIcone }
+  const registro = { para: '/registro', rotulo: 'Configurar dispositivo', icone: 'registro' as NomeIcone }
   const opcoesRegistro: ItemMenuDados[] = [
     { para: '/registro', rotulo: 'Registrar dispositivo', icone: 'registro', fim: true },
     // `fim: false`: editar um tipo é `/registro/tipos/:id`, e a opção continua
@@ -363,13 +391,19 @@ export function Layout() {
   /**
    * Seção atual, para a trilha da barra superior.
    *
-   * As opções do grupo vêm primeiro: `/registro/tipos` também casa com
-   * `/registro`, e a trilha tem de nomear a tela aberta, não o grupo.
+   * Em menus que possuem mais de uma opção (como Configurar dispositivo e Parceiros),
+   * a barra do topo mantém sempre o nome do grupo principal, enquanto a página
+   * exibe no título principal o nome da tela/submenu.
    */
-  const secao =
-    [...opcoesRegistro, ...opcoesParceiros, ...itens].find((i) =>
-      i.fim ? pathname === i.para : pathname.startsWith(i.para),
-    ) ?? itens[0]
+  const secao = (() => {
+    if (opcoesRegistro.some((i) => (i.fim ? pathname === i.para : pathname.startsWith(i.para)))) {
+      return registro
+    }
+    if (opcoesParceiros.some((i) => (i.fim ? pathname === i.para : pathname.startsWith(i.para)))) {
+      return parceiros
+    }
+    return itens.find((i) => (i.fim ? pathname === i.para : pathname.startsWith(i.para))) ?? itens[0]
+  })()
 
   /** Só as telas de planilha registram testes */
   const ehPlanilha = pathname.startsWith('/matriz')

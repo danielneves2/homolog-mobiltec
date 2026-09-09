@@ -11,7 +11,6 @@
  */
 export function BadgeHomologado({
   homologado = true,
-  comIcone = true,
   className = '',
 }: {
   homologado?: boolean
@@ -21,26 +20,11 @@ export function BadgeHomologado({
   if (!homologado) {
     return (
       <span
-        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold tracking-tight whitespace-nowrap select-none shrink-0 ${className}`}
+        className={`inline-flex items-center text-[11px] font-semibold tracking-tight whitespace-nowrap select-none shrink-0 ${className}`}
         style={{
-          background: '#FEECEB',
           color: '#B91C1C',
         }}
       >
-        {comIcone && (
-          <svg
-            viewBox="0 0 12 12"
-            className="h-2.5 w-2.5 shrink-0"
-            fill="none"
-            stroke="#B91C1C"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M2.5 2.5l7 7M9.5 2.5l-7 7" />
-          </svg>
-        )}
         Não homologado
       </span>
     )
@@ -48,26 +32,11 @@ export function BadgeHomologado({
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-tight whitespace-nowrap select-none shrink-0 ${className}`}
+      className={`inline-flex items-center text-[11px] font-semibold tracking-tight whitespace-nowrap select-none shrink-0 ${className}`}
       style={{
-        background: '#E8F5EE',
         color: '#16805A',
       }}
     >
-      {comIcone && (
-        <svg
-          viewBox="0 0 12 12"
-          className="h-3 w-3 shrink-0"
-          fill="none"
-          stroke="#16805A"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <polyline points="2.5 6.2 4.6 8.5 9.5 3.5" />
-        </svg>
-      )}
       Homologado
     </span>
   )

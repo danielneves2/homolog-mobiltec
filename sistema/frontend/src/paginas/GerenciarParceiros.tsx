@@ -118,17 +118,12 @@ export function GerenciarParceiros() {
   return (
     <div className="h-full flex flex-col overflow-y-auto p-6 space-y-6" style={{ background: 'var(--color-background)' }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-5" style={{ borderColor: 'var(--color-border)' }}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4" style={{ borderColor: 'var(--color-border)' }}>
         <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 rounded-lg text-white" style={{ background: 'var(--color-primary)' }}>
-              <Icone nome="parceiros" className="h-5 w-5" />
-            </span>
-            <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--color-foreground)' }}>
-              Parceiros
-            </h1>
-          </div>
-          <p className="text-xs mt-1" style={{ color: 'var(--color-muted-foreground)' }}>
+          <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--color-foreground)' }}>
+            Registrar parceiro
+          </h1>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted-foreground)' }}>
             Gerencie os acessos de parceiros externos e defina quais tipos de dispositivos cada um pode homologar.
           </p>
         </div>
@@ -180,112 +175,102 @@ export function GerenciarParceiros() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
           {parceiros.map((p) => (
             <div
               key={p.id}
-              className="rounded-xl border p-5 flex flex-col justify-between transition-all hover:shadow-md"
+              className="rounded-xl border p-4 flex flex-col justify-between transition-all hover:shadow-xs"
               style={{
                 borderColor: 'var(--color-border)',
                 background: 'var(--color-card)',
-                opacity: p.ativo ? 1 : 0.6,
+                opacity: p.ativo ? 1 : 0.65,
               }}
             >
               <div>
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className="h-10 w-10 shrink-0 rounded-lg flex items-center justify-center font-bold text-sm text-white"
-                      style={{ background: 'var(--gradient-brand-purple)' }}
-                    >
-                      {p.empresa.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
+                <div className="flex items-start justify-between gap-2.5 mb-1.5">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
                       <h3 className="font-semibold text-sm truncate" style={{ color: 'var(--color-foreground)' }}>
                         {p.empresa}
                       </h3>
-                      <p className="text-xs truncate" style={{ color: 'var(--color-muted-foreground)' }}>
-                        {p.nome}
-                      </p>
+                      <span
+                        className="text-xs font-semibold select-none"
+                        style={{
+                          color: p.ativo ? '#16805A' : 'var(--color-muted-foreground)',
+                        }}
+                      >
+                        {p.ativo ? 'Ativo' : 'Inativo'}
+                      </span>
                     </div>
+                    <p className="text-xs truncate mt-0.5" style={{ color: 'var(--color-muted-foreground)' }}>
+                      {p.nome}
+                    </p>
                   </div>
 
-                  <span
-                    className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                    style={{
-                      background: p.ativo ? 'var(--color-status-ok)' : 'var(--color-muted)',
-                      color: p.ativo ? '#fff' : 'var(--color-muted-foreground)',
-                    }}
-                  >
-                    {p.ativo ? 'Ativo' : 'Inativo'}
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => abrirModalEditar(p)}
+                      className="px-2.5 py-1 text-xs font-medium rounded border transition-colors hover:bg-black/5"
+                      style={{ borderColor: 'var(--color-border)', color: 'var(--color-foreground)' }}
+                    >
+                      Editar acessos
+                    </button>
+                    {p.ativo ? (
+                      <button
+                        type="button"
+                        onClick={() => inativarParceiro.mutate(p.id)}
+                        className="px-2 py-1 text-xs font-medium rounded border transition-colors hover:bg-red-50 text-red-600 border-red-200"
+                      >
+                        Inativar
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => atualizarParceiro.mutate({ id: p.id, ativo: true })}
+                        className="px-2 py-1 text-xs font-medium rounded border transition-colors hover:bg-green-50 text-green-700 border-green-200"
+                      >
+                        Reativar
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                <div className="mt-3 pt-3 border-t text-xs space-y-2" style={{ borderColor: 'var(--color-border)' }}>
+                <div className="mt-2 pt-2 border-t text-xs space-y-1.5" style={{ borderColor: 'var(--color-border)' }}>
                   <div className="flex items-center gap-2 truncate text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
                     <Icone nome="email" className="h-3.5 w-3.5 shrink-0" />
                     <span className="truncate">{p.email}</span>
                   </div>
 
-                  <div className="mt-2">
-                    <span className="text-[11px] font-medium block mb-1.5" style={{ color: 'var(--color-foreground)' }}>
-                      Homologações autorizadas:
+                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                    <span className="text-[11px] font-medium" style={{ color: 'var(--color-muted-foreground)' }}>
+                      Homologações:
                     </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {p.categoriasPermitidas && p.categoriasPermitidas.length > 0 ? (
-                        p.categoriasPermitidas.map((slug) => {
-                          const cat = categorias.find((c) => c.slug === slug)
-                          return (
-                            <span
-                              key={slug}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium"
-                              style={{
-                                background: 'var(--color-muted)',
-                                color: 'var(--color-foreground)',
-                                border: '1px solid var(--color-border)',
-                              }}
-                            >
-                              <Icone nome={iconeDaCategoria(cat?.icone ?? 'smartphone')} className="h-3 w-3" />
-                              {cat?.nome ?? slug}
-                            </span>
-                          )
-                        })
-                      ) : (
-                        <span className="text-[11px] italic" style={{ color: 'var(--color-muted-foreground)' }}>
-                          Nenhuma categoria liberada
-                        </span>
-                      )}
-                    </div>
+                    {p.categoriasPermitidas && p.categoriasPermitidas.length > 0 ? (
+                      p.categoriasPermitidas.map((slug) => {
+                        const cat = categorias.find((c) => c.slug === slug)
+                        return (
+                          <span
+                            key={slug}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium"
+                            style={{
+                              background: 'var(--color-muted)',
+                              color: 'var(--color-foreground)',
+                              border: '1px solid var(--color-border)',
+                            }}
+                          >
+                            <Icone nome={iconeDaCategoria(cat?.icone ?? 'smartphone')} className="h-3 w-3" />
+                            {cat?.nome ?? slug}
+                          </span>
+                        )
+                      })
+                    ) : (
+                      <span className="text-[11px] italic" style={{ color: 'var(--color-muted-foreground)' }}>
+                        Nenhuma liberada
+                      </span>
+                    )}
                   </div>
                 </div>
-              </div>
-
-              <div className="mt-4 pt-3 border-t flex items-center justify-end gap-2" style={{ borderColor: 'var(--color-border)' }}>
-                <button
-                  type="button"
-                  onClick={() => abrirModalEditar(p)}
-                  className="px-2.5 py-1 text-xs font-medium rounded border transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-                  style={{ borderColor: 'var(--color-border)', color: 'var(--color-foreground)' }}
-                >
-                  Editar acessos
-                </button>
-                {p.ativo ? (
-                  <button
-                    type="button"
-                    onClick={() => inativarParceiro.mutate(p.id)}
-                    className="px-2.5 py-1 text-xs font-medium rounded border transition-colors hover:bg-red-50 text-red-600 border-red-200"
-                  >
-                    Inativar
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => atualizarParceiro.mutate({ id: p.id, ativo: true })}
-                    className="px-2.5 py-1 text-xs font-medium rounded border transition-colors hover:bg-green-50 text-green-700 border-green-200"
-                  >
-                    Reativar
-                  </button>
-                )}
               </div>
             </div>
           ))}
