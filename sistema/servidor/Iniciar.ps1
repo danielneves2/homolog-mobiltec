@@ -1,4 +1,4 @@
-﻿# =====================================================================
+# =====================================================================
 #  Homologação Mobiltec — inicia o sistema inteiro numa janela só.
 #
 #  Sobe PostgreSQL, backend e frontend, publica na rede local e desliga
@@ -212,17 +212,32 @@ try {
   # 1. Banco de dados
   # -------------------------------------------------------------------
   Passo 'Banco de dados ..............'
-  $saidaPg = Join-Path $LOGS 'postgres.log'
-  # `pg_ctl status` é a pergunta certa: a porta pode ainda não estar
-  # escutando num servidor que acabou de ser mandado subir, e aí duas
-  # partidas se cruzam.
-  if ((Executar $PGCTL @('-D', $PGDATA, 'status') 'pg-status') -eq 0) {
-    Ok 'já estava no ar'
+  $envBackend = Join-Path $BACKEND '.env'
+  $usaRemoto = $false
+  $rotuloRemoto = ''
+  if (Test-Path $envBackend) {
+    $conteudoEnv = Get-Content $envBackend -Raw
+    if ($conteudoEnv -match 'DATABASE_URL="?postgresql://[^@]+@([^:/]+)' -and $matches[1] -notmatch 'localhost|127\.0\.0\.1') {
+      $usaRemoto = $true
+      $rotuloRemoto = if ($matches[1] -like '*supabase*') { 'Supabase (nuvem)' } else { "remoto ($($matches[1]))" }
+    }
+  }
+
+  if ($usaRemoto) {
+    Ok $rotuloRemoto
   } else {
-    [void](Executar $PGCTL @('-D', $PGDATA, '-l', $saidaPg, '-w', 'start') 'pg-start')
-    if (EsperarPorta $PORTA_BD 40) { Ok } else {
-      Falha 'não subiu'
-      throw "PostgreSQL não respondeu na porta $PORTA_BD. Veja $saidaPg"
+    $saidaPg = Join-Path $LOGS 'postgres.log'
+    # `pg_ctl status` é a pergunta certa: a porta pode ainda não estar
+    # escutando num servidor que acabou de ser mandado subir, e aí duas
+    # partidas se cruzam.
+    if ((Executar $PGCTL @('-D', $PGDATA, 'status') 'pg-status') -eq 0) {
+      Ok 'já estava no ar'
+    } else {
+      [void](Executar $PGCTL @('-D', $PGDATA, '-l', $saidaPg, '-w', 'start') 'pg-start')
+      if (EsperarPorta $PORTA_BD 40) { Ok } else {
+        Falha 'não subiu'
+        throw "PostgreSQL não respondeu na porta $PORTA_BD. Veja $saidaPg"
+      }
     }
   }
 
