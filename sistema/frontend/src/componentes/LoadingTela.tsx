@@ -68,25 +68,31 @@ export function LoadingTela({
           />
         </svg>
 
-        {/* As 2 setinhas >> pulsando em perfeita sincronia com o texto */}
+        {/* As 2 setinhas >> no laranja sutil e baixa opacidade, com centralização óptica perfeita */}
         <svg
           className={`${dim.setas} shrink-0`}
           style={{
             animation: 'carregandoPulsoSuave 2.4s ease-in-out infinite',
           }}
-          viewBox="96 98 126 116"
+          viewBox="95 80.13 140 140"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           aria-hidden="true"
         >
+          <defs>
+            <linearGradient id="setasLaranjaSutil" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#FB923C" />
+              <stop offset="100%" stopColor="#F97316" />
+            </linearGradient>
+          </defs>
           <path
-            fill="var(--color-brand-purple, #6e226b)"
-            fillOpacity="0.5"
+            fill="url(#setasLaranjaSutil)"
+            fillOpacity="0.55"
             d="M107.93,210.81c-2.25,0-4.52-.86-6.25-2.59-3.48-3.45-3.48-9.06,0-12.52l44.99-45-46-46c-3.45-3.45-3.45-9.07,0-12.52,3.45-3.46,9.07-3.46,12.52,0l52.25,52.26c3.46,3.45,3.46,9.07,0,12.52l-51.24,51.25c-1.73,1.72-4.01,2.59-6.28,2.59h.02Z"
           />
           <path
-            fill="var(--color-brand-purple, #6e226b)"
-            fillOpacity="0.5"
+            fill="url(#setasLaranjaSutil)"
+            fillOpacity="0.55"
             d="M216.02,156.84l-51.24,51.25c-1.73,1.72-4,2.59-6.27,2.59s-4.54-.86-6.25-2.59c-3.48-3.45-3.48-9.06,0-12.52l44.99-45-46-46c-3.46-3.45-3.46-9.07,0-12.52,3.45-3.46,9.04-3.46,12.52,0l52.25,52.27c3.48,3.45,3.48,9.07,0,12.52Z"
           />
         </svg>
