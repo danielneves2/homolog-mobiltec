@@ -173,15 +173,15 @@ export function Home() {
           </span>
           <div className="h-4 w-px shrink-0 mb-2.5" style={{ background: 'var(--color-border)' }} />
 
-          <div className="relative flex-1 min-w-0 flex items-center overflow-hidden">
+          <div className="flex-1 min-w-0 flex items-center gap-2">
             {podeScrollEsq && (
               <button
                 type="button"
                 onClick={() => rolarCategorias('esq')}
                 aria-label="Rolar dispositivos para esquerda"
-                className="absolute left-0 top-1/2 -translate-y-1/2 z-20 h-6 w-6 rounded-full flex items-center justify-center border shadow-xs bg-white text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-all cursor-pointer select-none"
+                className="shrink-0 p-1 pb-2.5 text-[var(--color-primary)] hover:opacity-70 transition-opacity cursor-pointer select-none outline-none"
               >
-                <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <svg viewBox="0 0 16 16" className="w-4 h-4" fill="none" stroke="var(--color-primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="10 13 5 8 10 3" />
                 </svg>
               </button>
@@ -190,7 +190,7 @@ export function Home() {
             <div
               ref={scrollCategoriasRef}
               onScroll={verificarScroll}
-              className="flex items-center gap-5 overflow-x-auto scrollbar-none scroll-smooth w-full px-1"
+              className="flex items-center gap-5 overflow-x-auto scrollbar-none scroll-smooth flex-1 min-w-0"
             >
               <BotaoCategoria
                 ativo={categoria === ''}
@@ -214,9 +214,9 @@ export function Home() {
                 type="button"
                 onClick={() => rolarCategorias('dir')}
                 aria-label="Rolar dispositivos para direita"
-                className="absolute right-0 top-1/2 -translate-y-1/2 z-20 h-6 w-6 rounded-full flex items-center justify-center border shadow-xs bg-white text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-all cursor-pointer select-none"
+                className="shrink-0 p-1 pb-2.5 text-[var(--color-primary)] hover:opacity-70 transition-opacity cursor-pointer select-none outline-none"
               >
-                <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <svg viewBox="0 0 16 16" className="w-4 h-4" fill="none" stroke="var(--color-primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="6 3 11 8 6 13" />
                 </svg>
               </button>
