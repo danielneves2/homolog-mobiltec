@@ -158,14 +158,14 @@ export function ValidarCertificados() {
 
           <Link
             to="/ambiente/parceiros"
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg border text-xs font-medium transition-colors hover:opacity-80 self-start sm:self-auto"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg border text-xs font-semibold transition-all hover:opacity-80 active:scale-95 shadow-xs self-start sm:self-auto"
             style={{
               borderColor: 'var(--color-border)',
               background: 'var(--color-muted)',
-              color: 'var(--color-foreground)',
+              color: 'var(--color-primary)',
             }}
           >
-            <Icone nome="ambiente" className="h-3.5 w-3.5" />
+            <Icone nome="parceiros" className="h-3.5 w-3.5" />
             Gerenciar parceiros
           </Link>
         </div>

@@ -76,10 +76,15 @@ export function GerenciarTipos() {
           </div>
           <Link
             to="/registro"
-            className="rounded-md px-3 py-2 text-sm font-semibold text-white"
-            style={{ background: 'var(--gradient-brand-purple)' }}
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg border text-xs font-semibold transition-all hover:opacity-80 active:scale-95 shadow-xs"
+            style={{
+              background: 'var(--color-muted)',
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-primary)',
+            }}
           >
-            + Registrar dispositivo
+            <span className="text-sm font-bold leading-none">+</span>
+            <span>Registrar dispositivo</span>
           </Link>
         </header>
 

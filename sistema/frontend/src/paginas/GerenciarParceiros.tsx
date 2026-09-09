@@ -122,10 +122,10 @@ export function GerenciarParceiros() {
         <div>
           <div className="flex items-center gap-2">
             <span className="p-2 rounded-lg text-white" style={{ background: 'var(--color-primary)' }}>
-              <Icone nome="ambiente" className="h-5 w-5" />
+              <Icone nome="parceiros" className="h-5 w-5" />
             </span>
             <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--color-foreground)' }}>
-              Ambiente · Parceiros
+              Parceiros
             </h1>
           </div>
           <p className="text-xs mt-1" style={{ color: 'var(--color-muted-foreground)' }}>
@@ -136,10 +136,14 @@ export function GerenciarParceiros() {
         <button
           type="button"
           onClick={abrirModalCriar}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-sm transition-all hover:opacity-90 active:scale-95"
-          style={{ background: 'var(--gradient-brand-purple)' }}
+          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg border text-xs font-semibold transition-all hover:opacity-80 active:scale-95 shadow-xs"
+          style={{
+            background: 'var(--color-muted)',
+            borderColor: 'var(--color-border)',
+            color: 'var(--color-primary)',
+          }}
         >
-          <span className="text-base leading-none">+</span>
+          <span className="text-sm font-bold leading-none">+</span>
           <span>Registrar parceiro</span>
         </button>
       </div>
@@ -152,8 +156,8 @@ export function GerenciarParceiros() {
           className="rounded-xl border border-dashed p-12 text-center flex flex-col items-center justify-center gap-3"
           style={{ borderColor: 'var(--color-border)', background: 'var(--color-card)' }}
         >
-          <div className="h-12 w-12 rounded-full flex items-center justify-center" style={{ background: 'var(--color-muted)', color: 'var(--color-muted-foreground)' }}>
-            <Icone nome="ambiente" className="h-6 w-6" />
+          <div className="h-12 w-12 rounded-full flex items-center justify-center" style={{ background: 'var(--color-muted)', color: 'var(--color-primary)' }}>
+            <Icone nome="parceiros" className="h-6 w-6" />
           </div>
           <h2 className="text-base font-semibold" style={{ color: 'var(--color-foreground)' }}>
             Nenhum parceiro registrado ainda
@@ -164,10 +168,15 @@ export function GerenciarParceiros() {
           <button
             type="button"
             onClick={abrirModalCriar}
-            className="mt-2 px-4 py-2 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"
-            style={{ background: 'var(--gradient-brand-purple)' }}
+            className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border text-xs font-semibold transition-all hover:opacity-80 shadow-xs"
+            style={{
+              background: 'var(--color-muted)',
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-primary)',
+            }}
           >
-            Registrar primeiro parceiro
+            <span className="text-sm font-bold leading-none">+</span>
+            <span>Registrar primeiro parceiro</span>
           </button>
         </div>
       ) : (
