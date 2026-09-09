@@ -74,7 +74,7 @@ export function LoadingTela({
           style={{
             animation: 'carregandoPulsoSuave 2.4s ease-in-out infinite',
           }}
-          viewBox="95 80.13 140 140"
+          viewBox="96 70.13 160 160"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           aria-hidden="true"
