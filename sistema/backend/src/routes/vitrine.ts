@@ -36,7 +36,7 @@ const vitrineRoutes: FastifyPluginAsync = async (fastify) => {
         where: { id: request.user.id },
         select: { empresa: true },
       })
-      const empresa = usuarioParceiro?.empresa
+      const empresa = usuarioParceiro?.empresa?.trim()
       whereHomologacao = {
         dispositivo: { ativo: true, categoria: { ativo: true } },
         OR: [
@@ -45,11 +45,44 @@ const vitrineRoutes: FastifyPluginAsync = async (fastify) => {
           // Dispositivos em andamento apenas se pertencerem à sua própria empresa ou atribuídos a ele
           ...(empresa
             ? [
-                { status: { in: ['RASCUNHO', 'AGUARDANDO_ANALISE', 'EM_REVISAO', 'REPROVADO'] }, dispositivo: { empresa } },
-                { status: { in: ['RASCUNHO', 'AGUARDANDO_ANALISE', 'EM_REVISAO', 'REPROVADO'] }, responsavel: { empresa } },
+                {
+                  status: { in: ['RASCUNHO', 'AGUARDANDO_ANALISE', 'EM_REVISAO', 'REPROVADO'] },
+                  dispositivo: { empresa: { equals: empresa, mode: 'insensitive' } },
+                },
+                {
+                  status: { in: ['RASCUNHO', 'AGUARDANDO_ANALISE', 'EM_REVISAO', 'REPROVADO'] },
+                  responsavel: { empresa: { equals: empresa, mode: 'insensitive' } },
+                },
               ]
             : []),
           { status: { in: ['RASCUNHO', 'AGUARDANDO_ANALISE', 'EM_REVISAO', 'REPROVADO'] }, responsavelId: request.user.id },
+        ],
+      }
+    } else {
+      // ADMIN: No Painel Geral Mobiltec, modelos homologados/publicados aparecem normalmente.
+      // Dispositivos em andamento (RASCUNHO, AGUARDANDO_ANALISE, EM_REVISAO) pertencentes a parceiros
+      // ficam restritos aos painéis exclusivos de cada parceiro, sem poluir o ambiente Mobiltec.
+      whereHomologacao = {
+        dispositivo: { ativo: true, categoria: { ativo: true } },
+        OR: [
+          { status: { in: ['APROVADO', 'PUBLICADO'] } },
+          {
+            status: { in: ['RASCUNHO', 'AGUARDANDO_ANALISE', 'EM_REVISAO', 'REPROVADO'] },
+            AND: [
+              {
+                OR: [
+                  { dispositivo: { empresa: null } },
+                  { dispositivo: { empresa: { equals: 'Mobiltec', mode: 'insensitive' } } },
+                ],
+              },
+              {
+                OR: [
+                  { responsavel: { empresa: null } },
+                  { responsavel: { empresa: { equals: 'Mobiltec', mode: 'insensitive' } } },
+                ],
+              },
+            ],
+          },
         ],
       }
     }

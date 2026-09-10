@@ -2,10 +2,15 @@ import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { usePainelParceiro } from '@/hooks/useParceiros'
 import { useConfirmarNotificacao } from '@/hooks/useNotificacoes'
+import { useAuth } from '@/contextos/AuthContext'
 import { Icone } from '@/componentes/Icone'
 import { LoadingTela } from '@/componentes/LoadingTela'
 import { BadgeHomologado } from '@/componentes/comum/BadgeHomologado'
 import { FotoDispositivo } from '@/componentes/vitrine/FotoDispositivo'
+import {
+  ModalInformacoesHomologacao,
+  parseObservacoes,
+} from '@/componentes/parceiro/ModalInformacoesHomologacao'
 import { ErroApi } from '@/lib/api'
 import type { DispositivoPainelParceiro, StatusHomologacao } from '@/lib/tipos'
 
@@ -13,10 +18,12 @@ type FiltroStatus = 'todos' | 'em-homologacao' | 'em-validacao' | 'em-revisao' |
 
 export function PainelParceiro() {
   const { id } = useParams<{ id?: string }>()
+  const { ehAdmin } = useAuth()
   const { data, isLoading, isError, error } = usePainelParceiro(id)
 
   const [filtro, setFiltro] = useState<FiltroStatus>('todos')
   const [busca, setBusca] = useState('')
+  const [modalDispositivo, setModalDispositivo] = useState<DispositivoPainelParceiro | null>(null)
 
   const parceiro = data?.parceiro
   const metricas = data?.metricas
@@ -198,12 +205,26 @@ export function PainelParceiro() {
           ) : (
             <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(330px,1fr))]">
               {filtrados.map((disp) => (
-                <CardDispositivoParceiro key={disp.dispositivoId} dispositivo={disp} />
+                <CardDispositivoParceiro
+                  key={disp.dispositivoId}
+                  dispositivo={disp}
+                  ehAdmin={ehAdmin}
+                  aoExibirInformacoes={(d) => setModalDispositivo(d)}
+                />
               ))}
             </div>
           )}
         </section>
       </div>
+
+      {/* Modal Web com Relatório Completo de Testes e Informações para o Administrador */}
+      {modalDispositivo && modalDispositivo.homologacaoId && (
+        <ModalInformacoesHomologacao
+          homologacaoId={modalDispositivo.homologacaoId}
+          dispositivo={modalDispositivo}
+          aoFechar={() => setModalDispositivo(null)}
+        />
+      )}
     </div>
   )
 }
@@ -243,10 +264,31 @@ function BotaoFiltroClean({
   )
 }
 
-function CardDispositivoParceiro({ dispositivo: d }: { dispositivo: DispositivoPainelParceiro }) {
+function CardDispositivoParceiro({
+  dispositivo: d,
+  ehAdmin,
+  aoExibirInformacoes,
+}: {
+  dispositivo: DispositivoPainelParceiro
+  ehAdmin: boolean
+  aoExibirInformacoes: (disp: DispositivoPainelParceiro) => void
+}) {
   const [expandirObs, setExpandirObs] = useState(false)
   const confirmarNotificacao = useConfirmarNotificacao()
   const pctAvaliado = d.resumo.total > 0 ? Math.round((d.resumo.avaliados / d.resumo.total) * 100) : 0
+
+  // Processa as observações com segurança para NUNCA exibir JSON cru
+  const observacoesProcessadas = useMemo(() => {
+    return parseObservacoes(d.observacoes)
+  }, [d.observacoes])
+
+  const textoRevisao = useMemo(() => {
+    if (d.notificacaoRevisao?.mensagem) return d.notificacaoRevisao.mensagem
+    if (observacoesProcessadas.length > 0) {
+      return `${observacoesProcessadas[0].titulo}: ${observacoesProcessadas[0].texto}`
+    }
+    return d.observacoes || 'Ajustes técnicos pendentes solicitados pela Mobiltec.'
+  }, [d.notificacaoRevisao, observacoesProcessadas, d.observacoes])
 
   return (
     <article
@@ -336,11 +378,9 @@ function CardDispositivoParceiro({ dispositivo: d }: { dispositivo: DispositivoP
             </div>
           </div>
 
-          {(d.notificacaoRevisao?.mensagem || d.observacoes) && (
-            <p className="text-blue-950/85 leading-relaxed bg-white/70 p-2 rounded border border-blue-200/50">
-              {d.notificacaoRevisao?.mensagem || d.observacoes}
-            </p>
-          )}
+          <p className="text-blue-950/85 leading-relaxed bg-white/70 p-2 rounded border border-blue-200/50 text-[11px]">
+            {textoRevisao}
+          </p>
 
           <div className="pt-1 flex items-center justify-between gap-2 flex-wrap text-[11px]">
             {d.notificacaoRevisao?.confirmada ? (
@@ -369,49 +409,94 @@ function CardDispositivoParceiro({ dispositivo: d }: { dispositivo: DispositivoP
               </button>
             ) : null}
 
-            <Link
-              to={`/matriz/${d.categoriaSlug}`}
-              className="text-blue-700 hover:underline font-medium ml-auto inline-flex items-center gap-1"
-            >
-              <span>Ajustar itens na bateria</span>
-              <span>→</span>
-            </Link>
+            {!ehAdmin && (
+              <Link
+                to={`/matriz/${d.categoriaSlug}`}
+                className="text-blue-700 hover:underline font-medium ml-auto inline-flex items-center gap-1"
+              >
+                <span>Ajustar itens na bateria</span>
+                <span>→</span>
+              </Link>
+            )}
           </div>
         </div>
       )}
 
-      {/* Observações do Processo (se existirem e não estiver em revisão) */}
-      {d.observacoes && d.status !== 'EM_REVISAO' && (
+      {/* Observações do Processo (Formato Clean: 1 linha de resumo no card, lista detalhada ao expandir) */}
+      {observacoesProcessadas.length > 0 && d.status !== 'EM_REVISAO' && (
         <div className="px-4 py-2 bg-slate-50/80 border-t text-xs">
           <button
             type="button"
             onClick={() => setExpandirObs((v) => !v)}
             className="w-full flex items-center justify-between font-medium text-slate-700 hover:text-slate-900 cursor-pointer"
           >
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1.5 truncate">
               <span>💬</span>
-              <span>Observações do processo</span>
+              <span className="font-semibold text-slate-800">Observações:</span>
+              <span className="text-slate-600 truncate">
+                {observacoesProcessadas.length === 1
+                  ? observacoesProcessadas[0].titulo || '1 item registrado'
+                  : `${observacoesProcessadas.length} registros`}
+              </span>
             </span>
-            <span className="text-[10px] opacity-60">{expandirObs ? 'Recolher ▲' : 'Expandir ▼'}</span>
+            <span className="text-[10px] opacity-60 shrink-0 ml-2">
+              {expandirObs ? 'Recolher ▲' : 'Expandir ▼'}
+            </span>
           </button>
+
           {expandirObs && (
-            <p className="mt-2 text-slate-600 leading-relaxed whitespace-pre-wrap text-[11px] pl-5 border-l-2 border-slate-300">
-              {d.observacoes}
-            </p>
+            <div className="mt-2.5 space-y-2">
+              {observacoesProcessadas.map((obs) => (
+                <div
+                  key={obs.id}
+                  className="p-2.5 rounded-lg border bg-white shadow-2xs space-y-1 text-xs"
+                  style={{ borderColor: 'var(--color-border)' }}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <strong className="font-bold text-slate-900">{obs.titulo}</strong>
+                    {obs.autorNome && (
+                      <span className="text-[10px] text-slate-500 font-medium">
+                        {obs.autorNome}
+                        {obs.data || obs.criadoEm
+                          ? ` · ${new Date(obs.data || obs.criadoEm!).toLocaleDateString('pt-BR')}`
+                          : ''}
+                      </span>
+                    )}
+                  </div>
+                  {obs.texto && (
+                    <p className="text-slate-600 text-[11px] leading-relaxed whitespace-pre-wrap">
+                      {obs.texto}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
 
-      {/* Ações Rápidas no Rodapé */}
+      {/* Ações Rápidas no Rodapé: Diferencia Administrador (Exibir informações) de Parceiro (Bateria de testes) */}
       <div className="p-3 border-t bg-[var(--color-card)] flex items-center justify-end gap-2 mt-auto">
-        <Link
-          to={`/matriz/${d.categoriaSlug}`}
-          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 shadow-xs inline-flex items-center gap-1.5"
-          style={{ background: 'var(--gradient-brand-purple)' }}
-        >
-          <span>Bateria de testes</span>
-          <span>→</span>
-        </Link>
+        {ehAdmin ? (
+          <button
+            type="button"
+            onClick={() => aoExibirInformacoes(d)}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
+            style={{ background: 'var(--gradient-brand-purple)' }}
+          >
+            <Icone nome="busca" className="h-3.5 w-3.5" />
+            <span>Exibir informações</span>
+          </button>
+        ) : (
+          <Link
+            to={`/matriz/${d.categoriaSlug}`}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 shadow-xs inline-flex items-center gap-1.5"
+            style={{ background: 'var(--gradient-brand-purple)' }}
+          >
+            <span>Bateria de testes</span>
+            <span>→</span>
+          </Link>
+        )}
 
         {d.homologacaoId && (d.homologado || d.status === 'APROVADO' || d.status === 'PUBLICADO') && (
           <Link

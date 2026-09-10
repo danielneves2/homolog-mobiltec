@@ -1,0 +1,414 @@
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useHomologacao } from '@/hooks/useHomologacao'
+import { Icone } from '@/componentes/Icone'
+import { LoadingTela } from '@/componentes/LoadingTela'
+import { BadgeHomologado } from '@/componentes/comum/BadgeHomologado'
+import type { DispositivoPainelParceiro, StatusHomologacao, StatusResultado } from '@/lib/tipos'
+
+interface ItemObservacaoProcessada {
+  id: string
+  titulo: string
+  texto: string
+  autorNome?: string
+  data?: string
+  criadoEm?: string
+  anexos?: any[]
+}
+
+export function parseObservacoes(raw?: string | null): ItemObservacaoProcessada[] {
+  if (!raw || !raw.trim()) return []
+  try {
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) {
+      return parsed.map((item: any, idx) => ({
+        id: item.id || String(idx),
+        titulo: item.titulo || item.assunto || 'Observação',
+        texto: item.texto || item.mensagem || item.descricao || '',
+        autorNome: item.autorNome || item.autor || '',
+        data: item.data || item.criadoEm,
+        anexos: item.anexos || [],
+      }))
+    }
+    if (typeof parsed === 'object' && parsed !== null) {
+      return [
+        {
+          id: parsed.id || '1',
+          titulo: parsed.titulo || 'Observação',
+          texto: parsed.texto || parsed.mensagem || '',
+          autorNome: parsed.autorNome,
+          data: parsed.data || parsed.criadoEm,
+          anexos: parsed.anexos || [],
+        },
+      ]
+    }
+  } catch {
+    // fallback texto puro
+  }
+
+  return [
+    {
+      id: '1',
+      titulo: 'Observação do Processo',
+      texto: raw.trim(),
+    },
+  ]
+}
+
+interface Props {
+  homologacaoId: string
+  dispositivo: DispositivoPainelParceiro
+  aoFechar: () => void
+}
+
+type FiltroItens = 'todos' | 'divergencias' | 'ok' | 'pendentes'
+
+export function ModalInformacoesHomologacao({ homologacaoId, dispositivo: d, aoFechar }: Props) {
+  const { data: homologacao, isLoading } = useHomologacao(homologacaoId)
+  const [filtroItens, setFiltroItens] = useState<FiltroItens>('todos')
+
+  const resultados = homologacao?.resultados ?? []
+  const observacoes = useMemo(() => {
+    return parseObservacoes(homologacao?.observacoes ?? d.observacoes)
+  }, [homologacao?.observacoes, d.observacoes])
+
+  const resumo = useMemo(() => {
+    let ok = 0
+    let divergencias = 0
+    let pendentes = 0
+    let naoAplicavel = 0
+
+    for (const r of resultados) {
+      if (r.status === 'OK') ok++
+      else if (r.status === 'NAO_TESTADO') pendentes++
+      else if (r.status === 'NAO_APLICAVEL') naoAplicavel++
+      else if (['FALHA', 'NAO_SUPORTADO', 'COM_RESSALVA'].includes(r.status)) divergencias++
+    }
+
+    const total = resultados.length
+    const pct = total > 0 ? Math.round(((total - pendentes) / total) * 100) : 0
+
+    return { total, ok, divergencias, pendentes, naoAplicavel, pct }
+  }, [resultados])
+
+  const resultadosFiltrados = useMemo(() => {
+    if (filtroItens === 'divergencias') {
+      return resultados.filter((r) => ['FALHA', 'NAO_SUPORTADO', 'COM_RESSALVA'].includes(r.status))
+    }
+    if (filtroItens === 'ok') {
+      return resultados.filter((r) => r.status === 'OK')
+    }
+    if (filtroItens === 'pendentes') {
+      return resultados.filter((r) => r.status === 'NAO_TESTADO')
+    }
+    return resultados
+  }, [resultados, filtroItens])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)' }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) aoFechar()
+      }}
+    >
+      <div
+        className="w-full max-w-4xl max-h-[90vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+        style={{ background: 'var(--color-card)', borderColor: 'var(--color-border)' }}
+      >
+        {/* Topo do Modal */}
+        <div className="p-5 border-b flex items-start justify-between gap-4 shrink-0 bg-slate-50/50">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                {d.fabricante} · {d.categoriaNome}
+              </span>
+              <span className="text-slate-300">|</span>
+              <span className="text-xs text-slate-600 font-medium">
+                Responsável: {d.responsavelNome}
+              </span>
+            </div>
+            <h2 className="text-lg font-bold text-slate-900 mt-0.5">{d.nomeComercial}</h2>
+            <div className="flex items-center gap-2 mt-1.5 text-xs text-slate-600 flex-wrap">
+              <span>Android: <strong>{d.versaoSo}</strong></span>
+              <span>·</span>
+              <span>Agente: <strong>{d.versaoAgente}</strong></span>
+              <span>·</span>
+              <span>Modo: <strong>{d.gerenciamento === 'ANDROID_ENTERPRISE' ? 'Enterprise' : 'Legado'}</strong></span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            {d.homologado || d.status === 'APROVADO' || d.status === 'PUBLICADO' ? (
+              <BadgeHomologado homologado={true} />
+            ) : (
+              <BadgeStatusModal status={d.status} />
+            )}
+            <button
+              type="button"
+              onClick={aoFechar}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer"
+              title="Fechar"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Resumo Quantitativo dos Testes */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 p-4 border-b bg-slate-50/80 text-xs shrink-0">
+          <div className="p-2.5 rounded-lg border bg-white shadow-2xs">
+            <span className="text-[10px] text-slate-500 uppercase font-semibold block">Progresso</span>
+            <span className="text-base font-bold text-purple-700">{resumo.pct}%</span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">{resumo.total - resumo.pendentes} de {resumo.total} itens</span>
+          </div>
+          <div className="p-2.5 rounded-lg border bg-white shadow-2xs">
+            <span className="text-[10px] text-emerald-600 uppercase font-semibold block">Aprovados (OK)</span>
+            <span className="text-base font-bold text-emerald-700">{resumo.ok}</span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">Sem pendências</span>
+          </div>
+          <div className="p-2.5 rounded-lg border bg-white shadow-2xs">
+            <span className="text-[10px] text-amber-600 uppercase font-semibold block">Divergências</span>
+            <span className="text-base font-bold text-amber-700">{resumo.divergencias}</span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">Falhas / Ressalvas</span>
+          </div>
+          <div className="p-2.5 rounded-lg border bg-white shadow-2xs">
+            <span className="text-[10px] text-slate-500 uppercase font-semibold block">Não Testados</span>
+            <span className="text-base font-bold text-slate-700">{resumo.pendentes}</span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">Ainda pendentes</span>
+          </div>
+          <div className="p-2.5 rounded-lg border bg-white shadow-2xs">
+            <span className="text-[10px] text-slate-500 uppercase font-semibold block">Não Aplicável</span>
+            <span className="text-base font-bold text-slate-600">{resumo.naoAplicavel}</span>
+            <span className="text-[10px] text-slate-400 block mt-0.5">Desconsiderados</span>
+          </div>
+        </div>
+
+        {/* Conteúdo com Scroll */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-6">
+          {isLoading ? (
+            <div className="py-12">
+              <LoadingTela mensagem="Carregando checklist e relatório de testes…" />
+            </div>
+          ) : (
+            <>
+              {/* Observações do Processo Registradas */}
+              {observacoes.length > 0 && (
+                <section className="space-y-2.5">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <span>💬</span>
+                    <span>Observações do Processo ({observacoes.length})</span>
+                  </h3>
+                  <div className="space-y-2">
+                    {observacoes.map((obs) => (
+                      <div
+                        key={obs.id}
+                        className="p-3.5 rounded-xl border bg-slate-50/60 shadow-2xs space-y-1.5 text-xs"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-slate-900">{obs.titulo}</span>
+                          {obs.autorNome && (
+                            <span className="text-[10.5px] text-slate-500 font-medium">
+                              Registrado por <strong>{obs.autorNome}</strong>
+                              {obs.data || obs.criadoEm
+                                ? ` em ${new Date(obs.data || obs.criadoEm!).toLocaleDateString('pt-BR')}`
+                                : ''}
+                            </span>
+                          )}
+                        </div>
+                        {obs.texto && (
+                          <p className="text-slate-700 text-xs leading-relaxed whitespace-pre-wrap pl-3 border-l-2 border-slate-300">
+                            {obs.texto}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Itens Avaliados na Bateria */}
+              <section className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Checklist de Homologação ({resultados.length} itens)
+                  </h3>
+
+                  <div className="flex items-center gap-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setFiltroItens('todos')}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
+                        filtroItens === 'todos'
+                          ? 'bg-purple-600 text-white font-semibold'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Todos ({resultados.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFiltroItens('divergencias')}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
+                        filtroItens === 'divergencias'
+                          ? 'bg-amber-600 text-white font-semibold'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Divergências ({resumo.divergencias})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFiltroItens('ok')}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
+                        filtroItens === 'ok'
+                          ? 'bg-emerald-600 text-white font-semibold'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      OK ({resumo.ok})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFiltroItens('pendentes')}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
+                        filtroItens === 'pendentes'
+                          ? 'bg-slate-700 text-white font-semibold'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Pendentes ({resumo.pendentes})
+                    </button>
+                  </div>
+                </div>
+
+                {resultadosFiltrados.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-6 text-center italic">
+                    Nenhum item encontrado com o filtro selecionado.
+                  </p>
+                ) : (
+                  <div className="divide-y border rounded-xl overflow-hidden bg-white shadow-2xs">
+                    {resultadosFiltrados.map((res: any) => (
+                      <div key={res.id} className="p-3 text-xs flex flex-col gap-1.5 hover:bg-slate-50/50">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0">
+                              {res.item?.grupo ?? 'ITEM'}
+                            </span>
+                            <span className="font-semibold text-slate-900 truncate">
+                              {res.item?.nome ?? 'Item de teste'}
+                            </span>
+                          </div>
+                          <BadgeStatusItem status={res.status} />
+                        </div>
+
+                        {/* Justificativa anexada */}
+                        {(res.justificativa || res.justificativaTexto) && (
+                          <div className="p-2 rounded-lg bg-amber-50/60 border border-amber-200 text-[11px] text-amber-900 space-y-0.5 mt-0.5">
+                            <span className="font-bold block">
+                              Justificativa: {res.justificativa?.titulo ?? 'Nota do técnico'}
+                            </span>
+                            <p className="text-amber-800/90 whitespace-pre-wrap">
+                              {res.justificativa?.texto ?? res.justificativaTexto}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Observação técnica adicional */}
+                        {res.observacao && (
+                          <p className="text-[11px] text-slate-500 italic pl-2 border-l-2 border-slate-200">
+                            Obs: {res.observacao}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </>
+          )}
+        </div>
+
+        {/* Rodapé com Ações */}
+        <div className="p-4 border-t bg-slate-50 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2">
+            {d.status === 'AGUARDANDO_ANALISE' || d.status === 'EM_REVISAO' ? (
+              <Link
+                to="/ambiente/validar-certificados"
+                className="px-3.5 py-2 rounded-lg text-xs font-semibold text-white shadow-xs transition-opacity hover:opacity-90 inline-flex items-center gap-1.5"
+                style={{ background: 'var(--gradient-brand-purple)' }}
+              >
+                <span>Validar Certificado na Esteira Mobiltec</span>
+                <span>→</span>
+              </Link>
+            ) : null}
+
+            {d.homologado || d.status === 'APROVADO' || d.status === 'PUBLICADO' ? (
+              <Link
+                to={`/homologacoes/${d.homologacaoId}/certificado`}
+                className="px-3 py-2 rounded-lg border text-xs font-semibold text-[var(--color-primary)] hover:bg-purple-50 transition-colors inline-flex items-center gap-1.5"
+              >
+                <Icone nome="certificado" className="h-4 w-4" />
+                <span>Visualizar Certificado Oficial</span>
+              </Link>
+            ) : null}
+          </div>
+
+          <button
+            type="button"
+            onClick={aoFechar}
+            className="px-4 py-2 rounded-lg border text-xs font-medium text-slate-700 hover:bg-slate-200/70 transition-colors cursor-pointer"
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BadgeStatusModal({ status }: { status: StatusHomologacao }) {
+  const configs: Record<StatusHomologacao, { rotulo: string; bg: string; fg: string }> = {
+    RASCUNHO: { rotulo: 'Em homologação', bg: '#f1f5f9', fg: '#475569' },
+    AGUARDANDO_ANALISE: { rotulo: 'Em validação', bg: '#fef3c7', fg: '#b45309' },
+    EM_REVISAO: { rotulo: 'Em revisão', bg: '#dbeafe', fg: '#1d4ed8' },
+    APROVADO: { rotulo: 'Homologado', bg: 'rgba(126,32,101,0.08)', fg: 'var(--color-primary)' },
+    PUBLICADO: { rotulo: 'Homologado', bg: 'rgba(126,32,101,0.08)', fg: 'var(--color-primary)' },
+    REPROVADO: { rotulo: 'Reprovado', bg: '#fee2e2', fg: '#b91c1c' },
+  }
+
+  const conf = configs[status] ?? configs.RASCUNHO
+
+  return (
+    <span
+      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold select-none"
+      style={{ background: conf.bg, color: conf.fg }}
+    >
+      {conf.rotulo}
+    </span>
+  )
+}
+
+function BadgeStatusItem({ status }: { status: StatusResultado }) {
+  const configs: Record<StatusResultado, { rotulo: string; bg: string; fg: string }> = {
+    OK: { rotulo: 'OK', bg: '#dcfce7', fg: '#15803d' },
+    FALHA: { rotulo: 'Falha', bg: '#fee2e2', fg: '#b91c1c' },
+    COM_RESSALVA: { rotulo: 'Com Ressalva', bg: '#fef3c7', fg: '#b45309' },
+    NAO_SUPORTADO: { rotulo: 'Não Suportado', bg: '#fee2e2', fg: '#b91c1c' },
+    NAO_APLICAVEL: { rotulo: 'N/A', bg: '#f1f5f9', fg: '#64748b' },
+    NAO_TESTADO: { rotulo: 'Não Testado', bg: '#f8fafc', fg: '#94a3b8' },
+  }
+
+  const conf = configs[status] ?? configs.NAO_TESTADO
+
+  return (
+    <span
+      className="inline-flex items-center px-2 py-0.5 rounded text-[10.5px] font-semibold shrink-0 select-none border border-black/5"
+      style={{ background: conf.bg, color: conf.fg }}
+    >
+      {conf.rotulo}
+    </span>
+  )
+}

@@ -19,7 +19,10 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /matriz
   // ============================================================
   fastify.get('/matriz', { onRequest: [fastify.autenticar] }, async (request, reply) => {
-    const { categoriaSlug = 'pos' } = request.query as { categoriaSlug?: string }
+    const { categoriaSlug = 'pos', empresa: empresaFiltro } = request.query as {
+      categoriaSlug?: string
+      empresa?: string
+    }
 
     const categoria = await fastify.prisma.categoria.findUnique({
       where: { slug: categoriaSlug },
@@ -51,15 +54,39 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
       categoriaSlug === 'pos'
 
     if (ehParceiro && !ehExcecaoHgomesPos) {
-      const empresa = usuarioParceiro?.empresa
+      const empresa = usuarioParceiro?.empresa?.trim()
       if (empresa) {
         whereHomologacao.OR = [
-          { dispositivo: { empresa } },
-          { responsavel: { empresa } },
+          { dispositivo: { empresa: { equals: empresa, mode: 'insensitive' } } },
+          { responsavel: { empresa: { equals: empresa, mode: 'insensitive' } } },
           { responsavelId: request.user.id },
         ]
       } else {
         whereHomologacao.responsavelId = request.user.id
+      }
+    } else if (!ehParceiro) {
+      // ADMIN: Isolamento entre planilhas
+      if (empresaFiltro && empresaFiltro.trim() && empresaFiltro.trim().toLowerCase() !== 'mobiltec') {
+        whereHomologacao.OR = [
+          { dispositivo: { empresa: { equals: empresaFiltro.trim(), mode: 'insensitive' } } },
+          { responsavel: { empresa: { equals: empresaFiltro.trim(), mode: 'insensitive' } } },
+        ]
+      } else {
+        // Planilha interna da Mobiltec: EXCLUSIVAMENTE dispositivos Mobiltec (não misturar com parceiros)
+        whereHomologacao.AND = [
+          {
+            OR: [
+              { dispositivo: { empresa: null } },
+              { dispositivo: { empresa: { equals: 'Mobiltec', mode: 'insensitive' } } },
+            ],
+          },
+          {
+            OR: [
+              { responsavel: { empresa: null } },
+              { responsavel: { empresa: { equals: 'Mobiltec', mode: 'insensitive' } } },
+            ],
+          },
+        ]
       }
     }
 
