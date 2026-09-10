@@ -776,7 +776,7 @@ export function Matriz() {
                       <CelulaFicha
                         coluna={c}
                         linha={linha}
-                        somenteLeitura={ehSomenteLeitura(c.homologacao.status)}
+                        somenteLeitura={ehSomenteLeitura(c.homologacao.status, usuario?.papel)}
                         enviandoFoto={
                           enviarFoto.isPending &&
                           enviarFoto.variables?.dispositivoId === c.homologacao.dispositivoId

@@ -43,12 +43,12 @@ export function registrarErrorHandler(fastify: FastifyInstance) {
       }
     }
 
-    // Erros que o próprio Fastify já classificou (payload malformado, 404 de rota…)
-    if (erro.statusCode && erro.statusCode < 500) {
+    // Erros com statusCode definido pelo Fastify ou pela aplicação (4xx, 503, etc.)
+    if (erro.statusCode && erro.statusCode !== 500) {
       return reply.status(erro.statusCode).send({ erro: erro.message })
     }
 
-    // Só chega aqui o que é realmente inesperado — logar completo
+    // Só chega aqui o que é realmente inesperado ou erro 500 genérico — logar completo
     request.log.error({ err: erro }, 'Erro não tratado')
     return reply.status(500).send({ erro: 'Erro interno do servidor.' })
   })

@@ -65,23 +65,35 @@ export function CelulaFicha({
     const srcImg = url ? (url.startsWith('http://') || url.startsWith('https://') ? url : `/api${url}`) : null
     return (
       <div className="p-1">
-        <input
-          ref={refArquivo}
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          hidden
-          onChange={(e) => {
-            const arquivo = e.target.files?.[0]
-            if (arquivo) aoEnviarFoto(arquivo)
-            e.target.value = '' // permite reenviar o mesmo arquivo
-          }}
-        />
+        {!somenteLeitura && (
+          <input
+            ref={refArquivo}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            hidden
+            onChange={(e) => {
+              const arquivo = e.target.files?.[0]
+              if (arquivo) aoEnviarFoto(arquivo)
+              e.target.value = '' // permite reenviar o mesmo arquivo
+            }}
+          />
+        )}
         <button
           type="button"
-          disabled={enviandoFoto}
-          onClick={() => refArquivo.current?.click()}
-          title={url ? 'Trocar a foto' : 'Enviar foto (PNG, JPEG ou WebP, até 8 MB)'}
-          className="w-full h-16 rounded border border-dashed flex items-center justify-center overflow-hidden transition-colors disabled:opacity-60"
+          disabled={somenteLeitura || enviandoFoto}
+          onClick={() => !somenteLeitura && refArquivo.current?.click()}
+          title={
+            somenteLeitura
+              ? 'Foto do dispositivo (bloqueada para edição)'
+              : url
+              ? 'Trocar a foto'
+              : 'Enviar foto (PNG, JPEG ou WebP, até 8 MB)'
+          }
+          className={`w-full h-16 rounded border flex items-center justify-center overflow-hidden transition-colors ${
+            somenteLeitura
+              ? 'border-solid cursor-default opacity-90'
+              : 'border-dashed cursor-pointer hover:border-primary'
+          } disabled:opacity-60`}
           style={{ borderColor: 'var(--color-border)' }}
         >
           {enviandoFoto ? (
@@ -99,7 +111,7 @@ export function CelulaFicha({
             />
           ) : (
             <span className="text-[10px]" style={{ color: 'var(--color-muted-foreground)' }}>
-              + foto
+              {somenteLeitura ? 'Sem foto' : '+ foto'}
             </span>
           )}
         </button>

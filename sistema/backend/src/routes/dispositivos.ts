@@ -119,6 +119,24 @@ const dispositivoRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string }
     const body = criarDispositivoSchema.partial().parse(request.body)
 
+    if (request.user.papel === 'PARCEIRO' && 'fotoUrl' in body) {
+      const homologacaoBloqueada = await fastify.prisma.homologacao.findFirst({
+        where: {
+          dispositivoId: id,
+          OR: [
+            { homologado: true },
+            { status: { in: ['APROVADO', 'PUBLICADO', 'AGUARDANDO_ANALISE', 'EM_REVISAO'] } },
+          ],
+        },
+      })
+
+      if (homologacaoBloqueada) {
+        return reply.status(403).send({
+          erro: 'Parceiros não podem alterar a imagem de um dispositivo após a homologação ou validação.',
+        })
+      }
+    }
+
     const dispositivo = await fastify.prisma.dispositivo.update({
       where: { id },
       data: body,
@@ -136,6 +154,24 @@ const dispositivoRoutes: FastifyPluginAsync = async (fastify) => {
 
     const dispositivo = await fastify.prisma.dispositivo.findUnique({ where: { id } })
     if (!dispositivo) return reply.status(404).send({ erro: 'Dispositivo não encontrado' })
+
+    if (request.user.papel === 'PARCEIRO') {
+      const homologacaoBloqueada = await fastify.prisma.homologacao.findFirst({
+        where: {
+          dispositivoId: id,
+          OR: [
+            { homologado: true },
+            { status: { in: ['APROVADO', 'PUBLICADO', 'AGUARDANDO_ANALISE', 'EM_REVISAO'] } },
+          ],
+        },
+      })
+
+      if (homologacaoBloqueada) {
+        return reply.status(403).send({
+          erro: 'Parceiros não podem alterar a imagem de um dispositivo após a homologação ou validação.',
+        })
+      }
+    }
 
     const arquivo = await request.file()
     if (!arquivo) return reply.status(400).send({ erro: 'Nenhum arquivo enviado.' })
