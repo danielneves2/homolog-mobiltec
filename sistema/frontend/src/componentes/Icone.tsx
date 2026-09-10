@@ -23,6 +23,9 @@ export type NomeIcone =
   | 'certificado'
   | 'relogio'
   | 'baixar'
+  | 'upload'
+  | 'camera'
+  | 'x'
   | 'compartilhar'
   | 'whatsapp'
   | 'email'
@@ -49,6 +52,9 @@ const TRACADOS: Record<NomeIcone, string> = {
   certificado: 'M7 3.5h10v13H7zM9.5 7h5M9.5 10h5M12 16.5v4l-2-1.3-2 1.3',
   relogio: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17M12 7.5V12l3 2',
   baixar: 'M12 3.5v11M8 11l4 4 4-4M4.5 19.5h15',
+  upload: 'M12 17.5v-11M8 10.5l4-4 4 4M4.5 19.5h15',
+  camera: 'M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+  x: 'M18 6 6 18M6 6l12 12',
   compartilhar:
     'M18 8.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5M6 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5M18 20.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6',
   whatsapp:

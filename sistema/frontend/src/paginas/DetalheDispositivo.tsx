@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useHomologacao } from '@/hooks/useHomologacao'
 import { api, ErroApi } from '@/lib/api'
+import { useAuth } from '@/contextos/AuthContext'
 import { FotoDispositivo } from '@/componentes/vitrine/FotoDispositivo'
+import { ModalUploadFoto } from '@/componentes/dispositivo/ModalUploadFoto'
 import { DicaJustificativa } from '@/componentes/DicaJustificativa'
 import { Icone } from '@/componentes/Icone'
 import { LoadingTela } from '@/componentes/LoadingTela'
@@ -56,14 +58,17 @@ interface LinhaResultado {
 export function DetalheDispositivo() {
   const { id = '' } = useParams<{ id: string }>()
   const consulta = useHomologacao(id)
+  const { ehMobiltec } = useAuth()
 
   const [baixando, setBaixando] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [modalFotoAberto, setModalFotoAberto] = useState(false)
 
   const ficha = useMemo(() => {
     const h = consulta.data
     if (!h) return null
     return {
+      dispositivoId: h.dispositivo?.id ?? '',
       nomeComercial: h.dispositivo?.nomeComercial ?? '—',
       fabricante: h.dispositivo?.fabricante ?? '—',
       modelo: h.dispositivo?.modelo ?? '—',
@@ -213,16 +218,45 @@ export function DetalheDispositivo() {
           </div>
 
           <div className="mt-4 flex flex-wrap items-start gap-6">
-            <div
-              className="w-48 shrink-0 self-center overflow-hidden rounded-xl border"
-              style={{ background: 'var(--color-sidebar)' }}
-            >
-              <FotoDispositivo
-                url={ficha.fotoUrl}
-                nome={ficha.nomeComercial}
-                altura={192}
-                semBorda
-              />
+            <div className="flex flex-col items-center gap-2">
+              <div
+                className="group relative w-48 shrink-0 self-center overflow-hidden rounded-xl border transition-all"
+                style={{ background: 'var(--color-sidebar)' }}
+              >
+                <FotoDispositivo
+                  url={ficha.fotoUrl}
+                  nome={ficha.nomeComercial}
+                  altura={192}
+                  semBorda
+                />
+                {ehMobiltec && (
+                  <button
+                    type="button"
+                    onClick={() => setModalFotoAberto(true)}
+                    title={ficha.fotoUrl ? 'Alterar foto do dispositivo' : 'Adicionar foto do dispositivo'}
+                    className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/60 opacity-0 backdrop-blur-[2px] transition-all duration-150 group-hover:opacity-100 focus:opacity-100 cursor-pointer"
+                  >
+                    <div className="grid h-10 w-10 place-items-center rounded-full bg-white/20 text-white shadow-sm">
+                      <Icone nome="camera" className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs font-semibold text-white tracking-wide">
+                      {ficha.fotoUrl ? 'Alterar foto' : 'Enviar foto'}
+                    </span>
+                  </button>
+                )}
+              </div>
+
+              {ehMobiltec && (
+                <button
+                  type="button"
+                  onClick={() => setModalFotoAberto(true)}
+                  className="flex items-center gap-1.5 text-xs font-medium transition-colors hover:text-primary cursor-pointer"
+                  style={{ color: 'var(--color-muted-foreground)' }}
+                >
+                  <Icone nome="camera" className="h-3.5 w-3.5" />
+                  <span>{ficha.fotoUrl ? 'Alterar foto' : 'Enviar foto'}</span>
+                </button>
+              )}
             </div>
 
             <div className="min-w-0 flex-1">
@@ -351,6 +385,16 @@ export function DetalheDispositivo() {
         </section>
       </div>
 
+      {modalFotoAberto && ficha && ficha.dispositivoId && (
+        <ModalUploadFoto
+          aberto={modalFotoAberto}
+          aoFechar={() => setModalFotoAberto(false)}
+          dispositivoId={ficha.dispositivoId}
+          homologacaoId={id}
+          nomeDispositivo={`${ficha.fabricante} ${ficha.modelo}`}
+          fotoAtualUrl={ficha.fotoUrl}
+        />
+      )}
     </div>
   )
 }
