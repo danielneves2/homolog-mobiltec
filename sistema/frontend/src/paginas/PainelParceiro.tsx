@@ -43,7 +43,7 @@ export function PainelParceiro() {
       if (filtro === 'em-homologacao' && d.status !== 'RASCUNHO') return false
       if (filtro === 'em-validacao' && d.status !== 'AGUARDANDO_ANALISE') return false
       if (filtro === 'em-revisao' && d.status !== 'EM_REVISAO') return false
-      if (filtro === 'homologados' && !d.homologado && d.status !== 'APROVADO' && d.status !== 'PUBLICADO') return false
+      if (filtro === 'homologados' && d.status !== 'APROVADO' && d.status !== 'PUBLICADO') return false
 
       if (!termo) return true
       return [d.nomeComercial, d.fabricante, d.modelo, d.versaoAgente, d.versaoSo, d.categoriaNome]
@@ -296,7 +296,7 @@ function CardDispositivoParceiro({
         </div>
 
         <div>
-          {d.homologado || d.status === 'APROVADO' || d.status === 'PUBLICADO' ? (
+          {d.status === 'APROVADO' || d.status === 'PUBLICADO' ? (
             <BadgeHomologado homologado={true} />
           ) : (
             <BadgeStatusProcesso status={d.status} />
@@ -484,7 +484,7 @@ function CardDispositivoParceiro({
           </Link>
         )}
 
-        {d.homologacaoId && (d.homologado || d.status === 'APROVADO' || d.status === 'PUBLICADO') && (
+        {d.homologacaoId && (d.status === 'APROVADO' || d.status === 'PUBLICADO') && (
           <Link
             to={`/homologacoes/${d.homologacaoId}/certificado`}
             className="px-2.5 py-1.5 rounded-lg border text-xs font-semibold text-[var(--color-primary)] hover:bg-purple-50/50 transition-colors inline-flex items-center gap-1"

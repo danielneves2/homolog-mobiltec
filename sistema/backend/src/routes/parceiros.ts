@@ -291,7 +291,6 @@ async function montarDadosPainel(fastify: any, parceiro: any) {
           ? [
               {
                 categoria: { slug: 'pos' },
-                homologacoes: { some: { status: { in: ['APROVADO', 'PUBLICADO'] } } },
               },
             ]
           : []),
@@ -392,7 +391,7 @@ async function montarDadosPainel(fastify: any, parceiro: any) {
       gerenciamento: atual?.gerenciamento ?? 'ANDROID_ENTERPRISE',
       tipoAgente: atual?.tipoAgente ?? 'PROD',
       status: atual?.status ?? 'RASCUNHO',
-      homologado: atual?.homologado ?? false,
+      homologado: Boolean(atual && (atual.status === 'APROVADO' || atual.status === 'PUBLICADO')),
       observacoes: atual?.observacoes ?? null,
       dataInicio: atual?.dataInicio ?? null,
       dataFim: atual?.dataFim ?? null,
