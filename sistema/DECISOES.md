@@ -848,3 +848,17 @@ encerra as sete rodadas anteriores: **assinatura do produto, não botão.**
 | D417 | O script travava na primeira linha, sem erro | `& pg_ctl \| ...`: o postgres **herda a saída padrão** de quem o criou e mantém o cano aberto para sempre — o `pg_ctl` termina, o pipeline não. Todo executável nativo passa por `Start-Process` com redirecionamento para arquivo |
 | D418 | O vigia vigiava a porta **80803001** | `-Portas "8080,3001"` para um parâmetro `[int[]]`: o PowerShell leu a vírgula como separador de milhar e converteu para um único inteiro. Trocado por dois parâmetros escalares |
 | D419 | O vigia registrava "banco parado" com o postgres vivo | `Start-Process -Wait` sem redirecionamento nem checagem: o `pg_ctl` falhava em silêncio. Agora o registro compara com a porta 5432 antes de afirmar |
+
+---
+
+## Etapa 58 — Ajustes na Homologação de Dispositivos (Parceiro, Anexos e Reteste)
+
+| # | Decisão | Justificativa |
+|---|---|---|
+| D420 | Suporte a upload de `.zip` e imagens (`.png`, `.jpg`, `.jpeg`, `.webp`) nas observações com bloqueio estrito de vídeos | Pedido do usuário (Item 1): parceiro e equipe técnica podem anexar logs e capturas de tela. Vídeos são estritamente rejeitados na API e na interface com mensagem amigável ("Vídeos não serão permitidos neste momento"). Rota `/upload/anexo` com limite de 50 MB e armazenamento em pasta local `uploads/anexos` e fallback Supabase |
+| D421 | Observações Gerais estruturadas com Título, Conteúdo, Anexos e Paste (Ctrl+V) de prints da área de transferência | Pedido do usuário (Item 2): em vez de campo único de texto desestruturado, funciona como menu de anotações com título, autor, data e prévia/zoom de imagens e download de logs. Armazenado como JSON retrocompatível em `homologacao.observacoes` |
+| D422 | Perfil Parceiro não visualiza o botão "Sem Justificativa" | Pedido do usuário (Item 3): parceiros não necessitam e não devem ter acesso a esse botão de ação rápida/justificativa em massa. Ocultado em `Matriz.tsx` |
+| D423 | Parceiro tem acesso à "Configuração" e "Solicitar Reteste" | Pedido do usuário (Item 4): parceiro pode alterar dados do aparelho em homologação e solicitar reteste reutilizando o mesmo modelo sem precisar recadastrar tudo do zero |
+| D424 | Nome de Apoio do Parceiro obtido automaticamente do cadastro (`usuario.nome`) com checkbox `[ ] Cadastrar como Apoio do Parceiro` | Pedido do usuário (Item 5): evita que o parceiro digite qualquer nome. Se marcado, padroniza como `{usuario.nome} — Parceiro`. Validado tanto no frontend quanto na API |
+| D425 | Homologação enviada para validação entra no status "Em Validação" (`AGUARDANDO_ANALISE`) e "Em Revisão" (`EM_REVISAO`), e bloqueia edição indevida pelo parceiro | Pedido do usuário (Itens 6, 7 e 8): mapeado visualmente na planilha (`CelulaFicha.tsx`), nos filtros e nas telas de validação. Parceiro mantém permissão de leitura das observações e download de logs, mas não pode alterar dados enquanto sob custódia da Mobiltec |
+| D426 | Correção do erro de servidor (500) ao baixar certificado em "Exibir Informações" | Pedido do usuário (Item 10): `dataExtenso` em `services/certificado.ts` recebia string em `dataFim` e disparava `RangeError: Invalid time value` no `Intl.DateTimeFormat`. Corrigido para converter com segurança para `new Date(d)` e tratar falhas de headless Chromium retornando 503 com alternativa de visualização e impressão direta no navegador |

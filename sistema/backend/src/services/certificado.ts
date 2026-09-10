@@ -434,13 +434,16 @@ function data(d: Date | null | undefined): string {
   return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(new Date(d))
 }
 
-function dataExtenso(d: Date): string {
+function dataExtenso(d: Date | string | null | undefined): string {
+  if (!d) return ''
+  const dataObj = d instanceof Date ? d : new Date(d)
+  if (Number.isNaN(dataObj.getTime())) return ''
   return new Intl.DateTimeFormat('pt-BR', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
     timeZone: 'UTC',
-  }).format(d)
+  }).format(dataObj)
 }
 
 // ------------------------------------------------------------

@@ -67,3 +67,7 @@ Thumbs.db
 *.bak
 .vercel
 .env*
+
+# AI Agent instructions
+CLAUDE.md
+

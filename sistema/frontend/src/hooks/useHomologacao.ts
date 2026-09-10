@@ -183,6 +183,7 @@ export interface ItemListaHomologacao {
   criadoEm: string
   atualizadoEm: string
   assinaturaApoio: string | null
+  observacoes?: string | null
   dispositivo: {
     id: string
     nomeComercial: string

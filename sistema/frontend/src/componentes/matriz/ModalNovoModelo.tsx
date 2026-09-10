@@ -17,6 +17,7 @@ interface Props {
   coluna?: ColunaMatriz
   aoFechar: () => void
   aoCriar: () => void
+  aoPedirReteste?: (coluna: ColunaMatriz) => void
 }
 
 const hoje = () => new Date().toISOString().slice(0, 10)
@@ -38,6 +39,7 @@ export function ModalNovoModelo({
   coluna,
   aoFechar,
   aoCriar,
+  aoPedirReteste,
 }: Props) {
   const cadastrar = useCadastrarModelo()
   const salvarFicha = useSalvarFicha(categoriaSlug)
@@ -245,24 +247,38 @@ export function ModalNovoModelo({
           )}
         </div>
 
-        <div className="p-5 border-t flex justify-end gap-2 shrink-0">
-          <button type="button" onClick={aoFechar} className="px-4 py-2 rounded-md text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={salvando}
-            className="px-4 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50"
-            style={{ background: 'var(--gradient-brand-purple)' }}
-          >
-            {salvando
-              ? editando
-                ? 'Salvando…'
-                : 'Cadastrando…'
-              : editando
-                ? 'Salvar alterações'
-                : 'Cadastrar modelo'}
-          </button>
+        <div className="p-5 border-t flex items-center justify-between gap-2 shrink-0">
+          <div>
+            {editando && aoPedirReteste && coluna && (
+              <button
+                type="button"
+                onClick={() => aoPedirReteste(coluna)}
+                className="px-3 py-2 rounded-md text-sm font-medium border transition-colors hover:bg-neutral-500/10"
+                style={{ borderColor: 'var(--color-border)', color: 'var(--color-foreground)' }}
+              >
+                Solicitar Reteste
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={aoFechar} className="px-4 py-2 rounded-md text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={salvando}
+              className="px-4 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50"
+              style={{ background: 'var(--gradient-brand-purple)' }}
+            >
+              {salvando
+                ? editando
+                  ? 'Salvando…'
+                  : 'Cadastrando…'
+                : editando
+                  ? 'Salvar alterações'
+                  : 'Cadastrar modelo'}
+            </button>
+          </div>
         </div>
       </form>
     </div>

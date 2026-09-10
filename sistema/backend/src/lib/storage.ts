@@ -11,6 +11,7 @@ import path from 'node:path'
 
 const BUCKET_FOTOS = 'fotos-dispositivos'
 const BUCKET_CERTIFICADOS = 'certificados'
+const BUCKET_ANEXOS = 'anexos'
 
 const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/+$/, '')
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -100,3 +101,49 @@ export async function salvarCertificadoPdf(
   await writeFile(path.join(dir, nomeArquivo), buffer)
   return `/uploads/certificados/${nomeArquivo}`
 }
+
+/**
+ * Salva um anexo de observação (.zip ou imagem).
+ *
+ * @param extensao - Extensão com ponto (ex: `.zip`, `.png`).
+ * @param buffer - Buffer com os bytes do arquivo.
+ * @param mime - MIME type do arquivo.
+ * @param nomeOriginal - Nome original para compor o arquivo de forma legível.
+ * @returns URL pública ou local do anexo (`/uploads/anexos/...`).
+ */
+export async function salvarAnexo(
+  extensao: string,
+  buffer: Buffer,
+  mime: string,
+  nomeOriginal?: string,
+): Promise<string> {
+  const sanitize = (nomeOriginal ?? 'anexo')
+    .replace(/\.[^/.]+$/, '')
+    .replace(/[^\w.-]/g, '_')
+    .slice(0, 30)
+  const nomeArquivo = `${sanitize}-${randomUUID().slice(0, 8)}${extensao}`
+
+  if (ehSupabaseStorageAtivo) {
+    const endpoint = `${supabaseUrl}/storage/v1/object/${BUCKET_ANEXOS}/${nomeArquivo}`
+    const resposta = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${supabaseServiceKey}`,
+        'Content-Type': mime,
+        'x-upsert': 'true',
+      },
+      body: new Uint8Array(buffer),
+    })
+
+    if (resposta.ok) {
+      return `${supabaseUrl}/storage/v1/object/public/${BUCKET_ANEXOS}/${nomeArquivo}`
+    }
+  }
+
+  // Fallback para disco local
+  const dir = path.resolve(process.env.UPLOAD_DIR ?? './uploads', 'anexos')
+  await mkdir(dir, { recursive: true })
+  await writeFile(path.join(dir, nomeArquivo), buffer)
+  return `/uploads/anexos/${nomeArquivo}`
+}
+

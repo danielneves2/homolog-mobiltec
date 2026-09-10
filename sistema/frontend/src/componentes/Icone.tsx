@@ -24,6 +24,7 @@ export type NomeIcone =
   | 'relogio'
   | 'baixar'
   | 'upload'
+  | 'anexo'
   | 'camera'
   | 'x'
   | 'compartilhar'
@@ -34,6 +35,8 @@ export type NomeIcone =
 
 const TRACADOS: Record<NomeIcone, string> = {
   home: 'M3 10.5 12 3l9 7.5M5.5 9.5V20h13V9.5',
+  anexo:
+    'M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48',
   ambiente: 'M3 21h18M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M15 11h4a2 2 0 0 1 2 2v8M9 7h2M9 11h2M9 15h2',
   parceiros: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
   'credit-card': 'M2.5 6.5h19v11h-19zM2.5 10.5h19M6 14.5h4',
