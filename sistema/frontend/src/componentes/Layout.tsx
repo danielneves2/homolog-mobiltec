@@ -317,9 +317,16 @@ function MenuPaineis({
   const empresasParceirasUnicas = useMemo(() => {
     const mapa = new Map<string, typeof parceiros[number]>()
     for (const p of parceirosAtivos) {
-      const chave = p.empresa.trim().toLowerCase()
+      if (!p.empresa || !p.empresa.trim()) continue
+      let chave = p.empresa.trim().toLowerCase()
+      if (chave === 'tnsi' || chave === 'tns') {
+        chave = 'tns'
+      }
       if (!mapa.has(chave)) {
-        mapa.set(chave, p)
+        mapa.set(chave, {
+          ...p,
+          empresa: chave === 'tns' ? 'TNS' : p.empresa.trim(),
+        })
       }
     }
     return Array.from(mapa.values())
@@ -525,11 +532,6 @@ function MenuPaineis({
                   >
                     <span className="truncate">Parceiros</span>
                     <div className="flex items-center gap-1 shrink-0">
-                      {empresasParceirasUnicas.length > 0 && (
-                        <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-100 text-slate-600 font-semibold">
-                          {empresasParceirasUnicas.length}
-                        </span>
-                      )}
                       <svg
                         viewBox="0 0 16 16"
                         className="h-3 w-3 shrink-0 transition-transform duration-200 opacity-70"

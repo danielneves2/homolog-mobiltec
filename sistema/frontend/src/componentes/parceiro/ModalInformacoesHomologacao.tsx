@@ -123,10 +123,6 @@ export function ModalInformacoesHomologacao({ homologacaoId, dispositivo: d, aoF
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 {d.fabricante} · {d.categoriaNome}
               </span>
-              <span className="text-slate-300">|</span>
-              <span className="text-xs text-slate-600 font-medium">
-                Responsável: {d.responsavelNome}
-              </span>
             </div>
             <h2 className="text-lg font-bold text-slate-900 mt-0.5">{d.nomeComercial}</h2>
             <div className="flex items-center gap-2 mt-1.5 text-xs text-slate-600 flex-wrap">
@@ -157,32 +153,32 @@ export function ModalInformacoesHomologacao({ homologacaoId, dispositivo: d, aoF
           </div>
         </div>
 
-        {/* Resumo Quantitativo dos Testes */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 p-4 border-b bg-slate-50/80 text-xs shrink-0">
-          <div className="p-2.5 rounded-lg border bg-white shadow-2xs">
-            <span className="text-[10px] text-slate-500 uppercase font-semibold block">Progresso</span>
-            <span className="text-base font-bold text-purple-700">{resumo.pct}%</span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">{resumo.total - resumo.pendentes} de {resumo.total} itens</span>
+        {/* Resumo Quantitativo dos Testes (Compacto e Neutro) */}
+        <div className="flex items-center flex-wrap gap-4 sm:gap-6 px-5 py-3 border-b bg-slate-50/60 text-xs text-slate-600 shrink-0">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Progresso:</span>
+            <span className="text-sm font-bold text-slate-900">{resumo.pct}%</span>
+            <span className="text-[11px] text-slate-400">({resumo.total - resumo.pendentes}/{resumo.total})</span>
           </div>
-          <div className="p-2.5 rounded-lg border bg-white shadow-2xs">
-            <span className="text-[10px] text-emerald-600 uppercase font-semibold block">Aprovados (OK)</span>
-            <span className="text-base font-bold text-emerald-700">{resumo.ok}</span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">Sem pendências</span>
+          <span className="text-slate-300 hidden sm:inline">|</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Aprovados:</span>
+            <span className="text-sm font-bold text-slate-900">{resumo.ok}</span>
           </div>
-          <div className="p-2.5 rounded-lg border bg-white shadow-2xs">
-            <span className="text-[10px] text-amber-600 uppercase font-semibold block">Divergências</span>
-            <span className="text-base font-bold text-amber-700">{resumo.divergencias}</span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">Falhas / Ressalvas</span>
+          <span className="text-slate-300 hidden sm:inline">|</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Divergências:</span>
+            <span className="text-sm font-bold text-slate-900">{resumo.divergencias}</span>
           </div>
-          <div className="p-2.5 rounded-lg border bg-white shadow-2xs">
-            <span className="text-[10px] text-slate-500 uppercase font-semibold block">Não Testados</span>
-            <span className="text-base font-bold text-slate-700">{resumo.pendentes}</span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">Ainda pendentes</span>
+          <span className="text-slate-300 hidden sm:inline">|</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Não Testados:</span>
+            <span className="text-sm font-bold text-slate-900">{resumo.pendentes}</span>
           </div>
-          <div className="p-2.5 rounded-lg border bg-white shadow-2xs">
-            <span className="text-[10px] text-slate-500 uppercase font-semibold block">Não Aplicável</span>
-            <span className="text-base font-bold text-slate-600">{resumo.naoAplicavel}</span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">Desconsiderados</span>
+          <span className="text-slate-300 hidden sm:inline">|</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Não Aplicável:</span>
+            <span className="text-sm font-bold text-slate-900">{resumo.naoAplicavel}</span>
           </div>
         </div>
 
@@ -240,11 +236,12 @@ export function ModalInformacoesHomologacao({ homologacaoId, dispositivo: d, aoF
                     <button
                       type="button"
                       onClick={() => setFiltroItens('todos')}
-                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
+                      className={`px-3 py-1 rounded-md text-[11px] transition-all cursor-pointer ${
                         filtroItens === 'todos'
-                          ? 'bg-purple-600 text-white font-semibold'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          ? 'text-white font-semibold shadow-2xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200 font-medium'
                       }`}
+                      style={filtroItens === 'todos' ? { background: 'var(--gradient-brand-purple)' } : undefined}
                     >
                       Todos ({resultados.length})
                     </button>
@@ -294,7 +291,10 @@ export function ModalInformacoesHomologacao({ homologacaoId, dispositivo: d, aoF
                       <div key={res.id} className="p-3 text-xs flex flex-col gap-1.5 hover:bg-slate-50/50">
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0">
+                            <span
+                              className="text-[10px] font-bold uppercase tracking-wider shrink-0 px-2 py-0.5 rounded text-white shadow-2xs"
+                              style={{ background: 'var(--gradient-brand-purple)' }}
+                            >
                               {res.item?.grupo ?? 'ITEM'}
                             </span>
                             <span className="font-semibold text-slate-900 truncate">

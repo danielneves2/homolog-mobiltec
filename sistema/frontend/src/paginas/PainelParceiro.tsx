@@ -74,27 +74,13 @@ export function PainelParceiro() {
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-xl font-bold tracking-tight text-[var(--color-foreground)]">
-                {parceiro.empresa}
+                Painel de Homologação {parceiro.empresa}
               </h1>
-              <span
-                className="px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold tracking-wide uppercase"
-                style={{
-                  background: parceiro.ativo ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)',
-                  color: parceiro.ativo ? '#16a34a' : '#dc2626',
-                }}
-              >
-                {parceiro.ativo ? 'Parceiro Ativo' : 'Inativo'}
-              </span>
-              <span
-                className="px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold"
-                style={{ background: 'var(--color-muted)', color: 'var(--color-muted-foreground)' }}
-              >
-                Painel Exclusivo
+              <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 font-medium ml-1">
+                <span className={`h-2 w-2 rounded-full shrink-0 ${parceiro.ativo ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                <span>{parceiro.ativo ? 'Ativo' : 'Inativo'}</span>
               </span>
             </div>
-            <p className="text-xs mt-1" style={{ color: 'var(--color-muted-foreground)' }}>
-              Responsável: <span className="font-medium text-[var(--color-foreground)]">{parceiro.nome}</span> ({parceiro.email}) · Cadastrado em {new Date(parceiro.criadoEm).toLocaleDateString('pt-BR')}
-            </p>
           </div>
 
           <div className="flex items-center gap-2">

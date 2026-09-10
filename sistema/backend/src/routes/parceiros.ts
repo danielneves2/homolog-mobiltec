@@ -274,6 +274,10 @@ const parceirosRoutes: FastifyPluginAsync = async (fastify) => {
  */
 async function montarDadosPainel(fastify: any, parceiro: any) {
   const empresa = parceiro.empresa?.trim()
+  const ehTNS =
+    empresa?.toLowerCase() === 'tns' ||
+    empresa?.toLowerCase() === 'tnsi' ||
+    parceiro.email?.toLowerCase() === 'hgomes@tnsi.com'
 
   const dispositivos = await fastify.prisma.dispositivo.findMany({
     where: {
@@ -283,6 +287,14 @@ async function montarDadosPainel(fastify: any, parceiro: any) {
         ...(empresa ? [{ fabricante: { equals: empresa, mode: 'insensitive' } }] : []),
         { homologacoes: { some: { responsavelId: parceiro.id } } },
         ...(empresa ? [{ homologacoes: { some: { responsavel: { empresa: { equals: empresa, mode: 'insensitive' } } } } }] : []),
+        ...(ehTNS
+          ? [
+              {
+                categoria: { slug: 'pos' },
+                homologacoes: { some: { status: { in: ['APROVADO', 'PUBLICADO'] } } },
+              },
+            ]
+          : []),
       ],
     },
     include: {
