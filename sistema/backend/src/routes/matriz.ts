@@ -159,7 +159,7 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
   // ============================================================
   // POST /matriz/modelo — nova coluna na planilha
   // ============================================================
-  fastify.post('/matriz/modelo', { onRequest: [fastify.autenticar] }, async (request, reply) => {
+  fastify.post('/matriz/modelo', { onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR', 'PARCEIRO'])] }, async (request, reply) => {
     const schema = z.object({
       categoriaId: z.string().uuid(),
       // Dispositivo
@@ -256,7 +256,7 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
   // ============================================================
   // POST /matriz/reteste — nova homologação para um modelo já cadastrado
   // ============================================================
-  fastify.post('/matriz/reteste', { onRequest: [fastify.autenticar] }, async (request, reply) => {
+  fastify.post('/matriz/reteste', { onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR', 'PARCEIRO'])] }, async (request, reply) => {
     const schema = z.object({
       dispositivoId: z.string().uuid(),
       /** Copia a ficha da homologação anterior, mudando só o que veio no corpo */

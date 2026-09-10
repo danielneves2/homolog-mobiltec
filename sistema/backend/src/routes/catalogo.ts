@@ -34,7 +34,7 @@ const catalogoRoutes: FastifyPluginAsync = async (fastify) => {
     })
   })
 
-  fastify.post('/itens-teste', { onRequest: [fastify.autenticar] }, async (request, reply) => {
+  fastify.post('/itens-teste', { onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR'])] }, async (request, reply) => {
     const schema = z.object({
       grupo: z.enum(['TELEMETRIA', 'COLETA', 'COMANDOS', 'PERFIS']),
       nome: z.string().min(1).max(200),
@@ -46,7 +46,7 @@ const catalogoRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(201).send(item)
   })
 
-  fastify.patch('/itens-teste/:id', { onRequest: [fastify.autenticar] }, async (request) => {
+  fastify.patch('/itens-teste/:id', { onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR'])] }, async (request) => {
     const { id } = request.params as { id: string }
     const schema = z.object({
       nome: z.string().min(1).max(200).optional(),
@@ -96,7 +96,7 @@ const catalogoRoutes: FastifyPluginAsync = async (fastify) => {
     return bateria
   })
 
-  fastify.post('/baterias', { onRequest: [fastify.autenticar] }, async (request, reply) => {
+  fastify.post('/baterias', { onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR'])] }, async (request, reply) => {
     const schema = z.object({
       categoriaId: z.string().uuid(),
       nome: z.string().min(1),
@@ -154,7 +154,7 @@ const catalogoRoutes: FastifyPluginAsync = async (fastify) => {
     return justificativas
   })
 
-  fastify.post('/justificativas', { onRequest: [fastify.autenticar] }, async (request, reply) => {
+  fastify.post('/justificativas', { onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR'])] }, async (request, reply) => {
     const schema = z.object({
       titulo: z.string().min(1),
       texto: z.string().min(1),
@@ -168,7 +168,7 @@ const catalogoRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(201).send(j)
   })
 
-  fastify.patch('/justificativas/:id', { onRequest: [fastify.autenticar] }, async (request) => {
+  fastify.patch('/justificativas/:id', { onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR'])] }, async (request) => {
     const { id } = request.params as { id: string }
     const schema = z.object({
       titulo: z.string().optional(),

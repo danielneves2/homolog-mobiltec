@@ -68,7 +68,7 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
   // ============================================================
   // POST /tipos-dispositivo
   // ============================================================
-  fastify.post('/tipos-dispositivo', { onRequest: [fastify.autenticar] }, async (request, reply) => {
+  fastify.post('/tipos-dispositivo', { onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR'])] }, async (request, reply) => {
     const schema = z.object({
       nome: z.string().trim().min(2).max(60),
       icone: z.string().trim().min(1).max(40),
@@ -185,7 +185,7 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
   // ============================================================
   // PATCH /tipos-dispositivo/:id
   // ============================================================
-  fastify.patch('/tipos-dispositivo/:id', { onRequest: [fastify.autenticar] }, async (request, reply) => {
+  fastify.patch('/tipos-dispositivo/:id', { onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR'])] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const schema = z.object({
       nome: z.string().trim().min(2).max(60).optional(),
@@ -384,7 +384,7 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
   // ============================================================
   // DELETE /tipos-dispositivo/:id
   // ============================================================
-  fastify.delete('/tipos-dispositivo/:id', { onRequest: [fastify.autenticar] }, async (request, reply) => {
+  fastify.delete('/tipos-dispositivo/:id', { onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR'])] }, async (request, reply) => {
     const { id } = request.params as { id: string }
 
     const categoria = await fastify.prisma.categoria.findUnique({

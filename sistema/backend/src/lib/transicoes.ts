@@ -28,6 +28,14 @@ export function validarTransicao(
   statusAtual: string,
   novoStatus: string,
 ): { permitida: true } | { permitida: false; erro: string } {
+  // Leitor: estritamente somente-leitura — nenhuma transição permitida
+  if (papel === 'LEITOR') {
+    return {
+      permitida: false,
+      erro: 'Usuários com perfil Leitor não possuem permissão para alterar o status de homologações.',
+    }
+  }
+
   // Parceiro: regra estrita — só RASCUNHO → AGUARDANDO_ANALISE
   if (papel === 'PARCEIRO') {
     if (statusAtual !== 'RASCUNHO' || novoStatus !== 'AGUARDANDO_ANALISE') {
@@ -40,12 +48,19 @@ export function validarTransicao(
   }
 
   // Mobiltec (ADMIN / HOMOLOGADOR): consulta o mapa de transições
-  const permitidas = TRANSICOES_PERMITIDAS[statusAtual as StatusHomologacao] ?? []
-  if (!permitidas.includes(novoStatus as StatusHomologacao)) {
-    return {
-      permitida: false,
-      erro: `Transição inválida: ${statusAtual} → ${novoStatus}`,
+  if (papel === 'ADMIN' || papel === 'HOMOLOGADOR') {
+    const permitidas = TRANSICOES_PERMITIDAS[statusAtual as StatusHomologacao] ?? []
+    if (!permitidas.includes(novoStatus as StatusHomologacao)) {
+      return {
+        permitida: false,
+        erro: `Transição inválida: ${statusAtual} → ${novoStatus}`,
+      }
     }
+    return { permitida: true }
   }
-  return { permitida: true }
+
+  return {
+    permitida: false,
+    erro: `Papel '${papel}' não possui permissão para transicionar status.`,
+  }
 }

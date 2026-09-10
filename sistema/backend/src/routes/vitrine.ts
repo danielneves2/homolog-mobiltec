@@ -19,15 +19,43 @@ const EXIGE_JUSTIFICATIVA: StatusResultado[] = [
 ]
 
 const vitrineRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.get('/vitrine', { onRequest: [fastify.autenticar] }, async () => {
+  fastify.get('/vitrine', { onRequest: [fastify.autenticar] }, async (request) => {
     const categorias = await fastify.prisma.categoria.findMany({
       where: { ativo: true },
       orderBy: { ordem: 'asc' },
       select: { id: true, nome: true, slug: true, icone: true },
     })
 
+    const ehParceiro = request.user.papel === 'PARCEIRO'
+    let whereHomologacao: any = {
+      dispositivo: { ativo: true, categoria: { ativo: true } },
+    }
+
+    if (ehParceiro) {
+      const usuarioParceiro = await fastify.prisma.usuario.findUnique({
+        where: { id: request.user.id },
+        select: { empresa: true },
+      })
+      const empresa = usuarioParceiro?.empresa
+      whereHomologacao = {
+        dispositivo: { ativo: true, categoria: { ativo: true } },
+        OR: [
+          // Homologados ou Publicados são visíveis para todos os parceiros no catálogo
+          { status: { in: ['APROVADO', 'PUBLICADO'] } },
+          // Dispositivos em andamento apenas se pertencerem à sua própria empresa ou atribuídos a ele
+          ...(empresa
+            ? [
+                { status: { in: ['RASCUNHO', 'AGUARDANDO_ANALISE', 'EM_REVISAO', 'REPROVADO'] }, dispositivo: { empresa } },
+                { status: { in: ['RASCUNHO', 'AGUARDANDO_ANALISE', 'EM_REVISAO', 'REPROVADO'] }, responsavel: { empresa } },
+              ]
+            : []),
+          { status: { in: ['RASCUNHO', 'AGUARDANDO_ANALISE', 'EM_REVISAO', 'REPROVADO'] }, responsavelId: request.user.id },
+        ],
+      }
+    }
+
     const homologacoes = await fastify.prisma.homologacao.findMany({
-      where: { dispositivo: { ativo: true, categoria: { ativo: true } } },
+      where: whereHomologacao,
       include: {
         dispositivo: { include: { categoria: { select: { nome: true, slug: true } } } },
         responsavel: { select: { nome: true } },

@@ -21,7 +21,7 @@ const anexosRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post(
     '/upload/anexo',
     {
-      onRequest: [fastify.autenticar],
+      onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR', 'PARCEIRO'])],
     },
     async (request, reply) => {
       const arquivo = await request.file()
