@@ -14,6 +14,8 @@ interface ValorAuth {
   ehMobiltec: boolean
   ehParceiro: boolean
   ehAdmin: boolean
+  ehLeitor: boolean
+  podeEditar: boolean
   podeEmitirCertificado: boolean
   podeJustificar: boolean
   entrar: (email: string, senha: string) => Promise<void>
@@ -46,6 +48,8 @@ export function ProvedorAuth({ children }: { children: ReactNode }) {
   const ehMobiltec = usuario?.papel === 'ADMIN' || usuario?.papel === 'HOMOLOGADOR'
   const ehParceiro = usuario?.papel === 'PARCEIRO'
   const ehAdmin = usuario?.papel === 'ADMIN'
+  const ehLeitor = usuario?.papel === 'LEITOR'
+  const podeEditar = ehMobiltec || ehParceiro
 
   const valor = useMemo<ValorAuth>(
     () => ({
@@ -54,12 +58,14 @@ export function ProvedorAuth({ children }: { children: ReactNode }) {
       ehMobiltec,
       ehParceiro,
       ehAdmin,
+      ehLeitor,
+      podeEditar,
       podeEmitirCertificado: ehMobiltec,
       podeJustificar: ehMobiltec,
       entrar,
       sair,
     }),
-    [usuario, ehMobiltec, ehParceiro, ehAdmin, entrar, sair],
+    [usuario, ehMobiltec, ehParceiro, ehAdmin, ehLeitor, podeEditar, entrar, sair],
   )
 
   return <AuthContext.Provider value={valor}>{children}</AuthContext.Provider>

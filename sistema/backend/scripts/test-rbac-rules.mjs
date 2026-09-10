@@ -46,6 +46,12 @@ assert.equal(validarTransicao('PARCEIRO', 'RASCUNHO', 'EM_REVISAO').permitida, f
 assert.equal(validarTransicao('PARCEIRO', 'AGUARDANDO_ANALISE', 'APROVADO').permitida, false)
 assert.equal(validarTransicao('PARCEIRO', 'AGUARDANDO_ANALISE', 'PUBLICADO').permitida, false)
 
+// Leitor
+assert.equal(validarTransicao('LEITOR', 'RASCUNHO', 'AGUARDANDO_ANALISE').permitida, false, 'LEITOR não pode transicionar para AGUARDANDO_ANALISE')
+assert.equal(validarTransicao('LEITOR', 'RASCUNHO', 'EM_REVISAO').permitida, false, 'LEITOR não pode transicionar para EM_REVISAO')
+assert.equal(validarTransicao('LEITOR', 'AGUARDANDO_ANALISE', 'APROVADO').permitida, false, 'LEITOR não pode aprovar homologação')
+assert.equal(validarTransicao('LEITOR', 'APROVADO', 'PUBLICADO').permitida, false, 'LEITOR não pode publicar homologação')
+
 // Mobiltec
 assert.equal(validarTransicao('ADMIN', 'RASCUNHO', 'AGUARDANDO_ANALISE').permitida, true)
 assert.equal(validarTransicao('ADMIN', 'RASCUNHO', 'EM_REVISAO').permitida, true)
@@ -54,7 +60,7 @@ assert.equal(validarTransicao('HOMOLOGADOR', 'AGUARDANDO_ANALISE', 'APROVADO').p
 assert.equal(validarTransicao('HOMOLOGADOR', 'AGUARDANDO_ANALISE', 'REPROVADO').permitida, true)
 assert.equal(validarTransicao('HOMOLOGADOR', 'EM_REVISAO', 'APROVADO').permitida, true)
 assert.equal(validarTransicao('HOMOLOGADOR', 'APROVADO', 'PUBLICADO').permitida, true)
-console.log('   ✓ Máquina de estados respeita estritamente os privilégios de Parceiro vs Mobiltec.\n')
+console.log('   ✓ Máquina de estados respeita estritamente os privilégios de Parceiro, Leitor vs Mobiltec.\n')
 
 // 3. Teste de Blindagem de Justificativa para Parceiros
 console.log('3. Testando restrição de Justificativa vs Observação...')
@@ -74,8 +80,8 @@ assert.equal(validarPayloadResultado('ADMIN', { status: 'FALHA', justificativaId
 assert.equal(validarPayloadResultado('HOMOLOGADOR', { status: 'COM_RESSALVA', justificativaTexto: 'Texto oficial' }).valido, true)
 console.log('   ✓ Parceiros impedidos de enviar justificativas e autorizados a enviar observações.\n')
 
-// 4. Teste de Permissões de Certificados
-console.log('4. Testando regras de acesso a Certificados...')
+// 4. Teste de Permissões de Certificados e Rotas Estruturais
+console.log('4. Testando regras de acesso a Certificados, Reabertura e Dispositivos...')
 function podeEmitirCertificado(papel) {
   return papel === 'ADMIN' || papel === 'HOMOLOGADOR'
 }
@@ -87,9 +93,18 @@ function podeBaixarCertificado(papel, statusHomologacao) {
   return true
 }
 
+function podeReabrirHomologacao(papel) {
+  return papel === 'ADMIN'
+}
+
+function podeExcluirDispositivo(papel) {
+  return papel === 'ADMIN' || papel === 'HOMOLOGADOR'
+}
+
 assert.equal(podeEmitirCertificado('ADMIN'), true)
 assert.equal(podeEmitirCertificado('HOMOLOGADOR'), true)
 assert.equal(podeEmitirCertificado('PARCEIRO'), false, 'Parceiro NUNCA pode emitir certificado')
+assert.equal(podeEmitirCertificado('LEITOR'), false, 'Leitor NUNCA pode emitir certificado')
 
 assert.equal(podeBaixarCertificado('PARCEIRO', 'RASCUNHO'), false)
 assert.equal(podeBaixarCertificado('PARCEIRO', 'AGUARDANDO_ANALISE'), false)
@@ -98,6 +113,17 @@ assert.equal(podeBaixarCertificado('PARCEIRO', 'APROVADO'), true)
 assert.equal(podeBaixarCertificado('PARCEIRO', 'PUBLICADO'), true)
 assert.equal(podeBaixarCertificado('ADMIN', 'RASCUNHO'), true)
 
-console.log('   ✓ Emissão e download de certificados devidamente protegidos.\n')
+// Reabertura e Exclusão
+assert.equal(podeReabrirHomologacao('ADMIN'), true, 'ADMIN deve poder reabrir')
+assert.equal(podeReabrirHomologacao('HOMOLOGADOR'), false, 'HOMOLOGADOR não pode reabrir')
+assert.equal(podeReabrirHomologacao('PARCEIRO'), false, 'PARCEIRO não pode reabrir')
+assert.equal(podeReabrirHomologacao('LEITOR'), false, 'LEITOR não pode reabrir')
 
-console.log('=== TODOS OS 22 TESTES DE REGRAS DE NEGÓCIO E RBAC PASSARAM COM SUCESSO! ===')
+assert.equal(podeExcluirDispositivo('ADMIN'), true)
+assert.equal(podeExcluirDispositivo('HOMOLOGADOR'), true)
+assert.equal(podeExcluirDispositivo('PARCEIRO'), false)
+assert.equal(podeExcluirDispositivo('LEITOR'), false)
+
+console.log('   ✓ Emissão de certificados, reabertura de homologações e exclusão devidamente protegidos.\n')
+
+console.log('=== TODOS OS 31 TESTES DE REGRAS DE NEGÓCIO E RBAC PASSARAM COM SUCESSO! ===')

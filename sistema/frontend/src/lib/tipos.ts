@@ -614,6 +614,7 @@ export function somenteVersaoAndroid(versaoSo: string): string {
  *     O parceiro só pode editar enquanto o status for `RASCUNHO`.
  */
 export function ehSomenteLeitura(status: StatusHomologacao, papel?: PapelUsuario): boolean {
+  if (papel === 'LEITOR') return true
   if (status === 'APROVADO' || status === 'PUBLICADO' || status === 'REPROVADO') return true
   if (papel === 'PARCEIRO' && (status === 'AGUARDANDO_ANALISE' || status === 'EM_REVISAO')) return true
   return false

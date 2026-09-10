@@ -71,7 +71,7 @@ const dispositivoRoutes: FastifyPluginAsync = async (fastify) => {
 
   // POST /dispositivos
   fastify.post('/dispositivos', {
-    onRequest: [fastify.autenticar],
+    onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR'])],
   }, async (request, reply) => {
     const body = criarDispositivoSchema.parse(request.body)
 
@@ -114,7 +114,7 @@ const dispositivoRoutes: FastifyPluginAsync = async (fastify) => {
 
   // PATCH /dispositivos/:id
   fastify.patch('/dispositivos/:id', {
-    onRequest: [fastify.autenticar],
+    onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR', 'PARCEIRO'])],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const body = criarDispositivoSchema.partial().parse(request.body)
@@ -148,7 +148,7 @@ const dispositivoRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /dispositivos/:id/foto — upload da foto usada no certificado
   // ============================================================
   fastify.post('/dispositivos/:id/foto', {
-    onRequest: [fastify.autenticar],
+    onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR', 'PARCEIRO'])],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
 
@@ -201,7 +201,7 @@ const dispositivoRoutes: FastifyPluginAsync = async (fastify) => {
 
   // DELETE /dispositivos/:id (soft delete)
   fastify.delete('/dispositivos/:id', {
-    onRequest: [fastify.autenticar],
+    onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR'])],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
     await fastify.prisma.dispositivo.update({

@@ -36,7 +36,7 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /homologacoes — Cria nova homologação
   // ============================================================
   fastify.post('/homologacoes', {
-    onRequest: [fastify.autenticar],
+    onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR', 'PARCEIRO'])],
   }, async (request, reply) => {
     const schema = z.object({
       dispositivoId: z.string().uuid(),
@@ -138,7 +138,7 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
   // (S/N, IMEI, versão do agente…) — usado pelos campos de cabeçalho da matriz
   // ============================================================
   fastify.patch('/homologacoes/:id', {
-    onRequest: [fastify.autenticar],
+    onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR', 'PARCEIRO'])],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
 
@@ -305,7 +305,7 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
   // REGRA CENTRAL: FALHA, NAO_SUPORTADO, COM_RESSALVA exigem justificativa
   // ============================================================
   fastify.put('/homologacoes/:id/resultados/:itemId', {
-    onRequest: [fastify.autenticar],
+    onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR', 'PARCEIRO'])],
   }, async (request, reply) => {
     const { id, itemId } = request.params as { id: string; itemId: string }
 
@@ -390,7 +390,7 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
   // RASCUNHO → AGUARDANDO_ANALISE → EM_REVISAO → APROVADO
   // ============================================================
   fastify.post('/homologacoes/:id/status', {
-    onRequest: [fastify.autenticar],
+    onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR', 'PARCEIRO'])],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const statusSchema = z.object({
@@ -512,7 +512,7 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /homologacoes/:id/reabrir — Reabrir APROVADO → RASCUNHO
   // ============================================================
   fastify.post('/homologacoes/:id/reabrir', {
-    onRequest: [fastify.autenticar],
+    onRequest: [fastify.exigirPapeis(['ADMIN'])],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const { motivo } = z.object({ motivo: z.string().min(10) }).parse(request.body)

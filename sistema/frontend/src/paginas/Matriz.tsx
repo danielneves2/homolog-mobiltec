@@ -116,7 +116,7 @@ export function Matriz() {
   // Uma matriz por categoria (/matriz/pos, /matriz/coletor…)
   const { slug = 'pos' } = useParams<{ slug: string }>()
   const navegar = useNavigate()
-  const { usuario, ehParceiro } = useAuth()
+  const { usuario, ehParceiro, ehLeitor } = useAuth()
 
   const { data, isLoading, isError, error } = useMatriz(slug)
   const salvarCelula = useSalvarCelula(slug)
@@ -501,14 +501,16 @@ export function Matriz() {
                 )}
               </button>
 
-              <button
-                type="button"
-                onClick={() => setNovoModelo(true)}
-                className="h-8 px-3 rounded-md text-xs font-semibold text-white transition-opacity hover:opacity-90 inline-flex items-center gap-1.5 shadow-xs shrink-0"
-                style={{ background: GRADIENTE_FAIXA }}
-              >
-                + Novo modelo
-              </button>
+              {!ehLeitor && (
+                <button
+                  type="button"
+                  onClick={() => setNovoModelo(true)}
+                  className="h-8 px-3 rounded-md text-xs font-semibold text-white transition-opacity hover:opacity-90 inline-flex items-center gap-1.5 shadow-xs shrink-0"
+                  style={{ background: GRADIENTE_FAIXA }}
+                >
+                  + Novo modelo
+                </button>
+              )}
           </div>
 
           {painelDivergencias && (
@@ -588,15 +590,17 @@ export function Matriz() {
                   Cadastre o primeiro modelo de {data.categoria.nome} para começar a preencher a
                   matriz.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setNovoModelo(true)}
-                  className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm transition-all hover:opacity-90 active:scale-95"
-                  style={{ background: GRADIENTE_FAIXA }}
-                >
-                  <span>+</span>
-                  <span>Cadastrar modelo</span>
-                </button>
+                {!ehLeitor && (
+                  <button
+                    type="button"
+                    onClick={() => setNovoModelo(true)}
+                    className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm transition-all hover:opacity-90 active:scale-95"
+                    style={{ background: GRADIENTE_FAIXA }}
+                  >
+                    <span>+</span>
+                    <span>Cadastrar modelo</span>
+                  </button>
+                )}
               </>
             ) : (
               <>
@@ -725,7 +729,7 @@ export function Matriz() {
                         modelo={c.homologacao.dispositivo.nomeComercial}
                         acoes={[
                           // Configuração disponível para parceiro durante o processo e para Mobiltec
-                          (!ehSomenteLeitura(c.homologacao.status, usuario?.papel) || !ehParceiro) && {
+                          !ehLeitor && (!ehSomenteLeitura(c.homologacao.status, usuario?.papel) || !ehParceiro) && {
                             rotulo: 'Configuração',
                             aoClicar: () => setConfigurar(c),
                           },
@@ -735,19 +739,19 @@ export function Matriz() {
                               navegar(`/homologacoes/${c.homologacao.id}/certificado`),
                           },
                           // Reteste disponível para parceiro e Mobiltec, inclusive após enviar para validação
-                          { rotulo: 'Reteste', aoClicar: () => setReteste(c) },
+                          !ehLeitor && { rotulo: 'Reteste', aoClicar: () => setReteste(c) },
                           {
                             rotulo: 'Observação',
                             aoClicar: () => setObservacoes(c),
                             marcado: !!c.homologacao.observacoes?.trim(),
                           },
                           ehSomenteLeitura(c.homologacao.status, usuario?.papel)
-                            ? (!ehParceiro ? { rotulo: 'Reabrir', aoClicar: () => setReabrir(c), destaque: true } : null)
-                            : {
+                            ? (usuario?.papel === 'ADMIN' ? { rotulo: 'Reabrir', aoClicar: () => setReabrir(c), destaque: true } : null)
+                            : (!ehLeitor ? {
                                 rotulo: ehParceiro ? 'Enviar para Validação' : 'Finalizar',
                                 aoClicar: () => setFinalizar(c),
                                 destaque: true,
-                              },
+                              } : null),
                         ].filter(Boolean) as AcaoColuna[]}
                       />
                       </div>

@@ -862,3 +862,14 @@ encerra as sete rodadas anteriores: **assinatura do produto, não botão.**
 | D424 | Nome de Apoio do Parceiro obtido automaticamente do cadastro (`usuario.nome`) com checkbox `[ ] Cadastrar como Apoio do Parceiro` | Pedido do usuário (Item 5): evita que o parceiro digite qualquer nome. Se marcado, padroniza como `{usuario.nome} — Parceiro`. Validado tanto no frontend quanto na API |
 | D425 | Homologação enviada para validação entra no status "Em Validação" (`AGUARDANDO_ANALISE`) e "Em Revisão" (`EM_REVISAO`), e bloqueia edição indevida pelo parceiro | Pedido do usuário (Itens 6, 7 e 8): mapeado visualmente na planilha (`CelulaFicha.tsx`), nos filtros e nas telas de validação. Parceiro mantém permissão de leitura das observações e download de logs, mas não pode alterar dados enquanto sob custódia da Mobiltec |
 | D426 | Correção do erro de servidor (500) ao baixar certificado em "Exibir Informações" | Pedido do usuário (Item 10): `dataExtenso` em `services/certificado.ts` recebia string em `dataFim` e disparava `RangeError: Invalid time value` no `Intl.DateTimeFormat`. Corrigido para converter com segurança para `new Date(d)` e tratar falhas de headless Chromium retornando 503 com alternativa de visualização e impressão direta no navegador |
+
+---
+
+## Etapa 59 — Atualização de Segurança dos Pacotes Críticos do Fastify (D427)
+
+| # | Decisão | Justificativa |
+|---|---|---|
+| D427 | Atualização de segurança do ecossistema Fastify 5 e JWT | Atualização coordenada de `fastify` (5.12.3), `@fastify/jwt` (10.2.2), `@fastify/static` (10.1.3), `@fastify/cors` (11.3.0), `@fastify/multipart` (10.1.1) e `fastify-plugin` (6.0.0) para sanar vulnerabilidades críticas de bypass de autenticação JWT e path traversal (GHSA-gmvf-9v4p-v8jc, GHSA-8pvw-jcv7-9cmj, GHSA-jx2c-rxcm-jvmq), com preservação de 100% dos tipos e roteiros de verificação mecânica |
+| D428 | Blindagem de RBAC para perfil LEITOR e restrição de rotas sensíveis de catálogo, dispositivos e vitrine | Garante que usuários com perfil LEITOR não possam criar ou alterar homologações, itens de catálogo ou transicionar status, restringe operações estruturais (DELETE/POST dispositivos, tipos e baterias) a ADMIN/HOMOLOGADOR, reabertura a ADMIN, e isola homologações em andamento na vitrine por empresa de parceiro |
+
+
