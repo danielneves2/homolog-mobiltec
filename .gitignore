@@ -49,6 +49,8 @@ sistema/backend/uploads/certificados/*
 !sistema/backend/uploads/certificados/.gitkeep
 sistema/backend/uploads/fotos/*
 !sistema/backend/uploads/fotos/.gitkeep
+sistema/backend/uploads/anexos/*
+!sistema/backend/uploads/anexos/.gitkeep
 
 # Verification screenshots & temp files
 sistema/.verificacao/
