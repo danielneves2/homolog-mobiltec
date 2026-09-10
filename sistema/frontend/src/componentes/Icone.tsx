@@ -33,9 +33,11 @@ export type NomeIcone =
   | 'ambiente'
   | 'parceiros'
   | 'homologacao'
+  | 'sino'
 
 const TRACADOS: Record<NomeIcone, string> = {
   home: 'M3 10.5 12 3l9 7.5M5.5 9.5V20h13V9.5',
+  sino: 'M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9m4.3 13a2 2 0 0 0 3.4 0',
   anexo:
     'M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48',
   homologacao:

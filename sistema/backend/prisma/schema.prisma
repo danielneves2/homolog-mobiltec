@@ -297,3 +297,21 @@ model HistoricoStatus {
 
   @@map("historico_status")
 }
+
+model Notificacao {
+  id              String    @id @default(uuid())
+  tipo            String    // "REVISAO", "APROVADO", "SUBMETIDO", "GERAL"
+  titulo          String
+  mensagem        String
+  homologacaoId   String?   @map("homologacao_id")
+  dispositivoNome String?   @map("dispositivo_nome")
+  empresaDestino  String?   @map("empresa_destino")
+  lida            Boolean   @default(false)
+  confirmada      Boolean   @default(false)
+  confirmadaEm    DateTime? @map("confirmada_em")
+  confirmadaPor   String?   @map("confirmada_por")
+  link            String?
+  criadoEm        DateTime  @default(now()) @map("criado_em")
+
+  @@map("notificacao")
+}

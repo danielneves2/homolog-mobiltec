@@ -404,6 +404,8 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
     const homologacao = await fastify.prisma.homologacao.findUnique({
       where: { id },
       include: {
+        dispositivo: true,
+        responsavel: { select: { id: true, nome: true, email: true, empresa: true } },
         resultados: {
           include: {
             item: true,
@@ -498,6 +500,55 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
         },
       }),
     ])
+
+    // Fluxo dinâmico de notificações entre Parceiro e Admin Mobiltec
+    const empresaParceiro = homologacao.responsavel?.empresa || homologacao.dispositivo?.empresa || null
+    const nomeDisp = homologacao.dispositivo?.nomeComercial || 'Dispositivo'
+
+    try {
+      if (novoStatus === StatusHomologacao.EM_REVISAO && empresaParceiro) {
+        await fastify.prisma.notificacao.create({
+          data: {
+            tipo: 'REVISAO',
+            titulo: `Revisão solicitada: ${nomeDisp}`,
+            mensagem: motivo?.trim() || 'A equipe técnica da Mobiltec solicitou ajustes nesta homologação.',
+            homologacaoId: id,
+            dispositivoNome: nomeDisp,
+            empresaDestino: empresaParceiro,
+            link: `/paineis/meu-painel`,
+            confirmada: false,
+          },
+        })
+      } else if (novoStatus === StatusHomologacao.APROVADO && empresaParceiro) {
+        await fastify.prisma.notificacao.create({
+          data: {
+            tipo: 'APROVADO',
+            titulo: `Certificado emitido e aprovado: ${nomeDisp}`,
+            mensagem: `A homologação do dispositivo ${nomeDisp} foi aprovada oficialmente. O certificado já está disponível para consulta e download.`,
+            homologacaoId: id,
+            dispositivoNome: nomeDisp,
+            empresaDestino: empresaParceiro,
+            link: `/homologacoes/${id}/certificado`,
+            confirmada: false,
+          },
+        })
+      } else if (novoStatus === StatusHomologacao.AGUARDANDO_ANALISE) {
+        await fastify.prisma.notificacao.create({
+          data: {
+            tipo: 'SUBMETIDO',
+            titulo: `Homologação enviada para análise: ${nomeDisp}`,
+            mensagem: `O parceiro ${empresaParceiro || 'Parceiro'} enviou o modelo ${nomeDisp} para conferência técnica e validação de certificado.`,
+            homologacaoId: id,
+            dispositivoNome: nomeDisp,
+            empresaDestino: null,
+            link: `/parceiros/validar-certificados`,
+            confirmada: false,
+          },
+        })
+      }
+    } catch (e) {
+      fastify.log.warn(`Erro ao gerar notificação de transição de status: ${e}`)
+    }
 
     // As pendências vão junto na resposta: quem fechou com item em aberto
     // fica sabendo o que ficou para trás, e o gerente de produto tem o que

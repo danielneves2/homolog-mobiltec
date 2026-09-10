@@ -227,7 +227,7 @@ const parceirosRoutes: FastifyPluginAsync = async (fastify) => {
 
       const parceiro = await fastify.prisma.usuario.findFirst({
         where: {
-          OR: [{ id }, { empresa: id }],
+          OR: [{ id }, { empresa: { equals: id, mode: 'insensitive' } }],
           papel: 'PARCEIRO',
         },
         select: {
@@ -247,13 +247,18 @@ const parceirosRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.status(404).send({ erro: 'Parceiro não encontrado' })
       }
 
-      // Regra de segurança: parceiro só pode acessar o seu próprio painel
+      // Regra de segurança: parceiro só pode acessar o painel da sua própria empresa
       if (ehParceiro) {
         const usuarioLogado = await fastify.prisma.usuario.findUnique({
           where: { id: request.user.id },
           select: { id: true, empresa: true },
         })
-        if (parceiro.id !== request.user.id && parceiro.empresa !== usuarioLogado?.empresa) {
+        const mesmaEmpresa =
+          Boolean(parceiro.empresa) &&
+          Boolean(usuarioLogado?.empresa) &&
+          parceiro.empresa?.trim().toLowerCase() === usuarioLogado?.empresa?.trim().toLowerCase()
+
+        if (parceiro.id !== request.user.id && !mesmaEmpresa) {
           return reply.status(403).send({ erro: 'Acesso restrito ao painel exclusivo da sua empresa' })
         }
       }
@@ -268,16 +273,16 @@ const parceirosRoutes: FastifyPluginAsync = async (fastify) => {
  * métricas de homologação, progresso de testes e lista de dispositivos.
  */
 async function montarDadosPainel(fastify: any, parceiro: any) {
-  const empresa = parceiro.empresa
+  const empresa = parceiro.empresa?.trim()
 
   const dispositivos = await fastify.prisma.dispositivo.findMany({
     where: {
       ativo: true,
       OR: [
-        ...(empresa ? [{ empresa }] : []),
+        ...(empresa ? [{ empresa: { equals: empresa, mode: 'insensitive' } }] : []),
         ...(empresa ? [{ fabricante: { equals: empresa, mode: 'insensitive' } }] : []),
         { homologacoes: { some: { responsavelId: parceiro.id } } },
-        ...(empresa ? [{ homologacoes: { some: { responsavel: { empresa } } } }] : []),
+        ...(empresa ? [{ homologacoes: { some: { responsavel: { empresa: { equals: empresa, mode: 'insensitive' } } } } }] : []),
       ],
     },
     include: {
@@ -305,8 +310,21 @@ async function montarDadosPainel(fastify: any, parceiro: any) {
     testesPendentes: 0,
   }
 
+  const notificacoes = empresa
+    ? await fastify.prisma.notificacao.findMany({
+        where: {
+          empresaDestino: { equals: empresa, mode: 'insensitive' },
+        },
+        orderBy: { criadoEm: 'desc' },
+        take: 30,
+      })
+    : []
+
   const listaDispositivos = dispositivos.map((d: any) => {
     const atual = d.homologacoes[0]
+    const notificacaoRevisao = notificacoes.find(
+      (n: any) => n.homologacaoId === atual?.id && n.tipo === 'REVISAO',
+    )
     const resumo = {
       total: atual?.resultados.length ?? 0,
       ok: 0,
@@ -367,6 +385,7 @@ async function montarDadosPainel(fastify: any, parceiro: any) {
       dataInicio: atual?.dataInicio ?? null,
       dataFim: atual?.dataFim ?? null,
       responsavelNome: atual?.responsavel?.nome ?? parceiro.nome,
+      notificacaoRevisao: notificacaoRevisao ?? null,
       resumo,
     }
   })
@@ -385,6 +404,7 @@ async function montarDadosPainel(fastify: any, parceiro: any) {
     },
     metricas,
     dispositivos: listaDispositivos,
+    notificacoes,
   }
 }
 

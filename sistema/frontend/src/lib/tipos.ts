@@ -278,6 +278,7 @@ export interface DispositivoPainelParceiro {
   dataInicio: string | null
   dataFim: string | null
   responsavelNome: string
+  notificacaoRevisao?: Notificacao | null
   resumo: {
     total: number
     ok: number
@@ -289,10 +290,27 @@ export interface DispositivoPainelParceiro {
   }
 }
 
+export interface Notificacao {
+  id: string
+  tipo: 'REVISAO' | 'APROVADO' | 'SUBMETIDO' | 'GERAL'
+  titulo: string
+  mensagem: string
+  homologacaoId?: string | null
+  dispositivoNome?: string | null
+  empresaDestino?: string | null
+  lida: boolean
+  confirmada: boolean
+  confirmadaEm?: string | null
+  confirmadaPor?: string | null
+  link?: string | null
+  criadoEm: string
+}
+
 export interface PainelParceiroDados {
   parceiro: Parceiro
   metricas: MetricasPainelParceiro
   dispositivos: DispositivoPainelParceiro[]
+  notificacoes?: Notificacao[]
 }
 
 export interface Categoria {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contextos/AuthContext'
 import { useCategorias } from '@/hooks/useVitrine'
@@ -7,6 +7,7 @@ import { useParceiros } from '@/hooks/useParceiros'
 import { ancorarMenu } from '@/lib/ancorarMenu'
 import { LogoMobiltec } from './LogoMobiltec'
 import { Icone, iconeDaCategoria, type NomeIcone } from './Icone'
+import { CentralNotificacoes } from './CentralNotificacoes'
 
 const CHAVE_MENU = 'homolog.menu-aberto'
 
@@ -312,6 +313,18 @@ function MenuPaineis({
   const { data: parceiros = [] } = useParceiros(ehAdmin)
   const parceirosAtivos = parceiros.filter((p) => p.ativo)
 
+  // Deduplica parceiros por empresa para que múltiplos usuários da mesma empresa formem um único ambiente
+  const empresasParceirasUnicas = useMemo(() => {
+    const mapa = new Map<string, typeof parceiros[number]>()
+    for (const p of parceirosAtivos) {
+      const chave = p.empresa.trim().toLowerCase()
+      if (!mapa.has(chave)) {
+        mapa.set(chave, p)
+      }
+    }
+    return Array.from(mapa.values())
+  }, [parceirosAtivos])
+
   const noPainel =
     pathname === '/' ||
     pathname === '/paineis/mobiltec' ||
@@ -417,8 +430,8 @@ function MenuPaineis({
         type="button"
         onClick={alternar}
         aria-expanded={aberto ? abertoVisivel : !!flutuante}
-        title={aberto ? undefined : 'Painéis'}
-        data-grupo-menu="Painéis"
+        title={aberto ? undefined : 'Painel'}
+        data-grupo-menu="Painel"
         className={`btn-menu-lateral relative flex items-center select-none outline-none focus:outline-none focus-visible:outline-none ${
           aberto
             ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium leading-tight'
@@ -437,7 +450,7 @@ function MenuPaineis({
         <Icone nome="painel" className="h-[18px] w-[18px] shrink-0" />
         {aberto && (
           <>
-            <span className="flex-1 truncate text-left">Painéis</span>
+            <span className="flex-1 truncate text-left">Painel</span>
             <svg
               viewBox="0 0 16 16"
               className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 opacity-75"
@@ -512,9 +525,9 @@ function MenuPaineis({
                   >
                     <span className="truncate">Parceiros</span>
                     <div className="flex items-center gap-1 shrink-0">
-                      {parceirosAtivos.length > 0 && (
+                      {empresasParceirasUnicas.length > 0 && (
                         <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-100 text-slate-600 font-semibold">
-                          {parceirosAtivos.length}
+                          {empresasParceirasUnicas.length}
                         </span>
                       )}
                       <svg
@@ -540,14 +553,14 @@ function MenuPaineis({
                       className="mt-0.5 ml-2.5 space-y-0.5 border-l pl-2"
                       style={{ borderColor: 'var(--color-border)' }}
                     >
-                      {parceirosAtivos.length === 0 ? (
+                      {empresasParceirasUnicas.length === 0 ? (
                         <span className="text-[11px] text-slate-400 italic px-2 py-1 block">
                           Nenhum parceiro cadastrado
                         </span>
                       ) : (
-                        parceirosAtivos.map((p) => (
+                        empresasParceirasUnicas.map((p) => (
                           <NavLink
-                            key={p.id}
+                            key={p.empresa}
                             to={`/paineis/parceiro/${p.id}`}
                             className={({ isActive }) =>
                               `btn-menu-subitem flex items-center truncate rounded-md px-2 py-1 text-[12px] font-medium leading-tight outline-none focus:outline-none focus-visible:outline-none ${
@@ -586,7 +599,7 @@ function MenuPaineis({
           }}
         >
           <div className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b mb-1">
-            Painéis
+            Painel
           </div>
           <NavLink
             to="/"
@@ -624,14 +637,14 @@ function MenuPaineis({
               <div className="px-3 py-1 text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider">
                 Parceiros
               </div>
-              {parceirosAtivos.length === 0 ? (
+              {empresasParceirasUnicas.length === 0 ? (
                 <span className="text-[11px] text-slate-400 italic px-3 py-1 block">
                   Nenhum parceiro
                 </span>
               ) : (
-                parceirosAtivos.map((p) => (
+                empresasParceirasUnicas.map((p) => (
                   <NavLink
-                    key={p.id}
+                    key={p.empresa}
                     to={`/paineis/parceiro/${p.id}`}
                     role="menuitem"
                     onClick={() => setFlutuante(null)}
@@ -745,15 +758,15 @@ export function Layout() {
    */
   const secao = (() => {
     if (pathname === '/' || pathname === '/paineis/mobiltec') {
-      return { rotulo: 'Painéis · Mobiltec', icone: 'painel' as NomeIcone }
+      return { rotulo: 'Painel · Mobiltec', icone: 'painel' as NomeIcone }
     }
     if (pathname === '/paineis/meu-painel') {
-      return { rotulo: `Painéis · ${usuario?.empresa || 'Meu Painel'}`, icone: 'painel' as NomeIcone }
+      return { rotulo: `Painel · ${usuario?.empresa || 'Meu Painel'}`, icone: 'painel' as NomeIcone }
     }
     if (pathname.startsWith('/paineis/parceiro/')) {
       const idOuEmpresa = pathname.replace('/paineis/parceiro/', '')
-      const p = todosParceiros.find((x) => x.id === idOuEmpresa || x.empresa === idOuEmpresa)
-      return { rotulo: `Painéis · ${p?.empresa || 'Parceiro'}`, icone: 'painel' as NomeIcone }
+      const p = todosParceiros.find((x) => x.id === idOuEmpresa || x.empresa.toLowerCase() === idOuEmpresa.toLowerCase())
+      return { rotulo: `Painel · ${p?.empresa || idOuEmpresa}`, icone: 'painel' as NomeIcone }
     }
     if (opcoesRegistro.some((i) => (i.fim ? pathname === i.para : pathname.startsWith(i.para)))) {
       return registro
@@ -765,7 +778,7 @@ export function Layout() {
     if (cat) {
       return { rotulo: `Homologações · ${cat.rotulo}`, icone: cat.icone }
     }
-    return { rotulo: 'Painéis · Mobiltec', icone: 'painel' as NomeIcone }
+    return { rotulo: 'Painel · Mobiltec', icone: 'painel' as NomeIcone }
   })()
 
   /** Só as telas de planilha registram testes */
@@ -913,7 +926,8 @@ export function Layout() {
                 </span>
               )}
 
-              <div className="ml-auto flex items-center gap-2 text-xs">
+              <div className="ml-auto flex items-center gap-3 text-xs">
+                <CentralNotificacoes />
                 <span className="font-medium" style={{ color: 'var(--color-foreground)' }}>
                   {usuario?.nome}
                 </span>

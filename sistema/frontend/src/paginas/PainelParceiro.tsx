@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { usePainelParceiro } from '@/hooks/useParceiros'
-import { useAuth } from '@/contextos/AuthContext'
+import { useConfirmarNotificacao } from '@/hooks/useNotificacoes'
 import { Icone } from '@/componentes/Icone'
 import { LoadingTela } from '@/componentes/LoadingTela'
 import { BadgeHomologado } from '@/componentes/comum/BadgeHomologado'
@@ -13,7 +13,6 @@ type FiltroStatus = 'todos' | 'em-homologacao' | 'em-validacao' | 'em-revisao' |
 
 export function PainelParceiro() {
   const { id } = useParams<{ id?: string }>()
-  const { ehAdmin, usuario } = useAuth()
   const { data, isLoading, isError, error } = usePainelParceiro(id)
 
   const [filtro, setFiltro] = useState<FiltroStatus>('todos')
@@ -22,6 +21,13 @@ export function PainelParceiro() {
   const parceiro = data?.parceiro
   const metricas = data?.metricas
   const dispositivos = data?.dispositivos ?? []
+
+  // Detecta se existem revisões pendentes de confirmação/ciência pelo parceiro
+  const pendentesRevisao = useMemo(() => {
+    return dispositivos.filter(
+      (d) => d.status === 'EM_REVISAO' && (!d.notificacaoRevisao || !d.notificacaoRevisao.confirmada),
+    )
+  }, [dispositivos])
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
@@ -52,71 +58,36 @@ export function PainelParceiro() {
     )
   }
 
-  const ehVisaoAdmin = ehAdmin && parceiro.id !== usuario?.id
-  const pctTestes = metricas.testesTotal > 0 ? Math.round((metricas.testesRealizados / metricas.testesTotal) * 100) : 0
-
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto w-full max-w-[78rem] px-8 pt-6 pb-12 space-y-6">
 
-        {/* Banner de visão administrativa para o time Mobiltec */}
-        {ehVisaoAdmin && (
-          <div
-            className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg border text-xs shadow-xs"
-            style={{
-              background: 'rgba(126,32,101,0.05)',
-              borderColor: 'rgba(126,32,101,0.2)',
-              color: 'var(--color-primary)',
-            }}
-          >
-            <div className="flex items-center gap-2">
-              <span className="font-semibold uppercase tracking-wider">Modo Administrador</span>
-              <span>· Acompanhando o painel individual de homologação da empresa</span>
-              <strong className="font-bold">{parceiro.empresa}</strong>
+        {/* Cabeçalho do Parceiro (Clean, Elegante e Minimalista) */}
+        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--color-border)] pb-4">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-xl font-bold tracking-tight text-[var(--color-foreground)]">
+                {parceiro.empresa}
+              </h1>
+              <span
+                className="px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold tracking-wide uppercase"
+                style={{
+                  background: parceiro.ativo ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)',
+                  color: parceiro.ativo ? '#16a34a' : '#dc2626',
+                }}
+              >
+                {parceiro.ativo ? 'Parceiro Ativo' : 'Inativo'}
+              </span>
+              <span
+                className="px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold"
+                style={{ background: 'var(--color-muted)', color: 'var(--color-muted-foreground)' }}
+              >
+                Painel Exclusivo
+              </span>
             </div>
-            <Link
-              to="/ambiente/parceiros"
-              className="text-xs font-semibold underline underline-offset-2 hover:opacity-80 transition-opacity"
-            >
-              Gerenciar permissões deste parceiro
-            </Link>
-          </div>
-        )}
-
-        {/* Cabeçalho do Parceiro */}
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b pb-5">
-          <div className="flex items-center gap-4">
-            <div
-              className="h-14 w-14 rounded-2xl flex items-center justify-center font-bold text-xl text-white shadow-sm shrink-0"
-              style={{ background: 'var(--gradient-brand-purple)' }}
-            >
-              {parceiro.empresa.substring(0, 2).toUpperCase()}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold tracking-tight text-[var(--color-foreground)]">
-                  {parceiro.empresa}
-                </h1>
-                <span
-                  className="px-2 py-0.5 rounded-full text-[10.5px] font-semibold tracking-wide uppercase"
-                  style={{
-                    background: parceiro.ativo ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)',
-                    color: parceiro.ativo ? '#16a34a' : '#dc2626',
-                  }}
-                >
-                  {parceiro.ativo ? 'Parceiro Ativo' : 'Inativo'}
-                </span>
-                <span
-                  className="px-2 py-0.5 rounded-full text-[10.5px] font-semibold"
-                  style={{ background: 'var(--color-muted)', color: 'var(--color-muted-foreground)' }}
-                >
-                  Painel Exclusivo
-                </span>
-              </div>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted-foreground)' }}>
-                Responsável: <span className="font-medium text-[var(--color-foreground)]">{parceiro.nome}</span> ({parceiro.email}) · Cadastrado em {new Date(parceiro.criadoEm).toLocaleDateString('pt-BR')}
-              </p>
-            </div>
+            <p className="text-xs mt-1" style={{ color: 'var(--color-muted-foreground)' }}>
+              Responsável: <span className="font-medium text-[var(--color-foreground)]">{parceiro.nome}</span> ({parceiro.email}) · Cadastrado em {new Date(parceiro.criadoEm).toLocaleDateString('pt-BR')}
+            </p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -129,61 +100,31 @@ export function PainelParceiro() {
           </div>
         </header>
 
-        {/* KPIs de Acompanhamento */}
-        <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <CardMetrica
-            rotulo="Dispositivos"
-            valor={metricas.totalDispositivos}
-            descricao="Modelos cadastrados"
-            cor="var(--color-primary)"
-          />
-          <CardMetrica
-            rotulo="Em Homologação"
-            valor={metricas.emHomologacao}
-            descricao="Bateria em teste ativo"
-            cor="#64748b"
-          />
-          <CardMetrica
-            rotulo="Em Validação"
-            valor={metricas.emValidacao}
-            descricao="Aguardando análise"
-            cor="#d97706"
-          />
-          <CardMetrica
-            rotulo="Em Revisão"
-            valor={metricas.emRevisao}
-            descricao="Ajustes técnicos pendentes"
-            cor="#2563eb"
-          />
-          <CardMetrica
-            rotulo="Homologados"
-            valor={metricas.homologados}
-            descricao="Aprovados / certificados"
-            cor="var(--color-primary)"
-            destaque
-          />
-          <div className="rounded-xl border p-3.5 flex flex-col justify-between" style={{ background: 'var(--color-card)' }}>
-            <div>
-              <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                Progresso Testes
-              </p>
-              <p className="text-xl font-bold tracking-tight mt-0.5 text-[var(--color-foreground)]">
-                {pctTestes}%
-              </p>
+        {/* Alerta de Revisão Pendente (se houver modelos que necessitam de ajustes) */}
+        {pendentesRevisao.length > 0 && (
+          <div
+            className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg border text-xs shadow-2xs"
+            style={{
+              background: 'rgba(239, 68, 68, 0.04)',
+              borderColor: 'rgba(239, 68, 68, 0.25)',
+              color: '#991b1b',
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="font-bold">⚠️ Pendência de Revisão Técnica</span>
+              <span>
+                · A equipe Mobiltec solicitou ajustes técnicos em {pendentesRevisao.length} modelo(s). Veja os apontamentos e confirme o recebimento.
+              </span>
             </div>
-            <div className="mt-2">
-              <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{ width: `${pctTestes}%`, background: 'var(--gradient-brand-purple)' }}
-                />
-              </div>
-              <p className="text-[10px] mt-1 text-[var(--color-muted-foreground)]">
-                {metricas.testesRealizados} de {metricas.testesTotal} itens avaliados
-              </p>
-            </div>
+            <button
+              type="button"
+              onClick={() => setFiltro('em-revisao')}
+              className="font-semibold underline underline-offset-2 hover:opacity-80 cursor-pointer"
+            >
+              Ver pendências ({pendentesRevisao.length})
+            </button>
           </div>
-        </section>
+        )}
 
         {/* Barra de Filtros e Busca (Estilo Clean Abas com Linha Roxa) */}
         <section className="space-y-4">
@@ -267,38 +208,6 @@ export function PainelParceiro() {
   )
 }
 
-function CardMetrica({
-  rotulo,
-  valor,
-  descricao,
-  cor,
-  destaque = false,
-}: {
-  rotulo: string
-  valor: number
-  descricao: string
-  cor?: string
-  destaque?: boolean
-}) {
-  return (
-    <div
-      className={`rounded-xl border p-3.5 transition-all shadow-2xs ${destaque ? 'ring-1' : ''}`}
-      style={{
-        background: 'var(--color-card)',
-        borderColor: destaque ? 'rgba(126,32,101,0.25)' : 'var(--color-border)',
-      }}
-    >
-      <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-muted-foreground)]">
-        {rotulo}
-      </p>
-      <p className="text-2xl font-bold tracking-tight mt-0.5" style={{ color: cor ?? 'var(--color-foreground)' }}>
-        {valor}
-      </p>
-      <p className="text-[11px] mt-1 text-[var(--color-muted-foreground)] truncate">{descricao}</p>
-    </div>
-  )
-}
-
 function BotaoFiltroClean({
   ativo,
   aoClicar,
@@ -336,6 +245,7 @@ function BotaoFiltroClean({
 
 function CardDispositivoParceiro({ dispositivo: d }: { dispositivo: DispositivoPainelParceiro }) {
   const [expandirObs, setExpandirObs] = useState(false)
+  const confirmarNotificacao = useConfirmarNotificacao()
   const pctAvaliado = d.resumo.total > 0 ? Math.round((d.resumo.avaliados / d.resumo.total) * 100) : 0
 
   return (
@@ -410,8 +320,68 @@ function CardDispositivoParceiro({ dispositivo: d }: { dispositivo: DispositivoP
         </div>
       </div>
 
-      {/* Observações do Processo (se existirem) */}
-      {d.observacoes && (
+      {/* Box de Notificação e Confirmação de Revisão Técnica Mobiltec */}
+      {d.status === 'EM_REVISAO' && (
+        <div
+          className="mx-4 mb-3 rounded-lg border p-3 text-xs space-y-2"
+          style={{
+            background: 'rgba(219, 234, 254, 0.35)',
+            borderColor: 'rgba(59, 130, 246, 0.3)',
+          }}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-1.5 font-semibold text-blue-900">
+              <span className="text-sm">⚠️</span>
+              <span>Revisão técnica solicitada pela Mobiltec</span>
+            </div>
+          </div>
+
+          {(d.notificacaoRevisao?.mensagem || d.observacoes) && (
+            <p className="text-blue-950/85 leading-relaxed bg-white/70 p-2 rounded border border-blue-200/50">
+              {d.notificacaoRevisao?.mensagem || d.observacoes}
+            </p>
+          )}
+
+          <div className="pt-1 flex items-center justify-between gap-2 flex-wrap text-[11px]">
+            {d.notificacaoRevisao?.confirmada ? (
+              <span className="inline-flex items-center gap-1 text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                <span>✓</span>
+                <span>
+                  Recebimento confirmado por {d.notificacaoRevisao.confirmadaPor ?? 'Parceiro'} em{' '}
+                  {d.notificacaoRevisao.confirmadaEm
+                    ? new Date(d.notificacaoRevisao.confirmadaEm).toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : ''}
+                </span>
+              </span>
+            ) : d.notificacaoRevisao?.id ? (
+              <button
+                type="button"
+                onClick={() => confirmarNotificacao.mutate(d.notificacaoRevisao!.id)}
+                disabled={confirmarNotificacao.isPending}
+                className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors shadow-2xs cursor-pointer flex items-center gap-1 text-[11px] disabled:opacity-50"
+              >
+                <span>{confirmarNotificacao.isPending ? 'Confirmando…' : '✓ Confirmar recebimento (Ciente)'}</span>
+              </button>
+            ) : null}
+
+            <Link
+              to={`/matriz/${d.categoriaSlug}`}
+              className="text-blue-700 hover:underline font-medium ml-auto inline-flex items-center gap-1"
+            >
+              <span>Ajustar itens na bateria</span>
+              <span>→</span>
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Observações do Processo (se existirem e não estiver em revisão) */}
+      {d.observacoes && d.status !== 'EM_REVISAO' && (
         <div className="px-4 py-2 bg-slate-50/80 border-t text-xs">
           <button
             type="button"
