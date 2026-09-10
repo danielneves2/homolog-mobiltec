@@ -12,6 +12,8 @@
 import { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
+import { existsSync, readFileSync } from 'node:fs'
+import path from 'node:path'
 import { salvarCertificadoPdf } from '../lib/storage.js'
 import {
   analiseComoBlocos,
@@ -85,9 +87,11 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
       }
     } catch (err: any) {
       console.warn('Playwright não disponível:', err?.message)
-      throw new Error(
+      const errComStatus: any = new Error(
         'Geração de PDF via servidor indisponível neste ambiente. Utilize o botão "Visualizar Certificado" e imprima como PDF (Ctrl+P).',
       )
+      errComStatus.statusCode = 503
+      throw errComStatus
     }
   }
 
@@ -265,15 +269,32 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
 
-    const pdf = await renderizarPdf(gerarCertificadoHtml(h as unknown as HomologacaoCertificado))
-    // O S/N saiu do nome do arquivo junto com o corpo do documento: o nome
-    // viaja com o PDF e vazaria o identificador do aparelho do mesmo jeito.
-    // Fabricante + modelo + versão do agente já distinguem um do outro.
+    // Se já houver um certificado emitido com arquivo em disco, serve diretamente
+    const emitido = await fastify.prisma.certificadoEmitido.findFirst({
+      where: { homologacaoId: id, formato: 'PDF' },
+      orderBy: { emitidoEm: 'desc' },
+    })
+
     const nome = `certificado-${h.dispositivo.fabricante}-${h.dispositivo.modelo}-agente-${h.versaoAgente}.pdf`.replace(
       /[^\w.-]/g,
       '_',
     )
 
+    if (emitido && emitido.arquivoUrl) {
+      if (emitido.arquivoUrl.startsWith('/uploads/')) {
+        const base = path.resolve(process.env.UPLOAD_DIR ?? './uploads')
+        const caminhoLocal = path.resolve(base, emitido.arquivoUrl.replace('/uploads/', ''))
+        if (existsSync(caminhoLocal)) {
+          const bufferArquivo = readFileSync(caminhoLocal)
+          return reply
+            .type('application/pdf')
+            .header('Content-Disposition', `inline; filename="${nome}"`)
+            .send(bufferArquivo)
+        }
+      }
+    }
+
+    const pdf = await renderizarPdf(gerarCertificadoHtml(h as unknown as HomologacaoCertificado))
     return reply
       .type('application/pdf')
       .header('Content-Disposition', `inline; filename="${nome}"`)

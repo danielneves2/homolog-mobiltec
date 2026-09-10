@@ -169,11 +169,30 @@ export const GRUPO_ORDEM: GrupoItem[] = ['TELEMETRIA', 'COLETA', 'COMANDOS', 'PE
 
 export const ROTULO_STATUS_HOMOLOGACAO: Record<StatusHomologacao, string> = {
   RASCUNHO: 'Rascunho',
-  AGUARDANDO_ANALISE: 'Aguardando Análise',
-  EM_REVISAO: 'Em revisão',
-  APROVADO: 'Aprovado',
+  AGUARDANDO_ANALISE: 'Em Validação',
+  EM_REVISAO: 'Em Revisão',
+  APROVADO: 'Homologado',
   REPROVADO: 'Reprovado',
   PUBLICADO: 'Publicado',
+}
+
+export interface AnexoObservacao {
+  id: string
+  nome: string
+  url: string
+  tipo: 'imagem' | 'zip'
+  tamanho?: number
+}
+
+export interface ItemObservacaoGeral {
+  id: string
+  titulo: string
+  texto: string
+  autorId?: string
+  autorNome: string
+  autorPapel?: string
+  criadoEm: string
+  anexos: AnexoObservacao[]
 }
 
 export const ROTULO_GERENCIAMENTO: Record<TipoGerenciamento, string> = {

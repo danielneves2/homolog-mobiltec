@@ -24,6 +24,7 @@ import tiposDispositivoRoutes from './routes/tipos-dispositivo.js'
 import certificadoRoutes from './routes/certificados.js'
 import vitrineRoutes from './routes/vitrine.js'
 import parceirosRoutes from './routes/parceiros.js'
+import anexosRoutes from './routes/anexos.js'
 
 export async function criarApp(): Promise<FastifyInstance> {
   const fastify = Fastify({
@@ -57,8 +58,8 @@ export async function criarApp(): Promise<FastifyInstance> {
   }
   await fastify.register(estatico, { root: dirUploads, prefix: '/uploads/' })
 
-  // Multipart para foto do dispositivo
-  await fastify.register(multipart, { limits: { fileSize: 8 * 1024 * 1024, files: 1 } })
+  // Multipart para foto do dispositivo e anexos (.zip e imagens até 50 MB)
+  await fastify.register(multipart, { limits: { fileSize: 50 * 1024 * 1024, files: 1 } })
 
   // Rotas da aplicação
   await fastify.register(authRoutes)
@@ -70,6 +71,7 @@ export async function criarApp(): Promise<FastifyInstance> {
   await fastify.register(certificadoRoutes)
   await fastify.register(vitrineRoutes)
   await fastify.register(parceirosRoutes)
+  await fastify.register(anexosRoutes)
 
   // Health check
   fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))

@@ -172,13 +172,22 @@ export function DetalheDispositivo() {
 
         {aviso && (
           <div
-            className="mt-3 rounded-lg px-4 py-2.5 text-sm"
+            className="mt-3 rounded-lg px-4 py-3 text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2"
             style={{
               background: 'var(--color-destructive-soft)',
               color: 'var(--color-destructive-fg)',
             }}
           >
-            {aviso}
+            <span>{aviso}</span>
+            <Link
+              to={`/homologacoes/${id}/certificado`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 font-semibold underline underline-offset-2 shrink-0"
+              style={{ color: 'var(--color-primary)' }}
+            >
+              Abrir Certificado no navegador →
+            </Link>
           </div>
         )}
 
@@ -204,17 +213,30 @@ export function DetalheDispositivo() {
               {ficha.fabricante} {ficha.modelo}
             </h2>
 
-            <button
-              type="button"
-              onClick={exportarCertificado}
-              disabled={baixando}
-              title="Baixar o certificado em PDF com os dados atuais"
-              className="flex shrink-0 items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-45"
-              style={{ background: 'var(--gradient-brand-purple)' }}
-            >
-              <Icone nome="baixar" className="h-4 w-4 shrink-0" />
-              {baixando ? 'Gerando…' : 'Certificado técnico'}
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                to={`/homologacoes/${id}/certificado`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Abrir visualização do certificado técnico"
+                className="flex shrink-0 items-center gap-1.5 rounded-md border px-3.5 py-2 text-sm font-semibold transition-colors hover:bg-muted"
+                style={{ borderColor: 'var(--color-border)', color: 'var(--color-foreground)' }}
+              >
+                <Icone nome="certificado" className="h-4 w-4 shrink-0" />
+                Visualizar Certificado
+              </Link>
+              <button
+                type="button"
+                onClick={exportarCertificado}
+                disabled={baixando}
+                title="Baixar o certificado em PDF com os dados atuais"
+                className="flex shrink-0 items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-45"
+                style={{ background: 'var(--gradient-brand-purple)' }}
+              >
+                <Icone nome="baixar" className="h-4 w-4 shrink-0" />
+                {baixando ? 'Gerando…' : 'Baixar PDF'}
+              </button>
+            </div>
           </div>
 
           <div className="mt-4 flex flex-wrap items-start gap-6">

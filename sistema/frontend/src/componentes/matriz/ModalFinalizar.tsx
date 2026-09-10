@@ -20,10 +20,12 @@ export function ModalFinalizar({
   aoFechar: () => void
   aoFinalizar: () => void
 }) {
-  const { ehParceiro } = useAuth()
+  const { usuario, ehParceiro } = useAuth()
   const transicao = useTransicaoStatus(coluna.homologacao.id)
   const [erro, setErro] = useState<string | null>(null)
-  const [nomeApoio, setNomeApoio] = useState(coluna.homologacao.assinaturaApoio ?? '')
+  const [comoApoio, setComoApoio] = useState(
+    Boolean(coluna.homologacao.assinaturaApoio?.includes('Parceiro')),
+  )
 
   const resultados = coluna.homologacao.resultados
   const naoTestados = resultados.filter((r) => r.status === 'NAO_TESTADO').length
@@ -45,10 +47,13 @@ export function ModalFinalizar({
 
   function enviarParaAnalise() {
     setErro(null)
+    const assinaturaApoioCalculada = comoApoio
+      ? `${usuario?.nome ?? 'Parceiro'} — Parceiro`
+      : null
     transicao.mutate(
       {
         novoStatus: 'AGUARDANDO_ANALISE',
-        assinaturaApoio: nomeApoio.trim() || null,
+        assinaturaApoio: assinaturaApoioCalculada,
       },
       {
         onSuccess: aoFinalizar,
@@ -115,30 +120,40 @@ export function ModalFinalizar({
                 className="px-3.5 py-3 rounded-md text-sm leading-relaxed"
                 style={{ background: 'var(--color-info-soft)', color: 'var(--color-info-fg)' }}
               >
-                Ao concluir esta etapa, a homologação mudará para <strong>Aguardando Análise</strong>.
+                Ao concluir esta etapa, a homologação mudará para <strong>Em Validação</strong>.
                 Um técnico da Mobiltec revisará as notas de observação e emitirá o certificado oficial.
               </div>
 
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="nome-apoio-input"
-                  className="block text-xs font-semibold uppercase tracking-wider"
+              <div
+                className="p-3.5 rounded-lg border space-y-2.5"
+                style={{ borderColor: 'var(--color-border)', background: 'var(--color-muted)' }}
+              >
+                <div
+                  className="text-xs font-semibold uppercase tracking-wider"
                   style={{ color: 'var(--color-muted-foreground)' }}
                 >
-                  Seu nome para constar como Apoio Técnico (opcional)
+                  Identificação do Parceiro
+                </div>
+                <div className="text-sm font-medium text-foreground">
+                  {usuario?.nome || 'Usuário Parceiro'}
+                </div>
+
+                <label className="flex items-center gap-2 text-sm cursor-pointer pt-1">
+                  <input
+                    type="checkbox"
+                    checked={comoApoio}
+                    onChange={(e) => setComoApoio(e.target.checked)}
+                    className="rounded border"
+                  />
+                  <span>Cadastrar como Apoio do Parceiro</span>
                 </label>
-                <input
-                  id="nome-apoio-input"
-                  type="text"
-                  value={nomeApoio}
-                  onChange={(e) => setNomeApoio(e.target.value)}
-                  placeholder="Ex: Carlos Silva (Fabricante X)"
-                  className="w-full px-3 py-2 text-sm rounded-md border bg-transparent outline-none focus:ring-1"
-                  style={{ borderColor: 'var(--color-input)' }}
-                />
-                <p className="text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
-                  Se preenchido, seu nome será impresso no certificado oficial na seção "Apoio Adicional".
-                </p>
+
+                {comoApoio && (
+                  <p className="text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
+                    Será exibido no certificado na seção de Apoio Técnico como:{' '}
+                    <strong>{usuario?.nome || 'Parceiro'} — Parceiro</strong>
+                  </p>
+                )}
               </div>
 
               {naoTestados > 0 && (

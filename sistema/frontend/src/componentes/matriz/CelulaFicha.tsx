@@ -111,27 +111,37 @@ export function CelulaFicha({
   if (linha.edicao === 'booleano') {
     const valor = valorBruto as boolean | null
 
-    // `homologado` é decisão manual do admin e só existe a partir da aprovação
-    // (spec §11.5) — na matriz ele é leitura, muda no fluxo de aprovação.
+    // `homologado` na planilha reflete o status atual do ciclo de vida:
+    // "Em Validação", "Em Revisão", "Homologado", "Não Homologado", "Rascunho"
     if (linha.chave === 'homologado') {
-      const rotulo = valor === null ? '—' : valor ? 'Sim' : 'Não'
-      const cor =
-        valor === null
-          ? 'var(--color-muted-foreground)'
-          : valor
-            ? 'var(--color-status-ok)'
-            : 'var(--color-status-falha)'
-      const fundo =
-        valor === null
-          ? 'transparent'
-          : valor
-            ? 'var(--color-status-ok-soft)'
-            : 'var(--color-status-falha-soft)'
+      const status = homologacao.status
+      let rotulo = 'Rascunho'
+      let cor = 'var(--color-muted-foreground)'
+      let fundo = 'transparent'
+
+      if (status === 'APROVADO' || status === 'PUBLICADO') {
+        rotulo = 'Homologado'
+        cor = 'var(--color-status-ok)'
+        fundo = 'var(--color-status-ok-soft)'
+      } else if (status === 'AGUARDANDO_ANALISE') {
+        rotulo = 'Em Validação'
+        cor = 'var(--color-info-fg)'
+        fundo = 'var(--color-info-soft)'
+      } else if (status === 'EM_REVISAO') {
+        rotulo = 'Em Revisão'
+        cor = 'var(--color-brand-orange)'
+        fundo = 'var(--color-brand-orange-soft)'
+      } else if (status === 'REPROVADO' || valor === false) {
+        rotulo = 'Não Homologado'
+        cor = 'var(--color-status-falha)'
+        fundo = 'var(--color-status-falha-soft)'
+      }
+
       return (
         <div
-          className="px-2 py-1 text-center font-semibold"
+          className="px-2 py-1 text-center font-semibold text-xs whitespace-nowrap rounded-sm mx-1"
           style={{ background: fundo, color: cor }}
-          title={valor === null ? 'Definido ao aprovar a homologação' : undefined}
+          title={`Status atual: ${rotulo}`}
         >
           {rotulo}
         </div>

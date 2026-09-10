@@ -48,7 +48,15 @@ const LARGURA_RAIL = 28
 
 type FiltroLinhas = 'todas' | 'faltam' | 'divergencias' | 'sem-justificativa'
 /** '' = todas as situações */
-type FiltroSituacao = '' | 'em-andamento' | 'finalizados'
+type FiltroSituacao =
+  | ''
+  | 'HOMOLOGADO'
+  | 'EM_VALIDACAO'
+  | 'EM_REVISAO'
+  | 'RASCUNHO'
+  | 'REPROVADO'
+  | 'em-andamento'
+  | 'finalizados'
 
 /** Degradê sutil para as colunas de modelos do cabeçalho */
 const GRADIENTE_FAIXA =
@@ -222,6 +230,16 @@ export function Matriz() {
           return false
         if (filtroModelo && c.homologacao.dispositivo.modelo !== filtroModelo) return false
         if (filtroVersaoAgente && c.homologacao.versaoAgente !== filtroVersaoAgente) return false
+        if (filtroSituacao === 'HOMOLOGADO')
+          return c.homologacao.status === 'APROVADO' || c.homologacao.status === 'PUBLICADO'
+        if (filtroSituacao === 'EM_VALIDACAO')
+          return c.homologacao.status === 'AGUARDANDO_ANALISE'
+        if (filtroSituacao === 'EM_REVISAO')
+          return c.homologacao.status === 'EM_REVISAO'
+        if (filtroSituacao === 'RASCUNHO')
+          return c.homologacao.status === 'RASCUNHO'
+        if (filtroSituacao === 'REPROVADO')
+          return c.homologacao.status === 'REPROVADO'
         if (filtroSituacao === 'finalizados') return ehSomenteLeitura(c.homologacao.status)
         if (filtroSituacao === 'em-andamento') return !ehSomenteLeitura(c.homologacao.status)
         return true
@@ -389,8 +407,13 @@ export function Matriz() {
                 valor={filtroSituacao}
                 aoMudar={(v) => setFiltroSituacao(v as FiltroSituacao)}
                 opcoes={[
-                  { valor: 'em-andamento', rotulo: 'Em andamento' },
-                  { valor: 'finalizados', rotulo: 'Finalizados' },
+                  { valor: 'HOMOLOGADO', rotulo: 'Homologado' },
+                  { valor: 'EM_VALIDACAO', rotulo: 'Em Validação' },
+                  { valor: 'EM_REVISAO', rotulo: 'Em Revisão' },
+                  { valor: 'RASCUNHO', rotulo: 'Rascunho' },
+                  { valor: 'REPROVADO', rotulo: 'Não Homologado' },
+                  { valor: 'em-andamento', rotulo: 'Em andamento (geral)' },
+                  { valor: 'finalizados', rotulo: 'Finalizados (geral)' },
                 ]}
               />
               {/* Sem seletor de itens: o recorte de linhas é acionado pelo
@@ -422,9 +445,13 @@ export function Matriz() {
                 // `aria-expanded`, e endereçar este "pelo primeiro da página"
                 // passou a apontar para lá
                 data-painel-divergencias
-                title={`${divergencias.total} divergência(s)${divergencias.semJustificativa > 0 ? `, ${divergencias.semJustificativa} sem justificativa` : ''}`}
+                title={
+                  ehParceiro
+                    ? `${divergencias.total} divergência(s)`
+                    : `${divergencias.total} divergência(s)${divergencias.semJustificativa > 0 ? `, ${divergencias.semJustificativa} sem justificativa` : ''}`
+                }
                 className={`relative px-2.5 py-1.5 text-sm font-medium flex items-center gap-1.5 whitespace-nowrap transition-colors rounded-md select-none cursor-pointer outline-none focus:outline-none focus-visible:outline-none ${
-                  divergencias.semJustificativa > 0
+                  !ehParceiro && divergencias.semJustificativa > 0
                     ? 'text-red-700 bg-red-50 hover:bg-red-100'
                     : painelDivergencias
                       ? 'text-[var(--color-primary)] font-semibold'
@@ -432,15 +459,15 @@ export function Matriz() {
                 }`}
               >
                 <span>
-                  {divergencias.semJustificativa > 0 ? '⚠' : '◆'} {divergencias.total}
+                  {!ehParceiro && divergencias.semJustificativa > 0 ? '⚠' : '◆'} {divergencias.total}
                 </span>
-                {divergencias.semJustificativa > 0 && (
+                {!ehParceiro && divergencias.semJustificativa > 0 && (
                   <span className="font-semibold">· {divergencias.semJustificativa} sem justificar</span>
                 )}
                 {painelDivergencias && (
                   <span
                     className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full"
-                    style={{ background: divergencias.semJustificativa > 0 ? '#b91c1c' : 'var(--color-primary)' }}
+                    style={{ background: !ehParceiro && divergencias.semJustificativa > 0 ? '#b91c1c' : 'var(--color-primary)' }}
                   />
                 )}
               </button>
@@ -509,24 +536,27 @@ export function Matriz() {
                   </span>
                 ))}
 
-                <span className="mx-1 h-4 w-px" style={{ background: 'var(--color-border)' }} />
-
-                {divergencias.semJustificativa > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => setFiltroLinhas('sem-justificativa')}
-                    className="px-2.5 py-1 rounded-md text-xs font-semibold underline underline-offset-2"
-                    style={{
-                      background: 'var(--color-destructive-soft)',
-                      color: 'var(--color-destructive-fg)',
-                    }}
-                  >
-                    {divergencias.semJustificativa} sem justificativa — filtrar para resolver
-                  </button>
-                ) : (
-                  <span className="text-xs" style={{ color: 'var(--color-status-ok)' }}>
-                    ✓ Todas as divergências estão justificadas
-                  </span>
+                {!ehParceiro && (
+                  <>
+                    <span className="mx-1 h-4 w-px" style={{ background: 'var(--color-border)' }} />
+                    {divergencias.semJustificativa > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setFiltroLinhas('sem-justificativa')}
+                        className="px-2.5 py-1 rounded-md text-xs font-semibold underline underline-offset-2"
+                        style={{
+                          background: 'var(--color-destructive-soft)',
+                          color: 'var(--color-destructive-fg)',
+                        }}
+                      >
+                        {divergencias.semJustificativa} sem justificativa — filtrar para resolver
+                      </button>
+                    ) : (
+                      <span className="text-xs" style={{ color: 'var(--color-status-ok)' }}>
+                        ✓ Todas as divergências estão justificadas
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
               <p className="mt-2 text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
@@ -694,13 +724,18 @@ export function Matriz() {
                       <MenuColuna
                         modelo={c.homologacao.dispositivo.nomeComercial}
                         acoes={[
-                          !ehParceiro && { rotulo: 'Configuração', aoClicar: () => setConfigurar(c) },
+                          // Configuração disponível para parceiro durante o processo e para Mobiltec
+                          (!ehSomenteLeitura(c.homologacao.status, usuario?.papel) || !ehParceiro) && {
+                            rotulo: 'Configuração',
+                            aoClicar: () => setConfigurar(c),
+                          },
                           (!ehParceiro || c.homologacao.status === 'APROVADO' || c.homologacao.status === 'PUBLICADO') && {
                             rotulo: 'Certificado',
                             aoClicar: () =>
                               navegar(`/homologacoes/${c.homologacao.id}/certificado`),
                           },
-                          !ehParceiro && { rotulo: 'Reteste', aoClicar: () => setReteste(c) },
+                          // Reteste disponível para parceiro e Mobiltec, inclusive após enviar para validação
+                          { rotulo: 'Reteste', aoClicar: () => setReteste(c) },
                           {
                             rotulo: 'Observação',
                             aoClicar: () => setObservacoes(c),
@@ -863,6 +898,10 @@ export function Matriz() {
           coluna={configurar}
           aoFechar={() => setConfigurar(null)}
           aoCriar={() => setConfigurar(null)}
+          aoPedirReteste={(col) => {
+            setConfigurar(null)
+            setReteste(col)
+          }}
         />
       )}
 
