@@ -241,3 +241,25 @@ export function useListaHomologacoes(filtros?: { status?: string; responsavelId?
   })
 }
 
+/** Upload da foto oficial do dispositivo — atualiza catálogo, matriz e certificados */
+export function useUploadFotoDispositivo(dispositivoId: string, homologacaoId?: string) {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (arquivo: File) => {
+      const dados = new FormData()
+      dados.append('arquivo', arquivo)
+      return api.postMultipart<{ id: string; fotoUrl: string }>(`/dispositivos/${dispositivoId}/foto`, dados)
+    },
+    onSuccess: () => {
+      if (homologacaoId) {
+        qc.invalidateQueries({ queryKey: chaves.homologacao(homologacaoId) })
+      }
+      qc.invalidateQueries({ queryKey: ['matriz'] })
+      qc.invalidateQueries({ queryKey: ['vitrine'] })
+      qc.invalidateQueries({ queryKey: ['dispositivo', dispositivoId] })
+      qc.invalidateQueries({ queryKey: ['certificado'] })
+    },
+  })
+}
+
