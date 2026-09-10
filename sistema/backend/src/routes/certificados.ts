@@ -281,24 +281,61 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
     )
 
     if (emitido && emitido.arquivoUrl) {
+      if (emitido.arquivoUrl.startsWith('http://') || emitido.arquivoUrl.startsWith('https://')) {
+        try {
+          const resp = await fetch(emitido.arquivoUrl)
+          if (resp.ok) {
+            const bufferArquivo = Buffer.from(await resp.arrayBuffer())
+            return reply
+              .type('application/pdf')
+              .header('Content-Disposition', `attachment; filename="${nome}"`)
+              .send(bufferArquivo)
+          }
+        } catch (errRemoto) {
+          request.log.warn({ err: errRemoto }, 'Falha ao buscar PDF do Supabase Storage')
+        }
+      }
+
       if (emitido.arquivoUrl.startsWith('/uploads/')) {
         const base = path.resolve(process.env.UPLOAD_DIR ?? './uploads')
-        const caminhoLocal = path.resolve(base, emitido.arquivoUrl.replace('/uploads/', ''))
+        let caminhoLocal = path.resolve(base, emitido.arquivoUrl.replace('/uploads/', ''))
+        if (!existsSync(caminhoLocal)) {
+          caminhoLocal = path.resolve('/tmp/uploads', emitido.arquivoUrl.replace('/uploads/', ''))
+        }
         if (existsSync(caminhoLocal)) {
           const bufferArquivo = readFileSync(caminhoLocal)
           return reply
             .type('application/pdf')
-            .header('Content-Disposition', `inline; filename="${nome}"`)
+            .header('Content-Disposition', `attachment; filename="${nome}"`)
             .send(bufferArquivo)
         }
       }
     }
 
-    const pdf = await renderizarPdf(gerarCertificadoHtml(h as unknown as HomologacaoCertificado))
-    return reply
-      .type('application/pdf')
-      .header('Content-Disposition', `inline; filename="${nome}"`)
-      .send(pdf)
+    const html = gerarCertificadoHtml(h as unknown as HomologacaoCertificado)
+
+    try {
+      const pdf = await renderizarPdf(html)
+      return reply
+        .type('application/pdf')
+        .header('Content-Disposition', `attachment; filename="${nome}"`)
+        .send(pdf)
+    } catch (errPdf: any) {
+      // Se a requisição veio direto de um navegador via barra de endereço (Accept inclui text/html)
+      if (request.headers.accept?.includes('text/html')) {
+        const htmlAutoPrint = html.replace(
+          '</body>',
+          '<script>window.addEventListener("load", function() { setTimeout(function() { window.print(); }, 400); });</script></body>',
+        )
+        return reply.type('text/html').send(htmlAutoPrint)
+      }
+
+      return reply.status(503).send({
+        erro: 'Geração de PDF no servidor indisponível neste ambiente.',
+        mensagem: 'Utilize a opção de visualização e imprima como PDF (Salvar como PDF no navegador).',
+        previewUrl: `/homologacoes/${id}/certificado`,
+      })
+    }
   })
 
   // ============================================================
@@ -332,7 +369,16 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
     ).length
     const pendentes = naoTestados + semJustificativa
     const html = gerarCertificadoHtml(h as unknown as HomologacaoCertificado)
-    const pdf = await renderizarPdf(html)
+
+    let pdf: Buffer
+    try {
+      pdf = await renderizarPdf(html)
+    } catch (err: any) {
+      return reply.status(503).send({
+        erro: 'Emissão automatizada de arquivo PDF no servidor indisponível neste ambiente serverless.',
+        detalhes: 'Utilize a impressão do navegador (Ctrl+P / Salvar como PDF) para arquivar o certificado.',
+      })
+    }
 
     const arquivoUrl = await salvarCertificadoPdf(id, pdf)
 

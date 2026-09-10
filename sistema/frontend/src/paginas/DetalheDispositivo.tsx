@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useHomologacao } from '@/hooks/useHomologacao'
 import { api, ErroApi } from '@/lib/api'
 import { useAuth } from '@/contextos/AuthContext'
+import { imprimirCertificadoHtml } from '@/lib/imprimir'
 import { FotoDispositivo } from '@/componentes/vitrine/FotoDispositivo'
 import { ModalUploadFoto } from '@/componentes/dispositivo/ModalUploadFoto'
 import { DicaJustificativa } from '@/componentes/DicaJustificativa'
@@ -58,7 +59,7 @@ interface LinhaResultado {
 export function DetalheDispositivo() {
   const { id = '' } = useParams<{ id: string }>()
   const consulta = useHomologacao(id)
-  const { ehMobiltec } = useAuth()
+  const { ehMobiltec, ehParceiro } = useAuth()
 
   const [baixando, setBaixando] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
@@ -118,6 +119,9 @@ export function DetalheDispositivo() {
     [linhas],
   )
 
+  const podeEditarFoto =
+    ehMobiltec || (ehParceiro && ficha?.status === 'RASCUNHO' && !ficha?.homologado)
+
   async function exportarCertificado() {
     setBaixando(true)
     setAviso(null)
@@ -129,8 +133,16 @@ export function DetalheDispositivo() {
       a.download = `certificado-${ficha?.modelo ?? id}.pdf`
       a.click()
       URL.revokeObjectURL(url)
-    } catch (e) {
-      setAviso(e instanceof ErroApi ? e.message : 'Não foi possível gerar o PDF.')
+    } catch (e: any) {
+      // Fallback: se a geração no servidor estiver indisponível (serverless / sem Playwright),
+      // buscamos o preview HTML e abrimos o diálogo nativo do navegador para Salvar como PDF
+      try {
+        setAviso('Abrindo diálogo de impressão (Salvar como PDF)...')
+        const html = await api.getTexto(`/homologacoes/${id}/certificado/preview`)
+        imprimirCertificadoHtml(html)
+      } catch (errFallback) {
+        setAviso(e instanceof ErroApi ? e.message : 'Não foi possível gerar o PDF.')
+      }
     } finally {
       setBaixando(false)
     }
@@ -251,7 +263,7 @@ export function DetalheDispositivo() {
                   altura={192}
                   semBorda
                 />
-                {ehMobiltec && (
+                {podeEditarFoto && (
                   <button
                     type="button"
                     onClick={() => setModalFotoAberto(true)}
@@ -268,7 +280,7 @@ export function DetalheDispositivo() {
                 )}
               </div>
 
-              {ehMobiltec && (
+              {podeEditarFoto && (
                 <button
                   type="button"
                   onClick={() => setModalFotoAberto(true)}

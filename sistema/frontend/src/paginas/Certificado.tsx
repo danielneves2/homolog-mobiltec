@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contextos/AuthContext'
 import { api, ErroApi } from '@/lib/api'
+import { imprimirCertificadoHtml } from '@/lib/imprimir'
 import {
   useDashboard,
   useEditarDivergencia,
@@ -112,8 +113,15 @@ export function Certificado() {
       a.download = `certificado-${homologacao?.dispositivo?.modelo ?? id}.pdf`
       a.click()
       URL.revokeObjectURL(url)
-    } catch (e) {
-      setAviso(e instanceof ErroApi ? e.message : 'Não foi possível gerar o PDF.')
+    } catch (e: any) {
+      // Fallback: se a geração no servidor estiver indisponível (serverless / sem Playwright),
+      // acionamos o diálogo nativo do navegador para Salvar como PDF
+      if (html) {
+        setAviso('Abrindo diálogo de impressão (Salvar como PDF)...')
+        imprimirCertificadoHtml(html)
+      } else {
+        setAviso(e instanceof ErroApi ? e.message : 'Não foi possível gerar o PDF.')
+      }
     } finally {
       setBaixando(false)
     }
