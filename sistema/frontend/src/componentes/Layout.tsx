@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contextos/AuthContext'
 import { useCategorias } from '@/hooks/useVitrine'
 import { useListaHomologacoes } from '@/hooks/useHomologacao'
+import { useParceiros } from '@/hooks/useParceiros'
 import { ancorarMenu } from '@/lib/ancorarMenu'
 import { LogoMobiltec } from './LogoMobiltec'
 import { Icone, iconeDaCategoria, type NomeIcone } from './Icone'
@@ -307,6 +308,379 @@ function GrupoMenu({
 }
 
 /**
+ * Menu "Painéis" com estrutura dinâmica por perfil (spec §3):
+ *
+ * PARCEIRO:
+ * Painéis ˅
+ * ├── Mobiltec (Geral público)
+ * └── [Nome da Empresa] (Exclusivo do parceiro logado)
+ *
+ * ADMIN @MOBILTEC:
+ * Painéis ˅
+ * ├── Mobiltec (Geral público)
+ * └── Parceiros ˅
+ *     ├── Empresa A
+ *     ├── Empresa B
+ *     └── Empresa C
+ */
+function MenuPaineis({
+  aberto,
+  ehAdmin,
+  ehParceiro,
+  usuario,
+}: {
+  aberto: boolean
+  ehAdmin: boolean
+  ehParceiro: boolean
+  usuario: any
+}) {
+  const { pathname } = useLocation()
+  const { data: parceiros = [] } = useParceiros(ehAdmin)
+  const parceirosAtivos = parceiros.filter((p) => p.ativo)
+
+  const noPainel =
+    pathname === '/' ||
+    pathname === '/paineis/mobiltec' ||
+    pathname === '/paineis/meu-painel' ||
+    pathname.startsWith('/paineis/parceiro')
+
+  const noSubParceiros = pathname.startsWith('/paineis/parceiro')
+
+  const [expandido, setExpandido] = useState(noPainel)
+  const [parceirosExpandido, setParceirosExpandido] = useState(noSubParceiros)
+  const [emHover, setEmHover] = useState(false)
+  const [flutuante, setFlutuante] = useState<{ x: number; y: number } | null>(null)
+  const refBotao = useRef<HTMLButtonElement>(null)
+  const refPainel = useRef<HTMLDivElement>(null)
+  const refTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (noPainel) setExpandido(true)
+    if (noSubParceiros) setParceirosExpandido(true)
+  }, [noPainel, noSubParceiros])
+
+  useEffect(() => {
+    if (!aberto) {
+      setExpandido(false)
+      setEmHover(false)
+    } else {
+      setFlutuante(null)
+    }
+  }, [aberto])
+
+  useEffect(() => {
+    return () => {
+      if (refTimeout.current) clearTimeout(refTimeout.current)
+    }
+  }, [])
+
+  function aoEntrarMouse() {
+    if (!aberto) return
+    if (refTimeout.current) {
+      clearTimeout(refTimeout.current)
+      refTimeout.current = null
+    }
+    setEmHover(true)
+  }
+
+  function aoSairMouse() {
+    if (!aberto) return
+    if (refTimeout.current) clearTimeout(refTimeout.current)
+    refTimeout.current = setTimeout(() => {
+      setEmHover(false)
+    }, 130)
+  }
+
+  useEffect(() => {
+    if (!flutuante) return
+    const fechar = (e: MouseEvent) => {
+      const alvo = e.target as Node
+      if (refBotao.current?.contains(alvo) || refPainel.current?.contains(alvo)) return
+      setFlutuante(null)
+    }
+    const aoTeclar = (e: KeyboardEvent) => e.key === 'Escape' && setFlutuante(null)
+    document.addEventListener('mousedown', fechar)
+    document.addEventListener('keydown', aoTeclar)
+    return () => {
+      document.removeEventListener('mousedown', fechar)
+      document.removeEventListener('keydown', aoTeclar)
+    }
+  }, [flutuante])
+
+  function alternar() {
+    if (aberto) {
+      setExpandido((v) => {
+        const proximo = !v
+        if (!proximo) setEmHover(false)
+        return proximo
+      })
+      return
+    }
+    const r = refBotao.current?.getBoundingClientRect()
+    if (!r) return
+    if (flutuante) return setFlutuante(null)
+    const aoLado = {
+      top: r.top,
+      bottom: r.top,
+      left: r.right + 6,
+      right: r.right + 6,
+      width: 0,
+    } as DOMRect
+    const altura = ehAdmin ? 260 : 80
+    setFlutuante(ancorarMenu(aoLado, { largura: 210, altura }))
+  }
+
+  const abertoVisivel = expandido || emHover
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={aoEntrarMouse}
+      onMouseLeave={aoSairMouse}
+    >
+      <button
+        ref={refBotao}
+        type="button"
+        onClick={alternar}
+        aria-expanded={aberto ? abertoVisivel : !!flutuante}
+        title={aberto ? undefined : 'Painéis'}
+        data-grupo-menu="Painéis"
+        className={`btn-menu-lateral relative flex items-center select-none outline-none focus:outline-none focus-visible:outline-none ${
+          aberto
+            ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium leading-tight'
+            : 'mx-auto h-9 w-9 items-center justify-center rounded-lg'
+        } ${
+          noPainel
+            ? 'btn-menu-ativo text-white'
+            : 'text-[var(--color-muted-foreground)]'
+        }`}
+        style={{
+          background: noPainel ? 'var(--gradient-brand-purple)' : undefined,
+          boxShadow: noPainel ? '0 2px 6px -1px rgba(126, 32, 101, 0.35)' : undefined,
+          justifyContent: aberto ? 'flex-start' : 'center',
+        }}
+      >
+        <Icone nome="painel" className="h-[18px] w-[18px] shrink-0" />
+        {aberto && (
+          <>
+            <span className="flex-1 truncate text-left">Painéis</span>
+            <svg
+              viewBox="0 0 16 16"
+              className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 opacity-75"
+              style={{ transform: abertoVisivel ? 'rotate(180deg)' : 'none' }}
+              aria-hidden
+            >
+              <path
+                d="M4 6.5 8 10.5l4-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </>
+        )}
+      </button>
+
+      {aberto && (
+        <div
+          className="menu-accordion-wrapper"
+          data-aberto={abertoVisivel ? 'true' : 'false'}
+        >
+          <div className="menu-accordion-content">
+            <div
+              className="mt-1 ml-5 space-y-0.5 border-l pl-2"
+              style={{ borderColor: 'var(--color-border)' }}
+            >
+              {/* Mobiltec — Painel Geral Público */}
+              <NavLink
+                to="/"
+                end
+                className={({ isActive }) =>
+                  `btn-menu-subitem flex items-center justify-between truncate rounded-md px-2.5 py-1.5 text-[13px] font-medium leading-tight outline-none focus:outline-none focus-visible:outline-none ${
+                    isActive
+                      ? 'btn-subitem-ativo bg-[var(--color-muted)] text-[var(--color-primary)] font-semibold'
+                      : 'text-[var(--color-muted-foreground)]'
+                  }`
+                }
+              >
+                <span className="truncate">Mobiltec</span>
+              </NavLink>
+
+              {/* Se for PARCEIRO: mostra diretamente o nome da própria empresa */}
+              {ehParceiro && (
+                <NavLink
+                  to="/paineis/meu-painel"
+                  className={({ isActive }) =>
+                    `btn-menu-subitem flex items-center justify-between truncate rounded-md px-2.5 py-1.5 text-[13px] font-medium leading-tight outline-none focus:outline-none focus-visible:outline-none ${
+                      isActive
+                        ? 'btn-subitem-ativo bg-[var(--color-muted)] text-[var(--color-primary)] font-semibold'
+                        : 'text-[var(--color-muted-foreground)]'
+                    }`
+                  }
+                >
+                  <span className="truncate">{usuario?.empresa || 'Meu Painel'}</span>
+                </NavLink>
+              )}
+
+              {/* Se for ADMIN: mostra submenu Parceiros ˅ com a lista de todos os parceiros */}
+              {ehAdmin && (
+                <div className="pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setParceirosExpandido((v) => !v)}
+                    className={`btn-menu-subitem flex items-center justify-between w-full truncate rounded-md px-2.5 py-1.5 text-[13px] font-medium leading-tight cursor-pointer outline-none focus:outline-none focus-visible:outline-none ${
+                      noSubParceiros
+                        ? 'text-[var(--color-primary)] font-semibold'
+                        : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]'
+                    }`}
+                  >
+                    <span className="truncate">Parceiros</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {parceirosAtivos.length > 0 && (
+                        <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-100 text-slate-600 font-semibold">
+                          {parceirosAtivos.length}
+                        </span>
+                      )}
+                      <svg
+                        viewBox="0 0 16 16"
+                        className="h-3 w-3 shrink-0 transition-transform duration-200 opacity-70"
+                        style={{ transform: parceirosExpandido ? 'rotate(180deg)' : 'none' }}
+                        aria-hidden
+                      >
+                        <path
+                          d="M4 6.5 8 10.5l4-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </div>
+                  </button>
+
+                  {parceirosExpandido && (
+                    <div
+                      className="mt-0.5 ml-2.5 space-y-0.5 border-l pl-2"
+                      style={{ borderColor: 'var(--color-border)' }}
+                    >
+                      {parceirosAtivos.length === 0 ? (
+                        <span className="text-[11px] text-slate-400 italic px-2 py-1 block">
+                          Nenhum parceiro cadastrado
+                        </span>
+                      ) : (
+                        parceirosAtivos.map((p) => (
+                          <NavLink
+                            key={p.id}
+                            to={`/paineis/parceiro/${p.id}`}
+                            className={({ isActive }) =>
+                              `btn-menu-subitem flex items-center truncate rounded-md px-2 py-1 text-[12px] font-medium leading-tight outline-none focus:outline-none focus-visible:outline-none ${
+                                isActive
+                                  ? 'bg-[var(--color-muted)] text-[var(--color-primary)] font-semibold'
+                                  : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]'
+                              }`
+                            }
+                            title={p.empresa}
+                          >
+                            <span className="truncate">{p.empresa}</span>
+                          </NavLink>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Menu Flutuante (quando sidebar está recolhida) */}
+      {!aberto && flutuante && (
+        <div
+          ref={refPainel}
+          role="menu"
+          data-menu-flutuante
+          className="fixed z-50 min-w-52 rounded-lg border py-1.5 shadow-lg bg-white"
+          style={{
+            left: flutuante.x,
+            top: flutuante.y,
+            background: 'var(--color-popover)',
+            color: 'var(--color-foreground)',
+          }}
+        >
+          <div className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b mb-1">
+            Painéis
+          </div>
+          <NavLink
+            to="/"
+            end
+            role="menuitem"
+            onClick={() => setFlutuante(null)}
+            className="flex items-center px-3 py-1.5 text-xs font-medium transition-colors hover:bg-black/[0.04] outline-none"
+            style={({ isActive }) => ({
+              background: isActive ? 'var(--color-muted)' : 'transparent',
+              color: isActive ? 'var(--color-primary)' : 'inherit',
+              fontWeight: isActive ? 600 : 400,
+            })}
+          >
+            Mobiltec
+          </NavLink>
+
+          {ehParceiro && (
+            <NavLink
+              to="/paineis/meu-painel"
+              role="menuitem"
+              onClick={() => setFlutuante(null)}
+              className="flex items-center px-3 py-1.5 text-xs font-medium transition-colors hover:bg-black/[0.04] outline-none"
+              style={({ isActive }) => ({
+                background: isActive ? 'var(--color-muted)' : 'transparent',
+                color: isActive ? 'var(--color-primary)' : 'inherit',
+                fontWeight: isActive ? 600 : 400,
+              })}
+            >
+              {usuario?.empresa || 'Meu Painel'}
+            </NavLink>
+          )}
+
+          {ehAdmin && (
+            <div className="pt-1 mt-1 border-t">
+              <div className="px-3 py-1 text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider">
+                Parceiros
+              </div>
+              {parceirosAtivos.length === 0 ? (
+                <span className="text-[11px] text-slate-400 italic px-3 py-1 block">
+                  Nenhum parceiro
+                </span>
+              ) : (
+                parceirosAtivos.map((p) => (
+                  <NavLink
+                    key={p.id}
+                    to={`/paineis/parceiro/${p.id}`}
+                    role="menuitem"
+                    onClick={() => setFlutuante(null)}
+                    className="flex items-center px-3 py-1.5 text-xs font-medium transition-colors hover:bg-black/[0.04] outline-none"
+                    style={({ isActive }) => ({
+                      background: isActive ? 'var(--color-muted)' : 'transparent',
+                      color: isActive ? 'var(--color-primary)' : 'inherit',
+                      fontWeight: isActive ? 600 : 400,
+                    })}
+                  >
+                    <span className="truncate">{p.empresa}</span>
+                  </NavLink>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
  * Nome do registro, ao centro da barra.
  *
  * Só nas telas de planilha: é o rótulo do documento que a bateria de testes
@@ -325,6 +699,7 @@ export function Layout() {
   const { usuario, ehParceiro, ehAdmin, sair } = useAuth()
   const { data: categorias } = useCategorias()
   const { data: todasHomologacoes = [] } = useListaHomologacoes()
+  const { data: todosParceiros = [] } = useParceiros(ehAdmin)
   const { pathname } = useLocation()
 
   const totalPendentes = todasHomologacoes.filter(
@@ -355,15 +730,12 @@ export function Layout() {
     return usuario?.categoriasPermitidas?.includes(c.slug)
   })
 
-  const itens: ItemMenuDados[] = [
-    { para: '/', rotulo: 'Painel de Homologação', icone: 'home', fim: true },
-    ...categoriasFiltradas.map((c) => ({
-      para: `/matriz/${c.slug}`,
-      rotulo: c.nome,
-      icone: iconeDaCategoria(c.icone),
-      fim: false,
-    })),
-  ]
+  const itensCategorias: ItemMenuDados[] = categoriasFiltradas.map((c) => ({
+    para: `/matriz/${c.slug}`,
+    rotulo: c.nome,
+    icone: iconeDaCategoria(c.icone),
+    fim: false,
+  }))
 
   /**
    * Fica sempre abaixo dos tipos de dispositivo, separado por um traço: é de
@@ -396,13 +768,24 @@ export function Layout() {
    * exibe no título principal o nome da tela/submenu.
    */
   const secao = (() => {
+    if (pathname === '/' || pathname === '/paineis/mobiltec') {
+      return { rotulo: 'Painéis · Mobiltec', icone: 'painel' as NomeIcone }
+    }
+    if (pathname === '/paineis/meu-painel') {
+      return { rotulo: `Painéis · ${usuario?.empresa || 'Meu Painel'}`, icone: 'painel' as NomeIcone }
+    }
+    if (pathname.startsWith('/paineis/parceiro/')) {
+      const idOuEmpresa = pathname.replace('/paineis/parceiro/', '')
+      const p = todosParceiros.find((x) => x.id === idOuEmpresa || x.empresa === idOuEmpresa)
+      return { rotulo: `Painéis · ${p?.empresa || 'Parceiro'}`, icone: 'painel' as NomeIcone }
+    }
     if (opcoesRegistro.some((i) => (i.fim ? pathname === i.para : pathname.startsWith(i.para)))) {
       return registro
     }
     if (opcoesParceiros.some((i) => (i.fim ? pathname === i.para : pathname.startsWith(i.para)))) {
       return parceiros
     }
-    return itens.find((i) => (i.fim ? pathname === i.para : pathname.startsWith(i.para))) ?? itens[0]
+    return itensCategorias.find((i) => (i.fim ? pathname === i.para : pathname.startsWith(i.para))) ?? { rotulo: 'Painéis · Mobiltec', icone: 'painel' as NomeIcone }
   })()
 
   /** Só as telas de planilha registram testes */
@@ -445,7 +828,16 @@ export function Layout() {
           </div>
 
           <nav className="flex-1 overflow-y-auto p-2 space-y-1">
-            {itens.map((item) => (
+            {/* Menu Painéis (diferenciado por perfil) */}
+            <MenuPaineis
+              aberto={aberto}
+              ehAdmin={ehAdmin}
+              ehParceiro={ehParceiro}
+              usuario={usuario}
+            />
+
+            {/* Categorias de dispositivo */}
+            {itensCategorias.map((item) => (
               <ItemMenu key={item.para} item={item} aberto={aberto} />
             ))}
 

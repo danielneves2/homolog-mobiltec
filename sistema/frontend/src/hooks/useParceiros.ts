@@ -1,15 +1,27 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { Parceiro, PayloadCriarParceiro, PayloadAtualizarParceiro } from '@/lib/tipos'
+import type { Parceiro, PayloadCriarParceiro, PayloadAtualizarParceiro, PainelParceiroDados } from '@/lib/tipos'
 
 export const chavesParceiros = {
   todas: ['parceiros'] as const,
+  painel: (id?: string) => ['painel-parceiro', id ?? 'meu'] as const,
 }
 
-export function useParceiros() {
+export function useParceiros(habilitado = true) {
   return useQuery({
     queryKey: chavesParceiros.todas,
     queryFn: () => api.get<Parceiro[]>('/parceiros'),
+    enabled: habilitado,
+  })
+}
+
+export function usePainelParceiro(parceiroId?: string) {
+  return useQuery({
+    queryKey: chavesParceiros.painel(parceiroId),
+    queryFn: () =>
+      parceiroId
+        ? api.get<PainelParceiroDados>(`/parceiros/${parceiroId}/painel`)
+        : api.get<PainelParceiroDados>('/parceiros/meu-painel'),
   })
 }
 
@@ -30,6 +42,7 @@ export function useAtualizarParceiro() {
       api.put<Parceiro>(`/parceiros/${id}`, dados),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: chavesParceiros.todas })
+      qc.invalidateQueries({ queryKey: ['painel-parceiro'] })
     },
   })
 }
@@ -40,6 +53,7 @@ export function useInativarParceiro() {
     mutationFn: (id: string) => api.delete<{ ok: boolean }>(`/parceiros/${id}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: chavesParceiros.todas })
+      qc.invalidateQueries({ queryKey: ['painel-parceiro'] })
     },
   })
 }

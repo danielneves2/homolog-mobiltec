@@ -185,6 +185,207 @@ const parceirosRoutes: FastifyPluginAsync = async (fastify) => {
       }
     },
   )
+
+  // ============================================================
+  // GET /parceiros/meu-painel — Painel exclusivo do parceiro logado
+  // ============================================================
+  fastify.get(
+    '/parceiros/meu-painel',
+    { onRequest: [fastify.autenticar] },
+    async (request, reply) => {
+      const usuarioLogado = await fastify.prisma.usuario.findUnique({
+        where: { id: request.user.id },
+      })
+
+      if (!usuarioLogado) {
+        return reply.status(404).send({ erro: 'Usuário não encontrado' })
+      }
+
+      if (usuarioLogado.papel !== 'PARCEIRO' && usuarioLogado.papel !== 'ADMIN') {
+        return reply.status(403).send({ erro: 'Acesso restrito a parceiros' })
+      }
+
+      return montarDadosPainel(fastify, usuarioLogado)
+    },
+  )
+
+  // ============================================================
+  // GET /parceiros/:id/painel — Painel de um parceiro específico
+  // (Admin pode ver qualquer um; Parceiro só pode ver o seu próprio)
+  // ============================================================
+  fastify.get(
+    '/parceiros/:id/painel',
+    { onRequest: [fastify.autenticar] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string }
+      const ehAdmin = request.user.papel === 'ADMIN'
+      const ehParceiro = request.user.papel === 'PARCEIRO'
+
+      if (!ehAdmin && !ehParceiro) {
+        return reply.status(403).send({ erro: 'Acesso restrito' })
+      }
+
+      const parceiro = await fastify.prisma.usuario.findFirst({
+        where: {
+          OR: [{ id }, { empresa: id }],
+          papel: 'PARCEIRO',
+        },
+        select: {
+          id: true,
+          nome: true,
+          email: true,
+          cargo: true,
+          papel: true,
+          empresa: true,
+          categoriasPermitidas: true,
+          ativo: true,
+          criadoEm: true,
+        },
+      })
+
+      if (!parceiro) {
+        return reply.status(404).send({ erro: 'Parceiro não encontrado' })
+      }
+
+      // Regra de segurança: parceiro só pode acessar o seu próprio painel
+      if (ehParceiro) {
+        const usuarioLogado = await fastify.prisma.usuario.findUnique({
+          where: { id: request.user.id },
+          select: { id: true, empresa: true },
+        })
+        if (parceiro.id !== request.user.id && parceiro.empresa !== usuarioLogado?.empresa) {
+          return reply.status(403).send({ erro: 'Acesso restrito ao painel exclusivo da sua empresa' })
+        }
+      }
+
+      return montarDadosPainel(fastify, parceiro)
+    },
+  )
+}
+
+/**
+ * Monta os dados consolidados do painel de um parceiro:
+ * métricas de homologação, progresso de testes e lista de dispositivos.
+ */
+async function montarDadosPainel(fastify: any, parceiro: any) {
+  const empresa = parceiro.empresa
+
+  const dispositivos = await fastify.prisma.dispositivo.findMany({
+    where: {
+      ativo: true,
+      OR: [
+        ...(empresa ? [{ empresa }] : []),
+        ...(empresa ? [{ fabricante: { equals: empresa, mode: 'insensitive' } }] : []),
+        { homologacoes: { some: { responsavelId: parceiro.id } } },
+        ...(empresa ? [{ homologacoes: { some: { responsavel: { empresa } } } }] : []),
+      ],
+    },
+    include: {
+      categoria: { select: { id: true, nome: true, slug: true, icone: true } },
+      homologacoes: {
+        include: {
+          resultados: { select: { status: true, justificativaId: true, justificativaTexto: true } },
+          responsavel: { select: { id: true, nome: true, email: true } },
+        },
+        orderBy: { criadoEm: 'desc' },
+      },
+    },
+    orderBy: { criadoEm: 'desc' },
+  })
+
+  const metricas = {
+    totalDispositivos: dispositivos.length,
+    emHomologacao: 0,
+    emValidacao: 0,
+    emRevisao: 0,
+    homologados: 0,
+    reprovados: 0,
+    testesTotal: 0,
+    testesRealizados: 0,
+    testesPendentes: 0,
+  }
+
+  const listaDispositivos = dispositivos.map((d: any) => {
+    const atual = d.homologacoes[0]
+    const resumo = {
+      total: atual?.resultados.length ?? 0,
+      ok: 0,
+      divergencias: 0,
+      semJustificativa: 0,
+      naoTestado: 0,
+      naoAplicavel: 0,
+      avaliados: 0,
+    }
+
+    if (atual) {
+      if (atual.status === 'RASCUNHO') metricas.emHomologacao++
+      else if (atual.status === 'AGUARDANDO_ANALISE') metricas.emValidacao++
+      else if (atual.status === 'EM_REVISAO') metricas.emRevisao++
+      else if (atual.status === 'APROVADO' || atual.status === 'PUBLICADO') metricas.homologados++
+      else if (atual.status === 'REPROVADO') metricas.reprovados++
+
+      for (const r of atual.resultados) {
+        metricas.testesTotal++
+        if (r.status === 'NAO_TESTADO') {
+          metricas.testesPendentes++
+          resumo.naoTestado++
+        } else {
+          metricas.testesRealizados++
+        }
+
+        if (r.status === 'OK') resumo.ok++
+        else if (r.status === 'NAO_APLICAVEL') resumo.naoAplicavel++
+
+        if (['FALHA', 'NAO_SUPORTADO', 'COM_RESSALVA'].includes(r.status)) {
+          resumo.divergencias++
+          if (!r.justificativaId && !r.justificativaTexto) resumo.semJustificativa++
+        }
+      }
+      resumo.avaliados = resumo.total - resumo.naoTestado
+    }
+
+    return {
+      dispositivoId: d.id,
+      homologacaoId: atual?.id ?? null,
+      fabricante: d.fabricante,
+      modelo: d.modelo,
+      nomeComercial: d.nomeComercial,
+      fotoUrl: d.fotoUrl,
+      linkFabricante: d.linkFabricante,
+      categoriaId: d.categoria.id,
+      categoriaNome: d.categoria.nome,
+      categoriaSlug: d.categoria.slug,
+      categoriaIcone: d.categoria.icone,
+      versaoSo: atual?.versaoSo ?? '-',
+      versaoAgente: atual?.versaoAgente ?? '-',
+      versaoPos: atual?.versaoPos ?? null,
+      gerenciamento: atual?.gerenciamento ?? 'ANDROID_ENTERPRISE',
+      tipoAgente: atual?.tipoAgente ?? 'PROD',
+      status: atual?.status ?? 'RASCUNHO',
+      homologado: atual?.homologado ?? false,
+      observacoes: atual?.observacoes ?? null,
+      dataInicio: atual?.dataInicio ?? null,
+      dataFim: atual?.dataFim ?? null,
+      responsavelNome: atual?.responsavel?.nome ?? parceiro.nome,
+      resumo,
+    }
+  })
+
+  return {
+    parceiro: {
+      id: parceiro.id,
+      nome: parceiro.nome,
+      email: parceiro.email,
+      cargo: parceiro.cargo,
+      papel: parceiro.papel,
+      empresa: parceiro.empresa,
+      categoriasPermitidas: parceiro.categoriasPermitidas,
+      ativo: parceiro.ativo,
+      criadoEm: parceiro.criadoEm,
+    },
+    metricas,
+    dispositivos: listaDispositivos,
+  }
 }
 
 export default parceirosRoutes

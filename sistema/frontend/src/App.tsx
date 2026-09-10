@@ -12,6 +12,7 @@ import { DetalheDispositivo } from '@/paginas/DetalheDispositivo'
 import { Certificado } from '@/paginas/Certificado'
 import { GerenciarParceiros } from '@/paginas/GerenciarParceiros'
 import { ValidarCertificados } from '@/paginas/ValidarCertificados'
+import { PainelParceiro } from '@/paginas/PainelParceiro'
 
 const clienteQuery = new QueryClient({
   defaultOptions: {
@@ -51,6 +52,10 @@ export default function App() {
               }
             >
               <Route path="/" element={<Home />} />
+              <Route path="/paineis/mobiltec" element={<Home />} />
+              <Route path="/paineis/meu-painel" element={<PainelParceiro />} />
+              <Route path="/paineis/parceiro/:id" element={<PainelParceiro />} />
+              <Route path="/paineis" element={<Navigate to="/" replace />} />
               <Route path="/dispositivos/:id" element={<DetalheDispositivo />} />
               {/* Uma matriz por categoria de dispositivo */}
               <Route path="/matriz/:slug" element={<Matriz />} />

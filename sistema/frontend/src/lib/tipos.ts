@@ -224,6 +224,58 @@ export interface PayloadAtualizarParceiro {
   ativo?: boolean
 }
 
+export interface MetricasPainelParceiro {
+  totalDispositivos: number
+  emHomologacao: number
+  emValidacao: number
+  emRevisao: number
+  homologados: number
+  reprovados: number
+  testesTotal: number
+  testesRealizados: number
+  testesPendentes: number
+}
+
+export interface DispositivoPainelParceiro {
+  dispositivoId: string
+  homologacaoId: string | null
+  fabricante: string
+  modelo: string
+  nomeComercial: string
+  fotoUrl: string | null
+  linkFabricante: string | null
+  categoriaId: string
+  categoriaNome: string
+  categoriaSlug: string
+  categoriaIcone: string
+  versaoSo: string
+  versaoAgente: string
+  versaoPos: string | null
+  gerenciamento: TipoGerenciamento
+  tipoAgente: string
+  status: StatusHomologacao
+  homologado: boolean
+  observacoes: string | null
+  dataInicio: string | null
+  dataFim: string | null
+  responsavelNome: string
+  resumo: {
+    total: number
+    ok: number
+    divergencias: number
+    semJustificativa: number
+    naoTestado: number
+    naoAplicavel: number
+    avaliados: number
+  }
+}
+
+export interface PainelParceiroDados {
+  parceiro: Parceiro
+  metricas: MetricasPainelParceiro
+  dispositivos: DispositivoPainelParceiro[]
+}
+
 export interface Categoria {
   id: string
   nome: string
