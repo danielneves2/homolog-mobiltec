@@ -60,6 +60,8 @@ export default function App() {
               {/* Uma matriz por categoria de dispositivo */}
               <Route path="/matriz/:slug" element={<Matriz />} />
               <Route path="/matriz" element={<Navigate to="/matriz/pos" replace />} />
+              <Route path="/homologacoes" element={<Navigate to="/matriz/pos" replace />} />
+              <Route path="/homologacao" element={<Navigate to="/matriz/pos" replace />} />
               {/* De onde saem as categorias do menu: cria o tipo e a bateria
                   dele, lista o que existe e edita ou remove */}
               <Route path="/registro" element={<RegistroDispositivo />} />

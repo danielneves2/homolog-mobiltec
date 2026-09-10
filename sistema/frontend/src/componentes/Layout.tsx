@@ -17,35 +17,6 @@ interface ItemMenuDados {
   fim: boolean
 }
 
-/** Uma linha do menu lateral — recolhido, sobra só o ícone compacto centralizado e o rótulo vira title */
-function ItemMenu({ item, aberto }: { item: ItemMenuDados; aberto: boolean }) {
-  return (
-    <NavLink
-      to={item.para}
-      end={item.fim}
-      title={aberto ? undefined : item.rotulo}
-      className={({ isActive }) =>
-        `btn-menu-lateral flex items-center select-none outline-none focus:outline-none focus-visible:outline-none ${
-          aberto
-            ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium leading-tight'
-            : 'mx-auto h-9 w-9 items-center justify-center rounded-lg'
-        } ${
-          isActive
-            ? 'btn-menu-ativo text-white'
-            : 'text-[var(--color-muted-foreground)]'
-        }`
-      }
-      style={({ isActive }) => ({
-        background: isActive ? 'var(--gradient-brand-purple)' : undefined,
-        boxShadow: isActive ? '0 2px 6px -1px rgba(126, 32, 101, 0.35)' : undefined,
-        justifyContent: aberto ? 'flex-start' : 'center',
-      })}
-    >
-      <Icone nome={item.icone} className="h-[18px] w-[18px] shrink-0" />
-      {aberto && <span className="truncate">{item.rotulo}</span>}
-    </NavLink>
-  )
-}
 
 /**
  * Item do menu que abre um grupo de opções, e não uma tela.
@@ -148,7 +119,7 @@ function GrupoMenu({
       right: r.right + 6,
       width: 0,
     } as DOMRect
-    setFlutuante(ancorarMenu(aoLado, { largura: 210, altura: filhos.length * 32 + 10 }))
+    setFlutuante(ancorarMenu(aoLado, { largura: 210, altura: filhos.length * 32 + 35 }))
   }
 
   const abertoVisivel = expandido || emHover
@@ -265,7 +236,7 @@ function GrupoMenu({
           ref={refPainel}
           role="menu"
           data-menu-flutuante
-          className="fixed z-50 min-w-52 rounded-lg border py-1 shadow-lg bg-white"
+          className="fixed z-50 min-w-52 rounded-lg border py-1.5 shadow-lg bg-white"
           style={{
             left: flutuante.x,
             top: flutuante.y,
@@ -273,6 +244,9 @@ function GrupoMenu({
             color: 'var(--color-foreground)',
           }}
         >
+          <div className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b mb-1">
+            {item.rotulo}
+          </div>
           {filhos.map((f) => {
             const isCertificado = f.para.includes('validar-certificados')
             return (
@@ -737,6 +711,8 @@ export function Layout() {
     fim: false,
   }))
 
+  const homologacoes = { para: '/matriz', rotulo: 'Homologações', icone: 'homologacao' as NomeIcone }
+
   /**
    * Fica sempre abaixo dos tipos de dispositivo, separado por um traço: é de
    * onde saem os itens acima dele, não mais um deles. Não é tela: abre as duas
@@ -785,7 +761,11 @@ export function Layout() {
     if (opcoesParceiros.some((i) => (i.fim ? pathname === i.para : pathname.startsWith(i.para)))) {
       return parceiros
     }
-    return itensCategorias.find((i) => (i.fim ? pathname === i.para : pathname.startsWith(i.para))) ?? { rotulo: 'Painéis · Mobiltec', icone: 'painel' as NomeIcone }
+    const cat = itensCategorias.find((i) => (i.fim ? pathname === i.para : pathname.startsWith(i.para)))
+    if (cat) {
+      return { rotulo: `Homologações · ${cat.rotulo}`, icone: cat.icone }
+    }
+    return { rotulo: 'Painéis · Mobiltec', icone: 'painel' as NomeIcone }
   })()
 
   /** Só as telas de planilha registram testes */
@@ -836,10 +816,14 @@ export function Layout() {
               usuario={usuario}
             />
 
-            {/* Categorias de dispositivo */}
-            {itensCategorias.map((item) => (
-              <ItemMenu key={item.para} item={item} aberto={aberto} />
-            ))}
+            {/* Menu Homologações — os dispositivos registrados ficam aqui */}
+            {itensCategorias.length > 0 && (
+              <GrupoMenu
+                item={homologacoes}
+                filhos={itensCategorias}
+                aberto={aberto}
+              />
+            )}
 
             {/* O traço marca a mudança de natureza: acima, os tipos que já
                 existem; abaixo, quem cria e mantém a lista deles. */}
