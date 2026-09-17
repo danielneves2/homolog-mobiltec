@@ -24,10 +24,37 @@ interface ItemObservacaoProcessada {
   anexos?: AnexoObservacao[]
 }
 
+/**
+ * Função utilitária para download confiável de arquivos/prints pelo admin/técnico.
+ */
+async function baixarArquivo(url: string, nomeArquivo: string) {
+  try {
+    const res = await fetch(url)
+    const blob = await res.blob()
+    const blobUrl = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = blobUrl
+    a.download = nomeArquivo || 'anexo'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(blobUrl)
+  } catch {
+    const a = document.createElement('a')
+    a.href = url
+    a.download = nomeArquivo || 'anexo'
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+    a.click()
+  }
+}
+
 export function parseObservacoes(raw?: string | null): ItemObservacaoProcessada[] {
   if (!raw || !raw.trim()) return []
+  const trimmed = raw.trim()
+
   try {
-    const parsed = JSON.parse(raw)
+    const parsed = JSON.parse(trimmed)
     if (Array.isArray(parsed)) {
       return parsed.map((item: any, idx) => ({
         id: item.id || String(idx),
@@ -53,21 +80,28 @@ export function parseObservacoes(raw?: string | null): ItemObservacaoProcessada[
       ]
     }
   } catch {
-    // fallback texto puro
+    // fallback texto puro ou markdown
   }
 
+  // Extrai anexos caso estejam embutidos no formato de texto
+  const parsedItem = parseObservacaoItem(trimmed)
   return [
     {
       id: '1',
-      titulo: 'Observação do Processo',
-      texto: raw.trim(),
+      titulo: 'Observação Geral',
+      texto: parsedItem.texto || trimmed,
+      anexos: parsedItem.anexos,
     },
   ]
 }
 
 interface Props {
   homologacaoId: string
-  dispositivo: Partial<DispositivoPainelParceiro> & { nomeComercial: string; status: StatusHomologacao; homologacaoId?: string | null }
+  dispositivo?: Partial<DispositivoPainelParceiro> & {
+    nomeComercial?: string
+    status?: StatusHomologacao
+    homologacaoId?: string | null
+  }
   aoFechar: () => void
 }
 
@@ -79,29 +113,81 @@ export function ModalInformacoesHomologacao({ homologacaoId, dispositivo: d, aoF
   const [filtroStatus, setFiltroStatus] = useState<FiltroItens>('todos')
   const [imagemAmpliada, setImagemAmpliada] = useState<{ url: string; nome: string } | null>(null)
 
+  // Dispositivo consolidado (props ou dados completos vindos da API)
+  const disp = {
+    fabricante: d?.fabricante ?? homologacao?.dispositivo?.fabricante ?? 'Dispositivo',
+    modelo: d?.modelo ?? homologacao?.dispositivo?.modelo ?? '',
+    nomeComercial:
+      d?.nomeComercial ??
+      homologacao?.dispositivo?.nomeComercial ??
+      (homologacao?.dispositivo
+        ? `${homologacao.dispositivo.fabricante} ${homologacao.dispositivo.modelo}`
+        : 'Informações da Homologação'),
+    categoriaNome:
+      d?.categoriaNome ??
+      (homologacao?.dispositivo as any)?.categoria?.nome ??
+      'Dispositivo',
+    versaoSo: d?.versaoSo ?? homologacao?.versaoSo ?? '-',
+    versaoAgente: d?.versaoAgente ?? homologacao?.versaoAgente ?? '-',
+    gerenciamento: d?.gerenciamento ?? homologacao?.gerenciamento ?? 'ANDROID_ENTERPRISE',
+    status: d?.status ?? homologacao?.status ?? 'RASCUNHO',
+    homologado:
+      d?.homologado ??
+      Boolean(homologacao?.homologado || homologacao?.status === 'APROVADO' || homologacao?.status === 'PUBLICADO'),
+    observacoes: d?.observacoes ?? homologacao?.observacoes ?? null,
+  }
+
   const resultados = homologacao?.resultados ?? []
 
   // Observações gerais da homologação
   const observacoesGerais = useMemo(() => {
-    return parseObservacoes(homologacao?.observacoes ?? d.observacoes)
-  }, [homologacao?.observacoes, d.observacoes])
+    return parseObservacoes(homologacao?.observacoes ?? disp.observacoes)
+  }, [homologacao?.observacoes, disp.observacoes])
 
   // Anotações funcionais célula a célula (matriz de testes)
+  // Inclui observações, justificativas técnicas e anexos
   const anotacoesFuncionalidade = useMemo(() => {
     return resultados
-      .filter((r) => r.observacao && r.observacao.trim())
       .map((r) => {
-        const parsed = parseObservacaoItem(r.observacao)
+        const obsParsed = r.observacao ? parseObservacaoItem(r.observacao) : { texto: '', anexos: [] }
+        const justParsed = r.justificativaTexto ? parseObservacaoItem(r.justificativaTexto) : { texto: '', anexos: [] }
+        const justObjParsed = r.justificativa?.texto ? parseObservacaoItem(r.justificativa.texto) : { texto: '', anexos: [] }
+
+        const obsTexto = obsParsed.texto.trim()
+        const justTexto = (justParsed.texto || justObjParsed.texto).trim()
+
+        let textoFinal = obsTexto
+        if (justTexto) {
+          if (!textoFinal) {
+            textoFinal = justTexto
+          } else if (!textoFinal.toLowerCase().includes(justTexto.toLowerCase())) {
+            textoFinal = `${textoFinal}\n\nJustificativa: ${justTexto}`
+          }
+        }
+
+        const todosAnexos = [
+          ...obsParsed.anexos,
+          ...justParsed.anexos,
+          ...justObjParsed.anexos,
+        ]
+
+        // Deduplicar anexos por url
+        const anexosUnicos = todosAnexos.filter((a, idx, arr) => arr.findIndex((x) => x.url === a.url) === idx)
+
+        const temConteudo = Boolean(textoFinal || anexosUnicos.length > 0)
+        if (!temConteudo) return null
+
         return {
           id: r.id,
           itemNome: r.item?.nome ?? 'Funcionalidade',
           status: r.status,
-          texto: parsed.texto,
-          anexos: parsed.anexos,
+          texto: textoFinal,
+          anexos: anexosUnicos,
           autorEmail: (r as any).autorEmail || (homologacao?.responsavel as any)?.email || 'admin@mobiltec.com.br',
           atualizadoEm: (r as any).atualizadoEm || homologacao?.atualizadoEm || homologacao?.criadoEm,
         }
       })
+      .filter((item): item is NonNullable<typeof item> => item !== null)
   }, [resultados, homologacao])
 
   const totalObservacoes = observacoesGerais.length + anotacoesFuncionalidade.length
@@ -181,16 +267,16 @@ export function ModalInformacoesHomologacao({ homologacaoId, dispositivo: d, aoF
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                {d.fabricante} · {d.categoriaNome ?? 'Dispositivo'}
+                {disp.fabricante} · {disp.categoriaNome}
               </span>
             </div>
-            <h2 className="text-lg font-bold text-slate-900 mt-0.5">{d.nomeComercial}</h2>
+            <h2 className="text-lg font-bold text-slate-900 mt-0.5">{disp.nomeComercial}</h2>
             <div className="flex items-center gap-2 mt-1.5 text-xs text-slate-600 flex-wrap">
-              <span>Android: <strong>{d.versaoSo}</strong></span>
+              <span>Android: <strong>{disp.versaoSo}</strong></span>
               <span>·</span>
-              <span>Agente: <strong>{d.versaoAgente}</strong></span>
+              <span>Agente: <strong>{disp.versaoAgente}</strong></span>
               <span>·</span>
-              <span>Modo: <strong>{d.gerenciamento === 'ANDROID_ENTERPRISE' ? 'Enterprise' : 'Legado'}</strong></span>
+              <span>Modo: <strong>{disp.gerenciamento === 'ANDROID_ENTERPRISE' ? 'Enterprise' : 'Legado'}</strong></span>
             </div>
           </div>
 
@@ -205,10 +291,10 @@ export function ModalInformacoesHomologacao({ homologacaoId, dispositivo: d, aoF
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            {d.homologado || d.status === 'APROVADO' || d.status === 'PUBLICADO' ? (
+            {disp.homologado || disp.status === 'APROVADO' || disp.status === 'PUBLICADO' ? (
               <BadgeHomologado homologado={true} />
             ) : (
-              <BadgeStatusModal status={d.status} />
+              <BadgeStatusModal status={disp.status} />
             )}
           </div>
         </div>
@@ -329,7 +415,7 @@ export function ModalInformacoesHomologacao({ homologacaoId, dispositivo: d, aoF
                 </div>
               ) : (
                 <>
-                  {/* Anotações por Funcionalidade (conforme Imagem de Referência) */}
+                  {/* Anotações por Funcionalidade com Observação ou Justificativa */}
                   {anotacoesFuncionalidade.length > 0 && (
                     <div className="space-y-3">
                       <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
@@ -355,50 +441,70 @@ export function ModalInformacoesHomologacao({ homologacaoId, dispositivo: d, aoF
                               </p>
                             )}
 
-                            {/* Anexos da funcionalidade */}
+                            {/* Anexos da funcionalidade com visualização e download direto */}
                             {a.anexos && a.anexos.length > 0 && (
-                              <div className="pt-2 border-t mt-2 flex flex-wrap gap-2">
+                              <div className="pt-2 border-t mt-2 flex flex-wrap gap-2.5">
                                 {a.anexos.map((anexo, i) => {
                                   const ehImagem = anexo.tipo === 'imagem' || /\.(png|jpe?g|webp)$/i.test(anexo.nome)
                                   if (ehImagem) {
                                     return (
                                       <div
                                         key={`${anexo.url}-${i}`}
-                                        onClick={() => setImagemAmpliada({ url: anexo.url, nome: anexo.nome })}
-                                        className="group relative flex flex-col items-center rounded-lg border overflow-hidden bg-slate-50 cursor-pointer hover:border-purple-400 transition-all"
-                                        style={{ width: '90px' }}
+                                        className="group relative flex flex-col items-center rounded-xl border border-slate-200 overflow-hidden bg-slate-50 hover:border-purple-400 hover:shadow-md transition-all"
+                                        style={{ width: '120px' }}
                                       >
-                                        <img src={anexo.url} alt={anexo.nome} className="h-16 w-full object-cover" />
-                                        <span className="w-full truncate px-1 py-0.5 text-[9px] text-center font-medium bg-white text-slate-700">
-                                          {anexo.nome}
-                                        </span>
-                                        <span className="absolute top-1 right-1 bg-black/60 text-white rounded px-1 text-[8px] opacity-0 group-hover:opacity-100 transition-opacity">
-                                          Ampliar
-                                        </span>
+                                        <div
+                                          onClick={() => setImagemAmpliada({ url: anexo.url, nome: anexo.nome })}
+                                          className="w-full h-20 cursor-pointer overflow-hidden bg-slate-100 relative"
+                                        >
+                                          <img src={anexo.url} alt={anexo.nome} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                                          <span className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                                            🔍 Ampliar
+                                          </span>
+                                        </div>
+                                        <div className="w-full p-1.5 bg-white border-t border-slate-100 flex items-center justify-between gap-1">
+                                          <span className="truncate text-[10px] font-medium text-slate-700" title={anexo.nome}>
+                                            {anexo.nome}
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              baixarArquivo(anexo.url, anexo.nome)
+                                            }}
+                                            className="p-1 rounded text-purple-700 hover:bg-purple-100 cursor-pointer shrink-0"
+                                            title="Baixar imagem"
+                                          >
+                                            <Icone nome="baixar" className="h-3 w-3" />
+                                          </button>
+                                        </div>
                                       </div>
                                     )
                                   }
                                   return (
-                                    <a
+                                    <div
                                       key={`${anexo.url}-${i}`}
-                                      href={anexo.url}
-                                      download={anexo.nome}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-800 transition-colors shadow-2xs"
-                                      title={`Baixar anexo: ${anexo.nome}`}
+                                      className="inline-flex items-center gap-2.5 px-3 py-2 rounded-xl border border-purple-200 bg-purple-50/60 hover:bg-purple-100/80 transition-colors shadow-2xs group"
                                     >
-                                      <span className="text-sm">📦</span>
-                                      <div className="min-w-0">
-                                        <p className="max-w-[140px] truncate leading-tight">{anexo.nome}</p>
-                                        {anexo.tamanho && (
-                                          <p className="text-[10px] text-slate-400 font-normal leading-none mt-0.5">
-                                            {formatarTamanhoArquivo(anexo.tamanho)}
-                                          </p>
-                                        )}
+                                      <span className="text-lg shrink-0">📦</span>
+                                      <div className="min-w-0 text-left">
+                                        <p className="max-w-[170px] truncate text-xs font-bold text-slate-900 group-hover:text-purple-950" title={anexo.nome}>
+                                          {anexo.nome}
+                                        </p>
+                                        <p className="text-[10px] text-slate-500">
+                                          {anexo.tamanho ? formatarTamanhoArquivo(anexo.tamanho) : 'Log / Arquivo'}
+                                        </p>
                                       </div>
-                                      <Icone nome="baixar" className="h-3.5 w-3.5 text-purple-600 shrink-0" />
-                                    </a>
+                                      <button
+                                        type="button"
+                                        onClick={() => baixarArquivo(anexo.url, anexo.nome)}
+                                        className="ml-1 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-purple-200 text-purple-700 hover:bg-purple-700 hover:text-white text-[10px] font-bold transition-colors cursor-pointer shadow-2xs"
+                                        title={`Baixar ${anexo.nome}`}
+                                      >
+                                        <Icone nome="baixar" className="h-3 w-3" />
+                                        <span>Baixar</span>
+                                      </button>
+                                    </div>
                                   )
                                 })}
                               </div>
@@ -453,48 +559,68 @@ export function ModalInformacoesHomologacao({ homologacaoId, dispositivo: d, aoF
 
                             {/* Anexos das Observações Gerais */}
                             {obs.anexos && obs.anexos.length > 0 && (
-                              <div className="pt-2 border-t mt-2 flex flex-wrap gap-2">
+                              <div className="pt-2 border-t mt-2 flex flex-wrap gap-2.5">
                                 {obs.anexos.map((anexo: any, i: number) => {
                                   const ehImagem = anexo.tipo === 'imagem' || /\.(png|jpe?g|webp)$/i.test(anexo.nome)
                                   if (ehImagem) {
                                     return (
                                       <div
                                         key={`${anexo.url}-${i}`}
-                                        onClick={() => setImagemAmpliada({ url: anexo.url, nome: anexo.nome })}
-                                        className="group relative flex flex-col items-center rounded-lg border overflow-hidden bg-slate-50 cursor-pointer hover:border-purple-400 transition-all"
-                                        style={{ width: '90px' }}
+                                        className="group relative flex flex-col items-center rounded-xl border border-slate-200 overflow-hidden bg-slate-50 hover:border-purple-400 hover:shadow-md transition-all"
+                                        style={{ width: '120px' }}
                                       >
-                                        <img src={anexo.url} alt={anexo.nome} className="h-16 w-full object-cover" />
-                                        <span className="w-full truncate px-1 py-0.5 text-[9px] text-center font-medium bg-white text-slate-700">
-                                          {anexo.nome}
-                                        </span>
-                                        <span className="absolute top-1 right-1 bg-black/60 text-white rounded px-1 text-[8px] opacity-0 group-hover:opacity-100 transition-opacity">
-                                          Ampliar
-                                        </span>
+                                        <div
+                                          onClick={() => setImagemAmpliada({ url: anexo.url, nome: anexo.nome })}
+                                          className="w-full h-20 cursor-pointer overflow-hidden bg-slate-100 relative"
+                                        >
+                                          <img src={anexo.url} alt={anexo.nome} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                                          <span className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                                            🔍 Ampliar
+                                          </span>
+                                        </div>
+                                        <div className="w-full p-1.5 bg-white border-t border-slate-100 flex items-center justify-between gap-1">
+                                          <span className="truncate text-[10px] font-medium text-slate-700" title={anexo.nome}>
+                                            {anexo.nome}
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              baixarArquivo(anexo.url, anexo.nome)
+                                            }}
+                                            className="p-1 rounded text-purple-700 hover:bg-purple-100 cursor-pointer shrink-0"
+                                            title="Baixar imagem"
+                                          >
+                                            <Icone nome="baixar" className="h-3 w-3" />
+                                          </button>
+                                        </div>
                                       </div>
                                     )
                                   }
                                   return (
-                                    <a
+                                    <div
                                       key={`${anexo.url}-${i}`}
-                                      href={anexo.url}
-                                      download={anexo.nome}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-800 transition-colors shadow-2xs"
-                                      title={`Baixar anexo: ${anexo.nome}`}
+                                      className="inline-flex items-center gap-2.5 px-3 py-2 rounded-xl border border-purple-200 bg-purple-50/60 hover:bg-purple-100/80 transition-colors shadow-2xs group"
                                     >
-                                      <span className="text-sm">📦</span>
-                                      <div className="min-w-0">
-                                        <p className="max-w-[140px] truncate leading-tight">{anexo.nome}</p>
-                                        {anexo.tamanho && (
-                                          <p className="text-[10px] text-slate-400 font-normal leading-none mt-0.5">
-                                            {formatarTamanhoArquivo(anexo.tamanho)}
-                                          </p>
-                                        )}
+                                      <span className="text-lg shrink-0">📦</span>
+                                      <div className="min-w-0 text-left">
+                                        <p className="max-w-[170px] truncate text-xs font-bold text-slate-900 group-hover:text-purple-950" title={anexo.nome}>
+                                          {anexo.nome}
+                                        </p>
+                                        <p className="text-[10px] text-slate-500">
+                                          {anexo.tamanho ? formatarTamanhoArquivo(anexo.tamanho) : 'Log / Arquivo'}
+                                        </p>
                                       </div>
-                                      <Icone nome="baixar" className="h-3.5 w-3.5 text-purple-600 shrink-0" />
-                                    </a>
+                                      <button
+                                        type="button"
+                                        onClick={() => baixarArquivo(anexo.url, anexo.nome)}
+                                        className="ml-1 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-purple-200 text-purple-700 hover:bg-purple-700 hover:text-white text-[10px] font-bold transition-colors cursor-pointer shadow-2xs"
+                                        title={`Baixar ${anexo.nome}`}
+                                      >
+                                        <Icone nome="baixar" className="h-3 w-3" />
+                                        <span>Baixar</span>
+                                      </button>
+                                    </div>
                                   )
                                 })}
                               </div>
@@ -535,6 +661,16 @@ export function ModalInformacoesHomologacao({ homologacaoId, dispositivo: d, aoF
                       <tbody className="divide-y divide-slate-100">
                         {itensGrupo.map((res: any) => {
                           const obsParsed = res.observacao ? parseObservacaoItem(res.observacao) : null
+                          const justParsed = res.justificativaTexto ? parseObservacaoItem(res.justificativaTexto) : null
+                          const justObj = res.justificativa?.texto ? parseObservacaoItem(res.justificativa.texto) : null
+
+                          const justificativaExibida = justParsed?.texto || justObj?.texto || res.justificativaTexto || res.justificativa?.texto
+
+                          const todosAnexosItem = [
+                            ...(obsParsed?.anexos ?? []),
+                            ...(justParsed?.anexos ?? []),
+                            ...(justObj?.anexos ?? []),
+                          ].filter((a, idx, arr) => arr.findIndex((x) => x.url === a.url) === idx)
 
                           return (
                             <tr key={res.id} className="hover:bg-slate-50/70 transition-colors">
@@ -543,38 +679,36 @@ export function ModalInformacoesHomologacao({ homologacaoId, dispositivo: d, aoF
                                   {res.item?.nome ?? 'Item'}
                                 </span>
                                 
-                                {(res.justificativa || res.justificativaTexto) && (
-                                  <div className="mt-1.5 p-1.5 rounded bg-amber-50 border border-amber-100 text-[10px] text-amber-900 leading-tight">
+                                {justificativaExibida && (
+                                  <div className="mt-1.5 p-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-950 leading-relaxed">
                                     <span className="font-bold">Justificativa: </span>
-                                    {res.justificativa?.texto ?? res.justificativaTexto}
+                                    {justificativaExibida}
                                   </div>
                                 )}
-                                {obsParsed && (obsParsed.texto || obsParsed.anexos.length > 0) && (
-                                  <div className="mt-1 text-[10px] text-slate-600 border-l-2 border-purple-300 pl-1.5 space-y-1">
-                                    {obsParsed.texto && (
-                                      <div className="italic leading-tight">
-                                        Obs: {obsParsed.texto}
-                                      </div>
-                                    )}
-                                    {obsParsed.anexos.length > 0 && (
-                                      <div className="flex flex-wrap gap-1 pt-0.5 not-italic">
-                                        {obsParsed.anexos.map((a, i) => {
-                                          const ehImg = a.tipo === 'imagem' || /\.(png|jpe?g|webp)$/i.test(a.nome)
-                                          return (
-                                            <button
-                                              key={i}
-                                              type="button"
-                                              onClick={() => ehImg ? setImagemAmpliada({ url: a.url, nome: a.nome }) : window.open(a.url, '_blank')}
-                                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[9.5px] font-medium text-slate-700 border border-slate-200 cursor-pointer"
-                                              title={`Anexo: ${a.nome}`}
-                                            >
-                                              <span>{ehImg ? '📷' : '📦'}</span>
-                                              <span className="max-w-[100px] truncate">{a.nome}</span>
-                                            </button>
-                                          )
-                                        })}
-                                      </div>
-                                    )}
+                                {obsParsed && obsParsed.texto && (
+                                  <div className="mt-1 p-2 rounded-lg bg-purple-50/60 border border-purple-200 text-[11px] text-purple-950 leading-relaxed">
+                                    <span className="font-bold text-purple-900">Obs: </span>
+                                    {obsParsed.texto}
+                                  </div>
+                                )}
+                                {todosAnexosItem.length > 0 && (
+                                  <div className="flex flex-wrap gap-1.5 pt-1.5 not-italic">
+                                    {todosAnexosItem.map((a, i) => {
+                                      const ehImg = a.tipo === 'imagem' || /\.(png|jpe?g|webp)$/i.test(a.nome)
+                                      return (
+                                        <button
+                                          key={i}
+                                          type="button"
+                                          onClick={() => ehImg ? setImagemAmpliada({ url: a.url, nome: a.nome }) : baixarArquivo(a.url, a.nome)}
+                                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-100 hover:bg-purple-100 text-[10px] font-bold text-slate-800 hover:text-purple-950 border border-slate-200 hover:border-purple-300 transition-colors cursor-pointer shadow-2xs"
+                                          title={`Anexo: ${a.nome} · Clique para ${ehImg ? 'ampliar' : 'baixar'}`}
+                                        >
+                                          <span>{ehImg ? '📷' : '📦'}</span>
+                                          <span className="max-w-[120px] truncate">{a.nome}</span>
+                                          <Icone nome="baixar" className="h-3 w-3 text-purple-600 shrink-0" />
+                                        </button>
+                                      )
+                                    })}
                                   </div>
                                 )}
                               </td>
@@ -600,7 +734,7 @@ export function ModalInformacoesHomologacao({ homologacaoId, dispositivo: d, aoF
           </p>
 
           <div className="flex items-center gap-2 ml-auto sm:ml-0">
-            {d.status === 'AGUARDANDO_ANALISE' || d.status === 'EM_REVISAO' ? (
+            {disp.status === 'AGUARDANDO_ANALISE' || disp.status === 'EM_REVISAO' ? (
               <Link
                 to="/parceiros/validar-certificados"
                 className="px-4 py-2 rounded-lg text-xs font-semibold text-white shadow-xs transition-opacity hover:opacity-90 inline-flex items-center gap-1.5"
@@ -611,9 +745,9 @@ export function ModalInformacoesHomologacao({ homologacaoId, dispositivo: d, aoF
               </Link>
             ) : null}
 
-            {(d.homologado || d.status === 'APROVADO' || d.status === 'PUBLICADO') && d.homologacaoId ? (
+            {(disp.homologado || disp.status === 'APROVADO' || disp.status === 'PUBLICADO') && (d?.homologacaoId || homologacaoId) ? (
               <Link
-                to={`/homologacoes/${d.homologacaoId}/certificado`}
+                to={`/homologacoes/${d?.homologacaoId || homologacaoId}/certificado`}
                 className="px-3 py-2 rounded-lg border text-xs font-semibold text-[var(--color-primary)] hover:bg-purple-50 transition-colors inline-flex items-center gap-1.5 bg-white"
               >
                 <Icone nome="certificado" className="h-4 w-4" />
@@ -632,30 +766,40 @@ export function ModalInformacoesHomologacao({ homologacaoId, dispositivo: d, aoF
         </div>
       </div>
 
-      {/* Lightbox para ampliação de imagens/prints */}
+      {/* Lightbox para ampliação de imagens/prints com download direto */}
       {imagemAmpliada && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs"
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/85 backdrop-blur-xs animate-in fade-in duration-150"
           onClick={() => setImagemAmpliada(null)}
         >
           <div
             className="relative max-w-4xl max-h-[90vh] flex flex-col items-center"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between w-full pb-2 text-white text-xs font-semibold">
-              <span className="truncate">{imagemAmpliada.nome}</span>
-              <button
-                type="button"
-                onClick={() => setImagemAmpliada(null)}
-                className="px-2 py-1 rounded bg-white/20 hover:bg-white/30 text-white cursor-pointer ml-4"
-              >
-                ✕ Fechar
-              </button>
+            <div className="flex items-center justify-between w-full pb-3 text-white text-xs font-semibold">
+              <span className="truncate max-w-md">{imagemAmpliada.nome}</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => baixarArquivo(imagemAmpliada.url, imagemAmpliada.nome)}
+                  className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white cursor-pointer font-bold inline-flex items-center gap-1.5 transition-colors shadow-sm"
+                >
+                  <Icone nome="baixar" className="h-3.5 w-3.5" />
+                  <span>Baixar imagem</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setImagemAmpliada(null)}
+                  className="px-2.5 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white cursor-pointer transition-colors"
+                >
+                  ✕ Fechar
+                </button>
+              </div>
             </div>
             <img
               src={imagemAmpliada.url}
               alt={imagemAmpliada.nome}
-              className="max-h-[80vh] max-w-full rounded-lg object-contain shadow-2xl border border-white/10"
+              className="max-h-[80vh] max-w-full rounded-xl object-contain shadow-2xl border border-white/20"
             />
           </div>
         </div>

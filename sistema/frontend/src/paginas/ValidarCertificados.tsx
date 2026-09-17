@@ -777,10 +777,26 @@ export function ValidarCertificados() {
         </div>
       )}
 
-      {/* Ficha de informações da homologação (D432) */}
+      {/* Ficha de informações da homologação (D432 / D472) */}
       {homologacaoInfo && (
         <ModalInformacoesHomologacao
           homologacaoId={homologacaoInfo.id}
+          dispositivo={{
+            nomeComercial: homologacaoInfo.dispositivo.nomeComercial,
+            fabricante: homologacaoInfo.dispositivo.fabricante,
+            modelo: homologacaoInfo.dispositivo.modelo,
+            categoriaNome: homologacaoInfo.dispositivo.categoria?.nome,
+            versaoSo: homologacaoInfo.versaoSo,
+            versaoAgente: homologacaoInfo.versaoAgente,
+            gerenciamento: homologacaoInfo.gerenciamento,
+            status: homologacaoInfo.status,
+            homologado: Boolean(
+              homologacaoInfo.homologado ||
+                homologacaoInfo.status === 'APROVADO' ||
+                homologacaoInfo.status === 'PUBLICADO',
+            ),
+            observacoes: homologacaoInfo.observacoes,
+          }}
           aoFechar={() => setHomologacaoInfo(null)}
         />
       )}
