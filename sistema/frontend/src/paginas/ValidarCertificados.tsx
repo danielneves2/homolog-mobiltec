@@ -546,7 +546,7 @@ export function ValidarCertificados() {
                       <div className="flex flex-wrap items-center gap-2">
                         {/* Visualizar Certificado */}
                         <Link
-                          to={`/homologacoes/${h.id}/certificado`}
+                          to={`/homologacoes/${h.id}/certificado?ambiente=mobiltec`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors hover:opacity-80"

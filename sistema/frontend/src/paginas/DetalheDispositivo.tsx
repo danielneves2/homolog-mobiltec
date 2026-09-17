@@ -57,7 +57,7 @@ export function DetalheDispositivo() {
     setBaixando(true)
     setAviso(null)
     try {
-      const blob = await api.getBlob(`/homologacoes/${id}/certificado/pdf`)
+      const blob = await api.getBlob(`/homologacoes/${id}/certificado/pdf?ambiente=mobiltec`)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -69,7 +69,7 @@ export function DetalheDispositivo() {
       // buscamos o preview HTML e abrimos o diálogo nativo do navegador para Salvar como PDF
       try {
         setAviso('Abrindo diálogo de impressão (Salvar como PDF)...')
-        const html = await api.getTexto(`/homologacoes/${id}/certificado/preview`)
+        const html = await api.getTexto(`/homologacoes/${id}/certificado/preview?ambiente=mobiltec`)
         imprimirCertificadoHtml(html)
       } catch {
         setAviso(e instanceof ErroApi ? e.message : 'Não foi possível gerar o PDF.')
@@ -141,7 +141,7 @@ export function DetalheDispositivo() {
               <span>{aviso}</span>
             </div>
             <Link
-              to={`/homologacoes/${id}/certificado`}
+              to={`/homologacoes/${id}/certificado?ambiente=mobiltec`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 font-semibold underline underline-offset-2 shrink-0 hover:opacity-80 transition-opacity"
@@ -184,7 +184,7 @@ export function DetalheDispositivo() {
 
             <div className="flex items-center gap-2">
               <Link
-                to={`/homologacoes/${id}/certificado`}
+                to={`/homologacoes/${id}/certificado?ambiente=mobiltec`}
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Abrir visualização do certificado técnico"

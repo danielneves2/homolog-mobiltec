@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contextos/AuthContext'
 import { api, ErroApi } from '@/lib/api'
@@ -34,12 +34,17 @@ interface CertificadoEmitido {
  */
 export function Certificado() {
   const { id = '' } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { usuario, ehParceiro } = useAuth()
   const qc = useQueryClient()
   const { data: homologacao } = useHomologacao(id)
   const { data: dashboard } = useDashboard(id)
   const [baixando, setBaixando] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
+
+  const paramAmbiente = searchParams.get('ambiente')
+  const ambiente: 'parceiro' | 'mobiltec' =
+    paramAmbiente === 'parceiro' ? 'parceiro' : (paramAmbiente === 'mobiltec' ? 'mobiltec' : (ehParceiro ? 'parceiro' : 'mobiltec'))
 
   const editarDivergencia = useEditarDivergencia(id)
   const salvarDados = useSalvarDadosCertificado(id)
@@ -50,12 +55,12 @@ export function Certificado() {
   const somenteLeitura = ehParceiro || (homologacao ? ehSomenteLeitura(homologacao.status, usuario?.papel) : false)
 
   const { data: html, isLoading, isError, error } = useQuery({
-    queryKey: ['certificado', id, 'preview', somenteLeitura, podeVerCertificado],
+    queryKey: ['certificado', id, 'preview', somenteLeitura, podeVerCertificado, ambiente],
     enabled: podeVerCertificado,
     queryFn: () =>
       api.getTexto(
         // Os lápis só entram no preview editável — o PDF nunca os recebe.
-        `/homologacoes/${id}/certificado/preview${somenteLeitura ? '' : '?editavel=1'}`,
+        `/homologacoes/${id}/certificado/preview?ambiente=${ambiente}${somenteLeitura ? '' : '&editavel=1'}`,
       ),
   })
 
@@ -107,7 +112,7 @@ export function Certificado() {
     setBaixando(true)
     setAviso(null)
     try {
-      const blob = await api.getBlob(`/homologacoes/${id}/certificado/pdf`)
+      const blob = await api.getBlob(`/homologacoes/${id}/certificado/pdf?ambiente=${ambiente}`)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -164,6 +169,25 @@ export function Certificado() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {!ehParceiro && (
+            <div className="flex items-center rounded-lg border p-0.5 text-xs font-medium" style={{ borderColor: 'var(--color-border)' }}>
+              <button
+                type="button"
+                onClick={() => setSearchParams({ ambiente: 'mobiltec' })}
+                className={`px-2.5 py-1 rounded-md transition-colors ${ambiente === 'mobiltec' ? 'bg-[var(--color-primary)] text-white shadow-xs' : 'text-[var(--color-muted-foreground)] hover:text-foreground'}`}
+              >
+                Padrão Mobiltec
+              </button>
+              <button
+                type="button"
+                onClick={() => setSearchParams({ ambiente: 'parceiro' })}
+                className={`px-2.5 py-1 rounded-md transition-colors ${ambiente === 'parceiro' ? 'bg-[var(--color-primary)] text-white shadow-xs' : 'text-[var(--color-muted-foreground)] hover:text-foreground'}`}
+              >
+                Visão Parceiro
+              </button>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={baixarPdf}

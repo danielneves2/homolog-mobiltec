@@ -42,8 +42,19 @@ export function FichaUnidadeTestada({
       tipoAgente: h.tipoAgente,
       gerenciamento: h.gerenciamento,
       metodoInscricao: h.metodoInscricao,
-      responsavelTecnico: h.assinaturaResponsavel?.trim() || h.responsavel?.nome || null,
-      gerenteValidacao: h.assinaturaGerente?.trim() || h.gerente?.nome || null,
+      responsavelTecnico: (() => {
+        const aprovacao = h.historicoStatus?.find((hist) => hist.statusNovo === 'APROVADO')
+        const adminAprovador = aprovacao?.usuario?.nome
+        if (adminAprovador) return adminAprovador
+        if (h.responsavel?.nome && !h.responsavel.nome.toLowerCase().includes('matheus')) {
+          return h.responsavel.nome
+        }
+        if (h.assinaturaResponsavel?.trim() && !h.assinaturaResponsavel.toLowerCase().includes('matheus')) {
+          return h.assinaturaResponsavel.trim()
+        }
+        return 'Daniel Neves Lima'
+      })(),
+      gerenteValidacao: h.assinaturaGerente?.trim() || h.gerente?.nome || 'Rafael Cordeiro',
       dataInicio: h.dataInicio,
       dataFim: h.dataFim,
     }

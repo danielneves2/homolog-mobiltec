@@ -389,7 +389,7 @@ export function ConfigurarDispositivos() {
                           <div className="inline-flex items-center gap-1.5">
                             {/* Certificado */}
                             <Link
-                              to={`/homologacoes/${h.id}/certificado`}
+                              to={`/homologacoes/${h.id}/certificado?ambiente=mobiltec`}
                               className="px-2.5 py-1.5 rounded-md border text-xs font-medium text-[var(--color-foreground)] hover:bg-black/[0.04] transition-colors"
                               style={{ borderColor: 'var(--color-border)' }}
                               title="Visualizar Certificado Técnico"

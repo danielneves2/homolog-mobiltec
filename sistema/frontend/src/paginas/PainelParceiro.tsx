@@ -555,7 +555,7 @@ function CardDispositivoParceiro({
 
           {d.homologacaoId && (d.status === 'APROVADO' || d.status === 'PUBLICADO') && (
             <Link
-              to={`/homologacoes/${d.homologacaoId}/certificado`}
+              to={`/homologacoes/${d.homologacaoId}/certificado?ambiente=parceiro`}
               className="px-2.5 py-1.5 rounded-lg border text-xs font-semibold text-[var(--color-primary)] hover:bg-purple-50/50 transition-colors inline-flex items-center gap-1"
             >
               <Icone nome="certificado" className="h-3.5 w-3.5" />

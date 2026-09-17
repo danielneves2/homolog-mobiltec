@@ -262,9 +262,9 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
       include: {
         dispositivo: { include: { categoria: true } },
         bateria: true,
-        responsavel: { select: { id: true, nome: true, cargo: true } },
+        responsavel: { select: { id: true, nome: true, cargo: true, papel: true, empresa: true } },
         gerente: { select: { id: true, nome: true, cargo: true } },
-        apoio: { select: { id: true, nome: true, cargo: true } },
+        apoio: { select: { id: true, nome: true, cargo: true, empresa: true } },
         resultados: {
           include: {
             item: true,
@@ -283,7 +283,7 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
         // é o que a ficha mostra ao parceiro para ele saber o que ajustar.
         historicoStatus: {
           orderBy: { criadoEm: 'desc' },
-          include: { usuario: { select: { nome: true } } },
+          include: { usuario: { select: { id: true, nome: true, cargo: true, papel: true } } },
         },
       },
     })

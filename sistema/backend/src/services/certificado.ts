@@ -471,9 +471,13 @@ export interface HomologacaoCertificado {
   assinaturaGerente: string | null
   assinaturaApoio: string | null
   dispositivo: { fabricante: string; modelo: string; nomeComercial: string; fotoUrl: string | null }
-  responsavel: { nome: string } | null
-  gerente: { nome: string } | null
-  apoio: { nome: string } | null
+  responsavel: { nome: string; papel?: string; cargo?: string } | null
+  gerente: { nome: string; cargo?: string } | null
+  apoio: { nome: string; cargo?: string; empresa?: string | null } | null
+  historicoStatus?: Array<{
+    statusNovo: string
+    usuario?: { nome: string; papel?: string } | null
+  }>
   resultados: ResultadoCertificado[]
 }
 
@@ -513,10 +517,11 @@ function dataExtenso(d: Date | string | null | undefined): string {
 
 export function gerarCertificadoHtml(
   h: HomologacaoCertificado,
-  opcoes: { editavel?: boolean } = {},
+  opcoes: { editavel?: boolean; ambiente?: 'parceiro' | 'mobiltec' } = {},
 ): string {
   const fundo = fundoDataUri()
   const editavel = opcoes.editavel === true
+  const ambiente = opcoes.ambiente === 'parceiro' ? 'parceiro' : 'mobiltec'
 
   /**
    * Lápis de edição inline. Só aparece no preview do app (`?editavel=1`) e
@@ -805,18 +810,55 @@ export function gerarCertificadoHtml(
       </div>`
     : ''
 
-  // Assinatura manual (digitada na tela do certificado) tem prioridade;
-  // sem ela, cai para o nome do Usuario vinculado
-  const nomeResponsavel = h.assinaturaResponsavel?.trim() || h.responsavel?.nome || ''
-  const nomeGerente = h.assinaturaGerente?.trim() || h.gerente?.nome || ''
-  const nomeApoio = h.assinaturaApoio?.trim() || h.apoio?.nome || ''
+  // Resolução de assinaturas conforme D476 (Regra de certificado por ambiente):
+  let nomeResponsavel = ''
+  let nomeGerente = 'Rafael Cordeiro'
+  let exibirApoio = false
+  let nomeApoio = ''
+
+  // Admin Mobiltec que aprovou a validação (obtido de HistoricoStatus)
+  const aprovacao = h.historicoStatus?.find((hist) => hist.statusNovo === 'APROVADO')
+  const adminAprovador = aprovacao?.usuario?.nome
+
+  if (ambiente === 'parceiro') {
+    // 1. Painel do parceiro (ambiente exclusivo):
+    // Se o responsável cadastrado for parceiro mas já foi aprovado por admin, preserva assinatura se digitada ou admin aprovador
+    nomeResponsavel = h.assinaturaResponsavel?.trim() || adminAprovador || h.responsavel?.nome || ''
+    nomeGerente = h.assinaturaGerente?.trim() || h.gerente?.nome || 'Rafael Cordeiro'
+
+    // Apoio adicional: opcional. Se informado, aparece com nome e empresa. Se vazio, omitido.
+    nomeApoio = h.assinaturaApoio?.trim() || (h.apoio ? (h.apoio.empresa ? `${h.apoio.nome} — ${h.apoio.empresa}` : h.apoio.nome) : '')
+    exibirApoio = Boolean(nomeApoio && nomeApoio.trim().length > 0)
+  } else {
+    // 2. Painel público da Mobiltec:
+    // Responsável técnico: nome do Admin da Mobiltec que realizou/aprovou a validação
+    if (adminAprovador) {
+      nomeResponsavel = adminAprovador
+    } else if (h.responsavel?.papel === 'ADMIN') {
+      nomeResponsavel = h.responsavel.nome
+    } else if (h.assinaturaResponsavel?.trim() && !h.assinaturaResponsavel.toLowerCase().includes('matheus')) {
+      nomeResponsavel = h.assinaturaResponsavel.trim()
+    } else {
+      nomeResponsavel = 'Daniel Neves Lima'
+    }
+
+    // Gerente de validação: SEMPRE Rafael Cordeiro
+    nomeGerente = 'Rafael Cordeiro'
+
+    // Apoio adicional: NÃO EXIBIR
+    exibirApoio = false
+  }
+
+  const blocoApoioHtml = exibirApoio
+    ? `<div class="assinatura"><span class="valor">${esc(nomeApoio)}</span>${lapis('assinaturaApoio', '')}<br><span class="cargo">Apoio Adicional</span></div>`
+    : ''
 
   const rodapeHtml = `<div class="rodape rodape-final">
     ${fontesHtml}
-    <div class="assinaturas">
+    <div class="assinaturas ${exibirApoio ? 'com-apoio' : 'sem-apoio'}">
       <div class="assinatura"><span class="valor">${esc(nomeResponsavel)}</span>${lapis('assinaturaResponsavel', '')}<br><span class="cargo">Responsável Técnico</span></div>
       <div class="assinatura"><span class="valor">${esc(nomeGerente)}</span>${lapis('assinaturaGerente', '')}<br><span class="cargo">Gerente de Validação</span></div>
-      <div class="assinatura"><span class="valor">${esc(nomeApoio)}</span>${lapis('assinaturaApoio', '')}<br><span class="cargo">Apoio Adicional</span></div>
+      ${blocoApoioHtml}
     </div>
     <div class="emissao">${esc(h.localEmissao)}, ${esc(dataExtenso(h.dataFim ?? new Date()))}</div>
     <div class="confidencial">DOCUMENTO TÉCNICO CONFIDENCIAL – MOBILTEC</div>
@@ -929,7 +971,9 @@ table.matriz td { padding:0; line-height:0.2in; }
 .fontes-titulo { text-align:center; font-weight:bold; font-size:10pt; }
 .fontes-lista { text-align:center; font-size:9.5pt; margin-top:0.04in; color:var(--roxo); }
 .fontes-lista a { color:inherit; text-decoration:underline; }
-.assinaturas { display:flex; justify-content:space-between; margin-top:0.46in; padding:0 0.14in; }
+.assinaturas { display:flex; margin-top:0.46in; padding:0 0.14in; }
+.assinaturas.com-apoio { justify-content:space-between; }
+.assinaturas.sem-apoio { justify-content:flex-start; gap:1.6in; }
 .assinatura { font-size:11pt; }
 .assinatura .cargo { color:#7A7A7A; font-size:10pt; }
 .emissao { margin-top:0.18in; font-size:10pt; color:#7A7A7A; padding-left:0.14in; }

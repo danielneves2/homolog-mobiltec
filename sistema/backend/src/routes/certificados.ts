@@ -23,10 +23,16 @@ import {
 } from '../services/certificado.js'
 
 const INCLUDE_CERTIFICADO = {
-  dispositivo: true,
-  responsavel: { select: { nome: true } },
-  gerente: { select: { nome: true } },
-  apoio: { select: { nome: true } },
+  dispositivo: { include: { categoria: true } },
+  responsavel: { select: { id: true, nome: true, papel: true, cargo: true, empresa: true } },
+  gerente: { select: { id: true, nome: true, cargo: true } },
+  apoio: { select: { id: true, nome: true, cargo: true, empresa: true } },
+  historicoStatus: {
+    where: { statusNovo: 'APROVADO' },
+    orderBy: { criadoEm: 'desc' },
+    take: 1,
+    include: { usuario: { select: { id: true, nome: true, papel: true } } },
+  },
   resultados: {
     include: {
       item: true,
@@ -102,7 +108,7 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
     onRequest: [fastify.autenticar],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
-    const { editavel } = request.query as { editavel?: string }
+    const { editavel, ambiente } = request.query as { editavel?: string; ambiente?: string }
     const h = await carregar(id)
     if (!h) return reply.status(404).send({ erro: 'Homologação não encontrada' })
 
@@ -113,6 +119,23 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
 
+    // Regra de segurança/visibilidade por ambiente (D476):
+    let ambienteEfetivo: 'parceiro' | 'mobiltec' = 'mobiltec'
+    if (ambiente === 'parceiro') {
+      let mesmaEmpresa = false
+      if (h.responsavel?.empresa) {
+        const u = await fastify.prisma.usuario.findUnique({
+          where: { id: request.user.id },
+          select: { empresa: true },
+        })
+        mesmaEmpresa = Boolean(u?.empresa && u.empresa === h.responsavel.empresa)
+      }
+      const ehDono = h.responsavelId === request.user.id || h.apoioId === request.user.id || mesmaEmpresa
+      if (request.user.papel === 'ADMIN' || (request.user.papel === 'PARCEIRO' && ehDono)) {
+        ambienteEfetivo = 'parceiro'
+      }
+    }
+
     const podeEditar = request.user.papel !== 'PARCEIRO' && editavel === '1'
 
     return reply
@@ -120,6 +143,7 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
       .send(
         gerarCertificadoHtml(h as unknown as HomologacaoCertificado, {
           editavel: podeEditar,
+          ambiente: ambienteEfetivo,
         }),
       )
   })
@@ -257,6 +281,7 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
     onRequest: [fastify.autenticar],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
+    const { ambiente } = request.query as { ambiente?: string }
     const h = await carregar(id)
     if (!h) return reply.status(404).send({ erro: 'Homologação não encontrada' })
 
@@ -267,50 +292,31 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
 
-    // Se já houver um certificado emitido com arquivo em disco, serve diretamente
-    const emitido = await fastify.prisma.certificadoEmitido.findFirst({
-      where: { homologacaoId: id, formato: 'PDF' },
-      orderBy: { emitidoEm: 'desc' },
-    })
+    // Regra de segurança/visibilidade por ambiente (D476):
+    let ambienteEfetivo: 'parceiro' | 'mobiltec' = 'mobiltec'
+    if (ambiente === 'parceiro') {
+      let mesmaEmpresa = false
+      if (h.responsavel?.empresa) {
+        const u = await fastify.prisma.usuario.findUnique({
+          where: { id: request.user.id },
+          select: { empresa: true },
+        })
+        mesmaEmpresa = Boolean(u?.empresa && u.empresa === h.responsavel.empresa)
+      }
+      const ehDono = h.responsavelId === request.user.id || h.apoioId === request.user.id || mesmaEmpresa
+      if (request.user.papel === 'ADMIN' || (request.user.papel === 'PARCEIRO' && ehDono)) {
+        ambienteEfetivo = 'parceiro'
+      }
+    }
 
     const nome = `certificado-${h.dispositivo.fabricante}-${h.dispositivo.modelo}-agente-${h.versaoAgente}.pdf`.replace(
       /[^\w.-]/g,
       '_',
     )
 
-    if (emitido && emitido.arquivoUrl) {
-      if (emitido.arquivoUrl.startsWith('http://') || emitido.arquivoUrl.startsWith('https://')) {
-        try {
-          const resp = await fetch(emitido.arquivoUrl)
-          if (resp.ok) {
-            const bufferArquivo = Buffer.from(await resp.arrayBuffer())
-            return reply
-              .type('application/pdf')
-              .header('Content-Disposition', `attachment; filename="${nome}"`)
-              .send(bufferArquivo)
-          }
-        } catch (errRemoto) {
-          request.log.warn({ err: errRemoto }, 'Falha ao buscar PDF do Supabase Storage')
-        }
-      }
-
-      if (emitido.arquivoUrl.startsWith('/uploads/')) {
-        const base = path.resolve(process.env.UPLOAD_DIR ?? './uploads')
-        let caminhoLocal = path.resolve(base, emitido.arquivoUrl.replace('/uploads/', ''))
-        if (!existsSync(caminhoLocal)) {
-          caminhoLocal = path.resolve('/tmp/uploads', emitido.arquivoUrl.replace('/uploads/', ''))
-        }
-        if (existsSync(caminhoLocal)) {
-          const bufferArquivo = readFileSync(caminhoLocal)
-          return reply
-            .type('application/pdf')
-            .header('Content-Disposition', `attachment; filename="${nome}"`)
-            .send(bufferArquivo)
-        }
-      }
-    }
-
-    const html = gerarCertificadoHtml(h as unknown as HomologacaoCertificado)
+    const html = gerarCertificadoHtml(h as unknown as HomologacaoCertificado, {
+      ambiente: ambienteEfetivo,
+    })
 
     try {
       const pdf = await renderizarPdf(html)
@@ -319,6 +325,43 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
         .header('Content-Disposition', `attachment; filename="${nome}"`)
         .send(pdf)
     } catch (errPdf: any) {
+      // Fallback: se houver arquivo pré-emitido no storage e for ambiente mobiltec
+      if (ambienteEfetivo === 'mobiltec') {
+        const emitido = await fastify.prisma.certificadoEmitido.findFirst({
+          where: { homologacaoId: id, formato: 'PDF' },
+          orderBy: { emitidoEm: 'desc' },
+        })
+        if (emitido && emitido.arquivoUrl) {
+          if (emitido.arquivoUrl.startsWith('http://') || emitido.arquivoUrl.startsWith('https://')) {
+            try {
+              const resp = await fetch(emitido.arquivoUrl)
+              if (resp.ok) {
+                const bufferArquivo = Buffer.from(await resp.arrayBuffer())
+                return reply
+                  .type('application/pdf')
+                  .header('Content-Disposition', `attachment; filename="${nome}"`)
+                  .send(bufferArquivo)
+              }
+            } catch (errRemoto) {
+              request.log.warn({ err: errRemoto }, 'Falha ao buscar PDF do Supabase Storage')
+            }
+          }
+          if (emitido.arquivoUrl.startsWith('/uploads/')) {
+            const base = path.resolve(process.env.UPLOAD_DIR ?? './uploads')
+            let caminhoLocal = path.resolve(base, emitido.arquivoUrl.replace('/uploads/', ''))
+            if (!existsSync(caminhoLocal)) {
+              caminhoLocal = path.resolve('/tmp/uploads', emitido.arquivoUrl.replace('/uploads/', ''))
+            }
+            if (existsSync(caminhoLocal)) {
+              const bufferArquivo = readFileSync(caminhoLocal)
+              return reply
+                .type('application/pdf')
+                .header('Content-Disposition', `attachment; filename="${nome}"`)
+                .send(bufferArquivo)
+            }
+          }
+        }
+      }
       // Se a requisição veio direto de um navegador via barra de endereço (Accept inclui text/html)
       if (request.headers.accept?.includes('text/html')) {
         const htmlAutoPrint = html.replace(

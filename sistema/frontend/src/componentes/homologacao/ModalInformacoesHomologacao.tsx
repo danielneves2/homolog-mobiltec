@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '@/contextos/AuthContext'
 import { useHomologacao } from '@/hooks/useHomologacao'
 import { Icone } from '@/componentes/Icone'
 import { ErroApi } from '@/lib/api'
@@ -106,6 +107,7 @@ export function ModalInformacoesHomologacao({
   aoFechar: () => void
   dispositivo?: any
 }) {
+  const { ehParceiro } = useAuth()
   const { data: homologacao, isLoading, isError, error } = useHomologacao(homologacaoId)
   const [abaAtiva, setAbaAtiva] = useState<'MATRIZ' | 'OBSERVACOES'>('MATRIZ')
   const [imagemAmpliada, setImagemAmpliada] = useState<{ url: string; nome: string } | null>(null)
@@ -212,7 +214,7 @@ export function ModalInformacoesHomologacao({
 
           <div className="flex items-center gap-2 shrink-0">
             <Link
-              to={`/homologacoes/${homologacaoId}/certificado`}
+              to={`/homologacoes/${homologacaoId}/certificado?ambiente=${ehParceiro ? 'parceiro' : 'mobiltec'}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-muted"
