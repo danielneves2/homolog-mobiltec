@@ -311,14 +311,12 @@ function MenuPaineis({
   ehParceiro,
   usuario,
   revisoesPendentes = 0,
-  homologacoesPendentes = [],
 }: {
   aberto: boolean
   ehAdmin: boolean
   ehParceiro: boolean
   usuario: any
   revisoesPendentes?: number
-  homologacoesPendentes?: any[]
 }) {
   const { pathname } = useLocation()
   const { data: parceiros = [] } = useParceiros(ehAdmin)
@@ -469,7 +467,7 @@ function MenuPaineis({
         }}
       >
         <Icone nome="painel" className="h-[18px] w-[18px] shrink-0" />
-        {!aberto && ((ehParceiro && revisoesPendentes > 0) || (ehAdmin && homologacoesPendentes.length > 0)) && (
+        {!aberto && ehParceiro && revisoesPendentes > 0 && (
           <span
             className="absolute top-1 right-1 h-2 w-2 rounded-full ring-2 shadow-xs"
             style={{ background: '#F59E0B' }}
@@ -484,14 +482,6 @@ function MenuPaineis({
                 style={{ background: '#F59E0B' }}
               >
                 {revisoesPendentes}
-              </span>
-            )}
-            {ehAdmin && homologacoesPendentes.length > 0 && (
-              <span
-                className="px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white shadow-xs"
-                style={{ background: 'var(--gradient-brand-purple)' }}
-              >
-                {homologacoesPendentes.length}
               </span>
             )}
             <svg
@@ -576,14 +566,6 @@ function MenuPaineis({
                   >
                     <span className="truncate">Parceiros</span>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {homologacoesPendentes.length > 0 && (
-                        <span
-                          className="px-1.5 py-0.2 rounded-full text-[10px] font-bold text-white"
-                          style={{ background: 'var(--gradient-brand-purple)' }}
-                        >
-                          {homologacoesPendentes.length}
-                        </span>
-                      )}
                       <svg
                         viewBox="0 0 16 16"
                         className="h-3 w-3 shrink-0 transition-transform duration-200 opacity-70"
@@ -612,36 +594,22 @@ function MenuPaineis({
                           Nenhum parceiro cadastrado
                         </span>
                       ) : (
-                        empresasParceirasUnicas.map((p) => {
-                          const pendenciasParceiro = homologacoesPendentes.filter((h) => {
-                            const emp = (h.responsavel?.empresa || h.dispositivo?.empresa || '').trim().toLowerCase()
-                            return emp === p.empresa.trim().toLowerCase()
-                          }).length
-
-                          return (
-                            <NavLink
-                              key={p.empresa}
-                              to={`/paineis/parceiro/${p.id}`}
-                              className={({ isActive }) =>
-                                `btn-menu-subitem flex items-center justify-between truncate rounded-md px-2 py-1 text-[12px] font-medium leading-tight outline-none focus:outline-none focus-visible:outline-none ${
-                                  isActive
-                                    ? 'bg-[var(--color-muted)] text-[var(--color-primary)] font-semibold'
-                                    : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]'
-                                }`
-                              }
-                              title={p.empresa}
-                            >
-                              <span className="truncate">{p.empresa}</span>
-                              {pendenciasParceiro > 0 && (
-                                <span
-                                  className="h-2 w-2 rounded-full shrink-0 shadow-xs ml-1"
-                                  style={{ background: 'var(--gradient-brand-purple)' }}
-                                  title={`${pendenciasParceiro} homologação(ões) aguardando validação`}
-                                />
-                              )}
-                            </NavLink>
-                          )
-                        })
+                        empresasParceirasUnicas.map((p) => (
+                          <NavLink
+                            key={p.empresa}
+                            to={`/paineis/parceiro/${p.id}`}
+                            className={({ isActive }) =>
+                              `btn-menu-subitem flex items-center justify-between truncate rounded-md px-2 py-1 text-[12px] font-medium leading-tight outline-none focus:outline-none focus-visible:outline-none ${
+                                isActive
+                                  ? 'bg-[var(--color-muted)] text-[var(--color-primary)] font-semibold'
+                                  : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]'
+                              }`
+                            }
+                            title={p.empresa}
+                          >
+                            <span className="truncate">{p.empresa}</span>
+                          </NavLink>
+                        ))
                       )}
                     </div>
                   )}
@@ -758,6 +726,29 @@ const NOME_REGISTRO = 'Registro de Testes Internos'
  * O menu é montado a partir das categorias ativas — cadastrar uma nova
  * categoria no banco a faz aparecer aqui sozinha, sem mexer no código.
  */
+const CHAVE_VALIDACAO_VISTOS = 'homolog.validacao-certificados-vistos'
+
+function obterVistosArmazenados(): string[] {
+  try {
+    const raw = localStorage.getItem(CHAVE_VALIDACAO_VISTOS)
+    if (raw) {
+      const arr = JSON.parse(raw)
+      if (Array.isArray(arr)) return arr
+    }
+  } catch {
+    /* fallback */
+  }
+  return []
+}
+
+function salvarVistosArmazenados(ids: string[]) {
+  try {
+    localStorage.setItem(CHAVE_VALIDACAO_VISTOS, JSON.stringify(ids))
+  } catch {
+    /* fallback */
+  }
+}
+
 export function Layout() {
   const { usuario, ehParceiro, ehAdmin, sair } = useAuth()
   const { data: categorias } = useCategorias()
@@ -768,6 +759,8 @@ export function Layout() {
 
   const revisoesPendentes = ehParceiro ? (notificacoesData?.naoLidas ?? 0) : 0
 
+  const [vistosValidacao, setVistosValidacao] = useState<string[]>(obterVistosArmazenados)
+
   // O selo do menu conta o que espera ação da Mobiltec, e só isso (D436).
   // `EM_REVISAO` está com o parceiro: contá-lo aqui mantinha o número aceso
   // sobre uma fila de validação vazia.
@@ -775,7 +768,42 @@ export function Layout() {
     return todasHomologacoes.filter((h) => h.status === 'AGUARDANDO_ANALISE')
   }, [todasHomologacoes])
 
-  const totalPendentes = ehAdmin ? homologacoesPendentes.length : 0
+  // Limpa IDs de homologações que já não estão mais pendentes de análise
+  useEffect(() => {
+    if (!ehAdmin || homologacoesPendentes.length === 0) return
+    const idsAtuais = new Set(homologacoesPendentes.map((h) => h.id))
+    setVistosValidacao((prev) => {
+      const filtrados = prev.filter((id) => idsAtuais.has(id))
+      if (filtrados.length !== prev.length) {
+        salvarVistosArmazenados(filtrados)
+        return filtrados
+      }
+      return prev
+    })
+  }, [ehAdmin, homologacoesPendentes])
+
+  // Homologações pendentes não visualizadas pelo admin
+  const pendenciasNaoVistas = useMemo(() => {
+    if (!ehAdmin) return []
+    const vistosSet = new Set(vistosValidacao)
+    return homologacoesPendentes.filter((h) => !vistosSet.has(h.id))
+  }, [ehAdmin, homologacoesPendentes, vistosValidacao])
+
+  const totalPendentes = ehAdmin ? pendenciasNaoVistas.length : 0
+
+  function marcarPendenciasComoVistas() {
+    if (!ehAdmin || homologacoesPendentes.length === 0) return
+    const todosIds = homologacoesPendentes.map((h) => h.id)
+    setVistosValidacao(todosIds)
+    salvarVistosArmazenados(todosIds)
+  }
+
+  // Se o usuário está na tela de validar certificados, descarta os avisos pendentes
+  useEffect(() => {
+    if (ehAdmin && pathname.includes('validar-certificados') && pendenciasNaoVistas.length > 0) {
+      marcarPendenciasComoVistas()
+    }
+  }, [ehAdmin, pathname, pendenciasNaoVistas.length])
 
   const [aberto, setAberto] = useState(() => {
     try {
@@ -915,7 +943,6 @@ export function Layout() {
               ehParceiro={ehParceiro}
               usuario={usuario}
               revisoesPendentes={revisoesPendentes}
-              homologacoesPendentes={homologacoesPendentes}
             />
 
             {/* Menu Homologações — os dispositivos registrados ficam aqui */}
@@ -964,6 +991,11 @@ export function Layout() {
                     filhos={opcoesParceiros}
                     aberto={aberto}
                     totalPendentes={totalPendentes}
+                    aoClicarItem={(item) => {
+                      if (item.para.includes('validar-certificados')) {
+                        marcarPendenciasComoVistas()
+                      }
+                    }}
                   />
                 )}
               </div>
