@@ -73,7 +73,7 @@ export function ModalReabrir({
             className="px-3 py-2.5 rounded-md text-sm"
             style={{ background: 'var(--color-warning-soft)', color: 'var(--color-warning-fg)' }}
           >
-            Volta para rascunho e libera a edição. A reabertura fica registrada em log, com
+            Volta para revisão e libera a edição de testes e dados. A reabertura fica registrada em log, com
             autor e motivo.
             {h._count?.certificados
               ? ` Já existem ${h._count.certificados} certificado(s) emitido(s) desta homologação — eles continuam válidos como estão.`

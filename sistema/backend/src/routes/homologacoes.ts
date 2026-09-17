@@ -725,7 +725,7 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
       where: { id },
       include: {
         dispositivo: { include: { categoria: true } },
-        responsavel: { select: { empresa: true } },
+        responsavel: { select: { empresa: true, papel: true } },
       },
     })
     if (!homologacao) return reply.status(404).send({ erro: 'Homologação não encontrada' })
@@ -741,6 +741,13 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
       })
     }
 
+    const empresaParceiro = homologacao.responsavel?.empresa || homologacao.dispositivo?.empresa || null
+    const nomeDisp = homologacao.dispositivo?.nomeComercial || 'Dispositivo'
+    const ehDeParceiro =
+      homologacao.responsavel?.papel === 'PARCEIRO' ||
+      Boolean(empresaParceiro && empresaParceiro.toLowerCase() !== 'mobiltec')
+    const statusNovo = ehDeParceiro ? StatusHomologacao.EM_REVISAO : StatusHomologacao.RASCUNHO
+
     // Executa tudo em transação
     const [logEntry] = await fastify.prisma.$transaction(async (tx) => {
       const log = await tx.logReabertura.create({
@@ -753,7 +760,7 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
       await tx.homologacao.update({
         where: { id },
         data: {
-          status: StatusHomologacao.RASCUNHO,
+          status: statusNovo,
           homologado: null,
           dataFim: null,
         },
@@ -762,16 +769,14 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
         data: {
           homologacaoId: id,
           statusAnterior: homologacao.status,
-          statusNovo: StatusHomologacao.RASCUNHO,
+          statusNovo,
           usuarioId: request.user.id,
           motivo,
         },
       })
 
       // Se for de parceiro, emite notificação para refletir no painel dele
-      const empresaParceiro = homologacao.responsavel?.empresa || homologacao.dispositivo?.empresa || null
-      const nomeDisp = homologacao.dispositivo?.nomeComercial || 'Dispositivo'
-      if (empresaParceiro && empresaParceiro.toLowerCase() !== 'mobiltec') {
+      if (ehDeParceiro && empresaParceiro) {
         await tx.notificacao.create({
           data: {
             tipo: 'REVISAO',

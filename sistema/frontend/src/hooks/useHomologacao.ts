@@ -109,6 +109,7 @@ export function useReabrir(homologacaoId?: string) {
       qc.invalidateQueries({ queryKey: ['painel-parceiro'] })
       qc.invalidateQueries({ queryKey: ['parceiros'] })
       qc.invalidateQueries({ queryKey: ['homologacoes-finalizadas'] })
+      qc.invalidateQueries({ queryKey: ['notificacoes'] })
     },
   })
 }

@@ -7,6 +7,7 @@ import { ErroApi } from '@/lib/api'
 import { BadgeHomologado } from '@/componentes/comum/BadgeHomologado'
 import { ModalInformacoesHomologacao } from '@/componentes/homologacao/ModalInformacoesHomologacao'
 import { AvisoRevisao } from '@/componentes/homologacao/AvisoRevisao'
+import { ModalReabrir } from '@/componentes/matriz/ModalReabrir'
 
 /**
  * `pendentes` é a fila de ação do Admin, e só ela: `AGUARDANDO_ANALISE`.
@@ -27,6 +28,7 @@ export function ValidarCertificados() {
   const [busca, setBusca] = useState('')
   const [homologacaoEmAprovacao, setHomologacaoEmAprovacao] = useState<ItemListaHomologacao | null>(null)
   const [homologacaoEmRevisao, setHomologacaoEmRevisao] = useState<ItemListaHomologacao | null>(null)
+  const [homologacaoParaReabrir, setHomologacaoParaReabrir] = useState<ItemListaHomologacao | null>(null)
   const [homologacaoInfo, setHomologacaoInfo] = useState<ItemListaHomologacao | null>(null)
   const [motivoRevisao, setMotivoRevisao] = useState('')
   const [sucesso, setSucesso] = useState<string | null>(null)
@@ -611,6 +613,22 @@ export function ValidarCertificados() {
                             </button>
                           </>
                         )}
+
+                        {isAprovado && (
+                          <button
+                            type="button"
+                            onClick={() => setHomologacaoParaReabrir(h)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-colors hover:bg-black/[0.04]"
+                            style={{
+                              borderColor: 'var(--color-primary)',
+                              color: 'var(--color-primary)',
+                              background: 'transparent',
+                            }}
+                            title="Reabrir homologação para revisão do parceiro"
+                          >
+                            ↩ Reabrir
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -798,6 +816,21 @@ export function ValidarCertificados() {
             observacoes: homologacaoInfo.observacoes,
           }}
           aoFechar={() => setHomologacaoInfo(null)}
+        />
+      )}
+
+      {/* Modal Reabrir Homologação Aprovada (D475) */}
+      {homologacaoParaReabrir && (
+        <ModalReabrir
+          homologacao={homologacaoParaReabrir}
+          aoFechar={() => setHomologacaoParaReabrir(null)}
+          aoReabrir={() => {
+            setHomologacaoParaReabrir(null)
+            setSucesso(
+              `Homologação de ${homologacaoParaReabrir.dispositivo.nomeComercial} reaberta para revisão do parceiro.`,
+            )
+            setTimeout(() => setSucesso(null), 5000)
+          }}
         />
       )}
 

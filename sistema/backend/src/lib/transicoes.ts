@@ -14,8 +14,9 @@ export const TRANSICOES_PERMITIDAS: Partial<Record<StatusHomologacao, StatusHomo
   RASCUNHO: ['EM_REVISAO', 'AGUARDANDO_ANALISE'] as StatusHomologacao[],
   AGUARDANDO_ANALISE: ['EM_REVISAO', 'APROVADO', 'REPROVADO', 'RASCUNHO'] as StatusHomologacao[],
   EM_REVISAO: ['APROVADO', 'REPROVADO', 'RASCUNHO', 'AGUARDANDO_ANALISE'] as StatusHomologacao[],
-  APROVADO: ['PUBLICADO', 'RASCUNHO'] as StatusHomologacao[],
-  REPROVADO: ['RASCUNHO'] as StatusHomologacao[],
+  APROVADO: ['PUBLICADO', 'RASCUNHO', 'EM_REVISAO'] as StatusHomologacao[],
+  PUBLICADO: ['RASCUNHO', 'EM_REVISAO'] as StatusHomologacao[],
+  REPROVADO: ['RASCUNHO', 'EM_REVISAO'] as StatusHomologacao[],
 }
 
 /**
