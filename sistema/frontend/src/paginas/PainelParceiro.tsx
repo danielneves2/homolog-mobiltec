@@ -10,6 +10,7 @@ import { FotoDispositivo } from '@/componentes/vitrine/FotoDispositivo'
 import {
   ModalInformacoesHomologacao,
   parseObservacoes,
+  type ItemObservacaoProcessada,
 } from '@/componentes/parceiro/ModalInformacoesHomologacao'
 import { ErroApi } from '@/lib/api'
 import type { DispositivoPainelParceiro, StatusHomologacao } from '@/lib/tipos'
@@ -499,7 +500,7 @@ function CardDispositivoParceiro({
 
           {expandirObs && (
             <div className="mt-2.5 space-y-2">
-              {observacoesProcessadas.map((obs) => (
+              {observacoesProcessadas.map((obs: ItemObservacaoProcessada) => (
                 <div
                   key={obs.id}
                   className="p-2.5 rounded-lg border bg-white shadow-2xs space-y-1 text-xs"

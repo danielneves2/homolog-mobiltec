@@ -1,9 +1,6 @@
 import { useMemo } from 'react'
 import { FotoDispositivo } from '@/componentes/vitrine/FotoDispositivo'
-import { DicaJustificativa } from '@/componentes/DicaJustificativa'
 import { Icone } from '@/componentes/Icone'
-import { comporDetalhesResultado } from '@/lib/detalhesResultado'
-import type { SecaoDetalheResultado } from '@/lib/detalhesResultado'
 import {
   GRUPO_ORDEM,
   META_STATUS,
@@ -12,49 +9,48 @@ import {
   obterRotuloGrupo,
   somenteVersaoAndroid,
 } from '@/lib/tipos'
-import type { GrupoItem, Homologacao, StatusResultado } from '@/lib/tipos'
+import type { GrupoItem, Homologacao, StatusResultado, AnexoObservacao } from '@/lib/tipos'
+import { parseObservacaoItem } from '@/lib/observacoes'
 
 /**
- * A ficha da homologação: a unidade testada e o resultado item a item.
- *
- * Mora aqui, e não dentro da página, porque a mesma ficha é aberta em dois
- * lugares (D432): pela vitrine, como página em `/dispositivos/:id`, e pela
- * tela de Validar Certificado, dentro de um modal — ali o Admin confere sem
- * perder a fila em que estava. Só leitura nos dois; quem edita é a matriz.
- *
- * São duas peças exportadas, e não uma: na página a unidade testada fica
- * dentro do card com os botões do certificado, e o resultado vem abaixo dele,
- * solto. Quem chama decide o enquadramento.
+ * Função utilitária para download confiável de arquivos/prints pelo admin/técnico.
  */
+async function baixarArquivo(url: string, nomeArquivo: string) {
+  try {
+    const res = await fetch(url)
+    const blob = await res.blob()
+    const blobUrl = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = blobUrl
+    a.download = nomeArquivo || 'anexo'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(blobUrl)
+  } catch {
+    const a = document.createElement('a')
+    a.href = url
+    a.download = nomeArquivo || 'anexo'
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+    a.click()
+  }
+}
 
 /** Uma linha do resultado, no formato que esta ficha desenha */
 interface LinhaResultado {
+  id: string
   grupo: GrupoItem
   nome: string
   acao: string
   status: StatusResultado
-  detalhes: SecaoDetalheResultado[]
+  observacao?: string | null
+  justificativaTexto?: string | null
+  anexos?: AnexoObservacao[]
 }
 
-/**
- * É `<table>`, e não grid, por um motivo concreto: cada linha em grid é um
- * contêiner independente, então dimensionar por conteúdo desalinharia as
- * colunas entre as linhas — e um grid único para cabeçalho e corpo exigiria
- * `display: contents`, que apaga a linha como elemento. Tabela resolve as
- * duas coisas de graça.
- *
- * A coluna do status é fixa e serve de âncora à direita; as outras duas
- * ficam em `auto`, sizing por conteúdo. Com os detalhes fora da tabela
- * (viraram balão no `?`), sobra largura para os quatro grupos caberem dois a
- * dois.
- */
-const LARGURA_STATUS = '7rem'
-/**
- * Na largura toda, deixar as duas primeiras colunas em `auto` abriria um vão
- * entre o texto e a coluna seguinte — era a queixa original desta tela. Com o
- * item em fração fixa, a ação ocupa todo o resto e a linha fecha.
- */
-const LARGURA_ITEM = '26%'
+const LARGURA_STATUS = '7.5rem'
+const LARGURA_ITEM = '28%'
 
 /** A identificação da unidade que foi para a bancada: foto e ficha técnica. */
 export function FichaUnidadeTestada({
@@ -62,10 +58,6 @@ export function FichaUnidadeTestada({
   aoEditarFoto,
 }: {
   homologacao: Homologacao
-  /**
-   * Quando informado, a foto vira botão de troca. Sem isso é só imagem — é o
-   * caso do modal de validação, onde o Admin confere e não mexe no cadastro.
-   */
   aoEditarFoto?: () => void
 }) {
   const ficha = useMemo(() => {
@@ -78,14 +70,7 @@ export function FichaUnidadeTestada({
       versaoPos: h.versaoPos,
       tipoAgente: h.tipoAgente,
       gerenciamento: h.gerenciamento,
-      // Sem `numeroSerie`, `imei1` e `imei2`: esta é a ficha que o parceiro
-      // vai ver, e identificador de aparelho não tem o que fazer nela — mesma
-      // razão pela qual saíram do certificado. Continuam no banco e na matriz,
-      // onde servem para saber qual unidade foi para a bancada.
       metodoInscricao: h.metodoInscricao,
-      // Mesma precedência do certificado: o nome digitado na tela do
-      // certificado vence; sem ele, cai para o Usuario vinculado. Se as duas
-      // telas mostrassem regras diferentes, uma delas estaria mentindo.
       responsavelTecnico: h.assinaturaResponsavel?.trim() || h.responsavel?.nome || null,
       gerenteValidacao: h.assinaturaGerente?.trim() || h.gerente?.nome || null,
       dataInicio: h.dataInicio,
@@ -94,9 +79,6 @@ export function FichaUnidadeTestada({
   }, [homologacao])
 
   return (
-    // Foto grande à esquerda, tudo o mais numa coluna ao lado: com os três
-    // identificadores fora, os dados restantes cabem em duas fileiras, e a
-    // faixa larga que sobrava vira espaço para a imagem.
     <div className="flex flex-wrap items-start gap-6">
       <div className="flex flex-col items-center gap-2">
         <div
@@ -138,9 +120,6 @@ export function FichaUnidadeTestada({
 
       <div className="min-w-0 flex-1">
         <p className="label-caps mb-3">Unidade testada</p>
-        {/* 240px de mínimo, não 190: medido, o par mais largo ("Método
-            de inscrição: Não informado") precisa de 213px, e com três
-            colunas nesta faixa sobravam 207 — o valor truncava. */}
         <dl className="grid gap-x-8 gap-y-2.5 text-sm [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
           <Campo rotulo="Android" valor={somenteVersaoAndroid(ficha.versaoSo)} />
           <Campo rotulo="Versão do agente" valor={ficha.versaoAgente} />
@@ -150,8 +129,6 @@ export function FichaUnidadeTestada({
           <Campo rotulo="Método de inscrição" valor={ficha.metodoInscricao} />
           <Campo rotulo="Início" valor={formatarData(ficha.dataInicio)} />
           <Campo rotulo="Conclusão" valor={formatarData(ficha.dataFim)} />
-          {/* As duas assinaturas do certificado, na mesma ordem em que
-              aparecem lá no rodapé */}
           <Campo rotulo="Responsável técnico" valor={ficha.responsavelTecnico} />
           <Campo rotulo="Gerente de validação" valor={ficha.gerenteValidacao} />
         </dl>
@@ -160,17 +137,43 @@ export function FichaUnidadeTestada({
   )
 }
 
-/** O checklist da bateria, grupo a grupo — as mesmas colunas do certificado. */
-export function ResultadoHomologacao({ homologacao }: { homologacao: Homologacao }) {
+/** O checklist da bateria, grupo a grupo — com observações e justificativas expostas na tabela. */
+export function ResultadoHomologacao({
+  homologacao,
+  onAmpliarImagem,
+}: {
+  homologacao: Homologacao
+  onAmpliarImagem?: (img: { url: string; nome: string }) => void
+}) {
   const porGrupo = useMemo(() => {
-    const linhas: LinhaResultado[] = (homologacao.resultados ?? []).map((r) => ({
-      grupo: r.item.grupo,
-      nome: r.item.nome,
-      // A coluna do meio do certificado: o que foi feito para avaliar o item
-      acao: r.item.descricaoAcao,
-      status: r.status,
-      detalhes: comporDetalhesResultado(r),
-    }))
+    const linhas: LinhaResultado[] = (homologacao.resultados ?? []).map((r) => {
+      const obsParsed = r.observacao ? parseObservacaoItem(r.observacao) : null
+      const justParsed = r.justificativaTexto ? parseObservacaoItem(r.justificativaTexto) : null
+      const justObj = r.justificativa?.texto ? parseObservacaoItem(r.justificativa.texto) : null
+
+      const obsTexto = obsParsed?.texto?.trim() || null
+      const justTexto =
+        justParsed?.texto?.trim() ||
+        justObj?.texto?.trim() ||
+        (r.justificativaTexto?.trim() ?? r.justificativa?.texto?.trim() ?? null)
+
+      const todosAnexos = [
+        ...(obsParsed?.anexos ?? []),
+        ...(justParsed?.anexos ?? []),
+        ...(justObj?.anexos ?? []),
+      ].filter((a, idx, arr) => arr.findIndex((x) => x.url === a.url) === idx)
+
+      return {
+        id: r.id,
+        grupo: r.item.grupo,
+        nome: r.item.nome,
+        acao: r.item.descricaoAcao,
+        status: r.status,
+        observacao: obsTexto,
+        justificativaTexto: justTexto,
+        anexos: todosAnexos,
+      }
+    })
 
     const gruposPresentes = Array.from(new Set(linhas.map((l) => l.grupo)))
     const todosGrupos = [
@@ -187,9 +190,6 @@ export function ResultadoHomologacao({ homologacao }: { homologacao: Homologacao
     <section className="mt-6">
       <h2 className="label-caps mb-3">Resultado da homologação</h2>
 
-      {/* Um grupo abaixo do outro, na largura toda — a mesma sequência do
-          certificado. Lado a lado, os grupos têm 9, 11, 12 e 16 itens e as
-          duas pilhas nunca fechavam na mesma altura. */}
       <div className="space-y-5">
         {porGrupo.map(({ grupo, itens }) => (
           <div
@@ -208,12 +208,6 @@ export function ResultadoHomologacao({ homologacao }: { homologacao: Homologacao
               {obterRotuloGrupo(grupo)}
             </div>
 
-            {/* As mesmas três colunas do certificado. Os detalhes saíram da
-                tabela e viraram balão no `?` ao lado do status: como coluna,
-                cobravam 38% da largura em todas as linhas para servir a poucas. */}
-            {/* Linhas baixas (`py-1.5`, `leading-snug`): na largura toda
-                nada quebra, então a altura do card é só a soma das linhas
-                — e são 48 itens somando os quatro grupos. */}
             <table className="w-full text-[13px] leading-snug">
               <colgroup>
                 <col style={{ width: LARGURA_ITEM }} />
@@ -225,24 +219,19 @@ export function ResultadoHomologacao({ homologacao }: { homologacao: Homologacao
                   className="text-left text-[11px] font-semibold uppercase"
                   style={{
                     background: 'var(--color-muted)',
-                    // Roxo no lugar do cinza: o cabeçalho passa a marcar a
-                    // tabela em vez de se confundir com o texto de apoio.
                     color: 'var(--color-primary)',
                     letterSpacing: '0.06em',
                   }}
                 >
-                  {/* O nome do item tem prioridade de largura: é o que
-                      identifica a linha. Quem cede e quebra é a ação, que
-                      é descrição. */}
                   {(() => {
                     const colunas = obterColunasGrupo(grupo)
                     return (
                       <>
-                        <th className="py-1.5 pl-4 pr-3 font-semibold whitespace-nowrap">
+                        <th className="py-2 pl-4 pr-3 font-semibold whitespace-nowrap">
                           {colunas[0]}
                         </th>
-                        <th className="py-1.5 pr-3 font-semibold">{colunas[1]}</th>
-                        <th className="py-1.5 pr-4 text-right font-semibold">
+                        <th className="py-2 pr-3 font-semibold">{colunas[1]}</th>
+                        <th className="py-2 pr-4 text-right font-semibold">
                           {colunas[2]}
                         </th>
                       </>
@@ -253,29 +242,61 @@ export function ResultadoHomologacao({ homologacao }: { homologacao: Homologacao
               <tbody>
                 {itens.map((l) => {
                   return (
-                    <tr key={l.nome} className="border-t align-top">
-                      <td className="py-1.5 pl-4 pr-3 font-medium whitespace-nowrap">{l.nome}</td>
-                      <td
-                        className="py-1.5 pr-3"
-                        style={{ color: 'var(--color-muted-foreground)' }}
-                      >
-                        {l.acao}
+                    <tr key={l.nome} className="border-t align-top hover:bg-muted/20 transition-colors">
+                      <td className="py-2.5 pl-4 pr-3 font-semibold text-foreground whitespace-nowrap">
+                        {l.nome}
                       </td>
-                      <td className="py-1.5 pr-4">
-                        {/* O "?" vem antes da pastilha: assim a coluna de
-                            status continua terminando sempre no mesmo x,
-                            com ou sem detalhes. */}
-                        <span className="flex items-center justify-end gap-1.5">
-                          {l.detalhes.length > 0 && <DicaJustificativa secoes={l.detalhes} />}
-                          <span
-                            className="inline-block rounded px-2 py-0.5 text-xs font-semibold whitespace-nowrap"
-                            style={{
-                              background: META_STATUS[l.status].corFill,
-                              color: META_STATUS[l.status].cor,
-                            }}
-                          >
-                            {META_STATUS[l.status].rotulo}
-                          </span>
+                      <td className="py-2.5 pr-3 space-y-1.5" style={{ color: 'var(--color-muted-foreground)' }}>
+                        <div className="leading-snug text-foreground/90">{l.acao}</div>
+
+                        {/* Observação registrada pelo parceiro nesta funcionalidade */}
+                        {l.observacao && (
+                          <div className="p-2 rounded-lg bg-purple-50/70 border border-purple-200/80 text-xs text-purple-950 leading-relaxed shadow-2xs">
+                            <span className="font-bold text-purple-900">Observação: </span>
+                            <span className="whitespace-pre-wrap">{l.observacao}</span>
+                          </div>
+                        )}
+
+                        {/* Justificativa técnica (se houver) */}
+                        {l.justificativaTexto && (
+                          <div className="p-2 rounded-lg bg-amber-50/70 border border-amber-200/80 text-xs text-amber-950 leading-relaxed shadow-2xs">
+                            <span className="font-bold text-amber-900">Justificativa: </span>
+                            <span className="whitespace-pre-wrap">{l.justificativaTexto}</span>
+                          </div>
+                        )}
+
+                        {/* Anexos da funcionalidade */}
+                        {l.anexos && l.anexos.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 pt-1 not-italic">
+                            {l.anexos.map((a, i) => {
+                              const ehImg = a.tipo === 'imagem' || /\.(png|jpe?g|webp)$/i.test(a.nome)
+                              return (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  onClick={() => ehImg ? onAmpliarImagem?.({ url: a.url, nome: a.nome }) : baixarArquivo(a.url, a.nome)}
+                                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-100 hover:bg-purple-100 text-[10px] font-bold text-slate-800 hover:text-purple-950 border border-slate-200 hover:border-purple-300 transition-colors cursor-pointer shadow-2xs"
+                                  title={`Anexo: ${a.nome} · Clique para ${ehImg ? 'ampliar' : 'baixar'}`}
+                                >
+                                  <span>{ehImg ? '📷' : '📦'}</span>
+                                  <span className="max-w-[130px] truncate">{a.nome}</span>
+                                  <Icone nome="baixar" className="h-3 w-3 text-purple-600 shrink-0" />
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-2.5 pr-4 text-right">
+                        <span
+                          className="inline-block rounded px-2.5 py-1 text-xs font-semibold whitespace-nowrap shadow-2xs"
+                          style={{
+                            background: META_STATUS[l.status].corFill,
+                            color: META_STATUS[l.status].cor,
+                            border: '1px solid rgba(0,0,0,0.06)',
+                          }}
+                        >
+                          {META_STATUS[l.status].rotulo}
                         </span>
                       </td>
                     </tr>
