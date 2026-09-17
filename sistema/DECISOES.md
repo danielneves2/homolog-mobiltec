@@ -1126,6 +1126,14 @@ encerra as sete rodadas anteriores: **assinatura do produto, não botão.**
 |---|---|---|
 | D460 | Sincronização do pin de novidades do parceiro no menu lateral com notificações não lidas e remoção do card amarelo duplicado de revisão | Em `Layout.tsx`: sincroniza o badge âmbar de novidades no menu Painel (`revisoesPendentes`) com `notificacoesData?.naoLidas` em vez de `pendentesConfirmacao`, garantindo que o pin desapareça assim que o parceiro visualizar a atualização ou as notificações, mantendo o histórico de revisões acessível na central de notificações; e em `PainelParceiro.tsx`: ao carregar o ambiente do parceiro, despacha `marcarTodasLidas()` quando houver itens não lidos, dispensando o pin de novidades de forma imediata quando o usuário estiver visualizando seu ambiente; e remove o bloco amarelo redundante `AvisoRevisao` do card de dispositivo sob revisão, preservando unicamente o container clean de revisão técnica com identificação do técnico e status de recebimento. |
 
+---
+
+## Etapa 92 — Remoção do Card Amarelo de Revisão na Matriz de Homologação (D461)
+
+| # | Decisão | Justificativa |
+|---|---|---|
+| D461 | Eliminação do card amarelo de apontamentos de revisão acima da planilha de testes na Matriz de Homologação | Em `Matriz.tsx`: remove a renderização do bloco de aviso amarelo `AvisoRevisao` que era exibido acima da planilha quando havia modelos com status `EM_REVISAO`, limpando a visualização e focando a tela de testes estritamente na planilha e na interação da homologação. |
+
 
 
 
