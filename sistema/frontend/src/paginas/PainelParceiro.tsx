@@ -1,13 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { usePainelParceiro } from '@/hooks/useParceiros'
-import { useConfirmarNotificacao } from '@/hooks/useNotificacoes'
+import { useConfirmarNotificacao, useNotificacoes, useMarcarTodasLidas } from '@/hooks/useNotificacoes'
 import { useAuth } from '@/contextos/AuthContext'
 import { Icone } from '@/componentes/Icone'
 import { LoadingTela } from '@/componentes/LoadingTela'
 import { BadgeHomologado } from '@/componentes/comum/BadgeHomologado'
 import { FotoDispositivo } from '@/componentes/vitrine/FotoDispositivo'
-import { AvisoRevisao } from '@/componentes/homologacao/AvisoRevisao'
 import {
   ModalInformacoesHomologacao,
   parseObservacoes,
@@ -19,8 +18,18 @@ type FiltroStatus = 'todos' | 'em-homologacao' | 'em-validacao' | 'em-revisao' |
 
 export function PainelParceiro() {
   const { id } = useParams<{ id?: string }>()
-  const { ehAdmin } = useAuth()
+  const { ehAdmin, ehParceiro } = useAuth()
   const { data, isLoading, isError, error } = usePainelParceiro(id)
+  const { data: notificacoesData } = useNotificacoes()
+  const marcarTodasLidas = useMarcarTodasLidas()
+
+  // Se o parceiro está visualizando seu ambiente/painel e possui notificações não lidas, marca como lidas
+  // para dispensar o pin de novidades do menu, preservando os registros na central de notificações.
+  useEffect(() => {
+    if (ehParceiro && notificacoesData?.naoLidas && notificacoesData.naoLidas > 0) {
+      marcarTodasLidas.mutate()
+    }
+  }, [ehParceiro, notificacoesData?.naoLidas, marcarTodasLidas])
 
   const [filtro, setFiltro] = useState<FiltroStatus>('todos')
   const [busca, setBusca] = useState('')
@@ -463,17 +472,6 @@ function CardDispositivoParceiro({
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* O apontamento que trouxe o dispositivo de volta para a bancada (D435) */}
-      {d.revisaoPendente && (
-        <div className="px-4 pb-3">
-          <AvisoRevisao
-            motivo={d.revisaoPendente.motivo}
-            solicitadoEm={d.revisaoPendente.solicitadoEm}
-            solicitadoPor={d.revisaoPendente.solicitadoPor}
-          />
         </div>
       )}
 

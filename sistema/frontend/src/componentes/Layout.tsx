@@ -766,7 +766,7 @@ export function Layout() {
   const { data: notificacoesData } = useNotificacoes()
   const { pathname } = useLocation()
 
-  const revisoesPendentes = ehParceiro ? (notificacoesData?.pendentesConfirmacao ?? 0) : 0
+  const revisoesPendentes = ehParceiro ? (notificacoesData?.naoLidas ?? 0) : 0
 
   // O selo do menu conta o que espera ação da Mobiltec, e só isso (D436).
   // `EM_REVISAO` está com o parceiro: contá-lo aqui mantinha o número aceso

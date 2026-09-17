@@ -1118,6 +1118,14 @@ encerra as sete rodadas anteriores: **assinatura do produto, não botão.**
 |---|---|---|
 | D459 | Substituição do design de caixas cinzas nos contadores métricos e badges de status pelo padrão pílula clean com dot verde/roxo/âmbar | Em `ValidarCertificados.tsx`: substitui o bloco acinzentado do número no card métrico 'Aprovados & Emitidos' pelo badge clean pílula (`rounded-full`) com fundo verde ultraclaro (`#f0fdf4`), borda suave (`rgba(22, 163, 74, 0.25)`), indicador dot verde vibrante (`bg-emerald-500`) e tipografia nítida semibold em verde esmeralda (`#166534`), harmonizando identicamente com os cards de 'Aguardando Validação' (pílula roxa com dot) e 'Parceiros Cadastrados'; e na listagem de dispositivos, elimina as bordas e badges genéricos de pendência para itens em revisão, aplicando pills específicas com dot âmbar para `EM_REVISAO` e roxo para `AGUARDANDO_ANALISE`. |
 
+---
+
+## Etapa 91 — Ocultação do Pin de Novidade do Parceiro ao Visualizar Notificações ou Ambiente (D460)
+
+| # | Decisão | Justificativa |
+|---|---|---|
+| D460 | Sincronização do pin de novidades do parceiro no menu lateral com notificações não lidas e remoção do card amarelo duplicado de revisão | Em `Layout.tsx`: sincroniza o badge âmbar de novidades no menu Painel (`revisoesPendentes`) com `notificacoesData?.naoLidas` em vez de `pendentesConfirmacao`, garantindo que o pin desapareça assim que o parceiro visualizar a atualização ou as notificações, mantendo o histórico de revisões acessível na central de notificações; e em `PainelParceiro.tsx`: ao carregar o ambiente do parceiro, despacha `marcarTodasLidas()` quando houver itens não lidos, dispensando o pin de novidades de forma imediata quando o usuário estiver visualizando seu ambiente; e remove o bloco amarelo redundante `AvisoRevisao` do card de dispositivo sob revisão, preservando unicamente o container clean de revisão técnica com identificação do técnico e status de recebimento. |
+
 
 
 
