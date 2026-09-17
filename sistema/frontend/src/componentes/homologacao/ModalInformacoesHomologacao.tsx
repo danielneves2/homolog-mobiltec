@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useHomologacao } from '@/hooks/useHomologacao'
 import { Icone } from '@/componentes/Icone'
 import { ErroApi } from '@/lib/api'
+import { META_STATUS } from '@/lib/tipos'
+import { parseObservacaoItem, formatarTamanhoArquivo } from '@/lib/observacoes'
 import { FichaUnidadeTestada, ResultadoHomologacao } from './FichaHomologacao'
-import { BlocoObservacoesParceiro } from './BlocoObservacoesParceiro'
 import { AvisoRevisao } from './AvisoRevisao'
 
 export interface ItemObservacaoProcessada {
@@ -91,7 +92,7 @@ async function baixarArquivo(url: string, nomeArquivo: string) {
 }
 
 /**
- * Modal unificado de Exibir Informações (D432 / D472 / D473).
+ * Modal unificado de Exibir Informações (D432 / D472 / D473 / D474).
  *
  * Utilizado com o mesmo padrão visual e estrutural em:
  * 1. Validar Certificado → Exibir informações
@@ -106,6 +107,7 @@ export function ModalInformacoesHomologacao({
   dispositivo?: any
 }) {
   const { data: homologacao, isLoading, isError, error } = useHomologacao(homologacaoId)
+  const [abaAtiva, setAbaAtiva] = useState<'MATRIZ' | 'OBSERVACOES'>('MATRIZ')
   const [imagemAmpliada, setImagemAmpliada] = useState<{ url: string; nome: string } | null>(null)
 
   // Esc fecha: o modal cobre a tela inteira e o usuário percorre pelo teclado
@@ -133,6 +135,54 @@ export function ModalInformacoesHomologacao({
     homologacao?.status === 'EM_REVISAO'
       ? homologacao.historicoStatus?.find((h) => h.statusNovo === 'EM_REVISAO')
       : undefined
+
+  // Anotações funcionais registradas em itens de teste
+  const anotacoesFuncionalidade = useMemo(() => {
+    if (!homologacao?.resultados) return []
+    return homologacao.resultados
+      .map((r) => {
+        const obsParsed = r.observacao ? parseObservacaoItem(r.observacao) : null
+        const justParsed = r.justificativaTexto ? parseObservacaoItem(r.justificativaTexto) : null
+        const justObj = r.justificativa?.texto ? parseObservacaoItem(r.justificativa.texto) : null
+
+        const obsTexto = obsParsed?.texto?.trim() || null
+        const justTexto =
+          justParsed?.texto?.trim() ||
+          justObj?.texto?.trim() ||
+          (r.justificativaTexto?.trim() ?? r.justificativa?.texto?.trim() ?? null)
+
+        const todosAnexos = [
+          ...(obsParsed?.anexos ?? []),
+          ...(justParsed?.anexos ?? []),
+          ...(justObj?.anexos ?? []),
+        ].filter((a, idx, arr) => arr.findIndex((x) => x.url === a.url) === idx)
+
+        return {
+          id: r.id,
+          itemNome: r.item?.nome ?? 'Funcionalidade',
+          status: r.status,
+          grupo: r.item?.grupo,
+          acao: r.item?.descricaoAcao,
+          texto: obsTexto,
+          justificativa: justTexto,
+          anexos: todosAnexos,
+          autorIdentificacao:
+            (r as any).autorEmail ||
+            (homologacao as any)?.responsavel?.email ||
+            homologacao?.responsavel?.nome ||
+            null,
+          atualizadoEm: (r as any).atualizadoEm || homologacao?.atualizadoEm || homologacao?.criadoEm,
+        }
+      })
+      .filter((item) => Boolean(item.texto || item.justificativa || (item.anexos && item.anexos.length > 0)))
+  }, [homologacao])
+
+  // Observações gerais da homologação
+  const observacoesGerais = useMemo(() => {
+    return parseObservacoes(homologacao?.observacoes)
+  }, [homologacao?.observacoes])
+
+  const totalObservacoes = anotacoesFuncionalidade.length + observacoesGerais.length
 
   return (
     <div
@@ -204,15 +254,352 @@ export function ModalInformacoesHomologacao({
                   />
                 </div>
               )}
+
+              {/* Ficha da Unidade Testada (sempre visível no topo) */}
               <FichaUnidadeTestada homologacao={homologacao} />
-              <ResultadoHomologacao
-                homologacao={homologacao}
-                onAmpliarImagem={(img) => setImagemAmpliada(img)}
-              />
-              <BlocoObservacoesParceiro
-                observacoes={homologacao.observacoes}
-                onAmpliarImagem={(img) => setImagemAmpliada(img)}
-              />
+
+              {/* Barra de Abas ao lado do título Resultado da homologação (D474) */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t">
+                <h2 className="label-caps m-0 font-bold" style={{ color: 'var(--color-foreground)' }}>
+                  Resultado da homologação
+                </h2>
+
+                <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setAbaAtiva('MATRIZ')}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      abaAtiva === 'MATRIZ'
+                        ? 'text-white font-bold shadow-xs'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-200/60'
+                    }`}
+                    style={abaAtiva === 'MATRIZ' ? { background: 'var(--gradient-brand-purple)' } : {}}
+                  >
+                    Matriz de Testes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAbaAtiva('OBSERVACOES')}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                      abaAtiva === 'OBSERVACOES'
+                        ? 'text-white font-bold shadow-xs'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-200/60'
+                    }`}
+                    style={abaAtiva === 'OBSERVACOES' ? { background: 'var(--gradient-brand-purple)' } : {}}
+                  >
+                    <span>💬 Observações</span>
+                    {totalObservacoes > 0 && (
+                      <span
+                        className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                          abaAtiva === 'OBSERVACOES' ? 'bg-white/25 text-white' : 'bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {totalObservacoes}
+                      </span>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Visualização da Matriz de Testes (Limpa e Estritamente Tabular) */}
+              {abaAtiva === 'MATRIZ' && (
+                <ResultadoHomologacao
+                  homologacao={homologacao}
+                  semTitulo={true}
+                />
+              )}
+
+              {/* Visualização de Observações Separadas (Funcionalidades + Gerais) */}
+              {abaAtiva === 'OBSERVACOES' && (
+                <div className="space-y-6 pt-1">
+                  {totalObservacoes === 0 ? (
+                    <div
+                      className="p-10 text-center rounded-xl border flex flex-col items-center justify-center text-muted-foreground bg-muted/20"
+                      style={{ borderColor: 'var(--color-border)' }}
+                    >
+                      <Icone nome="anexo" className="h-8 w-8 mb-2 opacity-50" />
+                      <p className="text-sm font-medium">
+                        Nenhuma observação ou anexo registrado para esta homologação.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Seção 1: Observações por Funcionalidade */}
+                      {anotacoesFuncionalidade.length > 0 && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                              Observações por funcionalidade ({anotacoesFuncionalidade.length})
+                            </h3>
+                          </div>
+
+                          <div className="space-y-3">
+                            {anotacoesFuncionalidade.map((item) => (
+                              <div
+                                key={item.id}
+                                className="p-4 rounded-xl border shadow-2xs space-y-3"
+                                style={{ borderColor: 'var(--color-border)', background: 'var(--color-card)' }}
+                              >
+                                <div className="flex items-center justify-between gap-2 border-b pb-2">
+                                  <div>
+                                    <h4 className="font-bold text-sm text-foreground leading-snug">
+                                      {item.itemNome}
+                                    </h4>
+                                    {item.acao && (
+                                      <p className="text-xs text-muted-foreground mt-0.5">{item.acao}</p>
+                                    )}
+                                  </div>
+                                  <span
+                                    className="inline-block rounded px-2.5 py-1 text-xs font-semibold whitespace-nowrap shadow-2xs shrink-0"
+                                    style={{
+                                      background: META_STATUS[item.status].corFill,
+                                      color: META_STATUS[item.status].cor,
+                                      border: '1px solid rgba(0,0,0,0.06)',
+                                    }}
+                                  >
+                                    {META_STATUS[item.status].rotulo}
+                                  </span>
+                                </div>
+
+                                {/* Texto da Observação */}
+                                {item.texto && (
+                                  <div className="p-3 rounded-lg bg-purple-50/70 border border-purple-200/80 text-xs sm:text-[13px] text-purple-950 leading-relaxed shadow-2xs">
+                                    <span className="font-bold text-purple-900">Observação: </span>
+                                    <span className="whitespace-pre-wrap">{item.texto}</span>
+                                  </div>
+                                )}
+
+                                {/* Texto da Justificativa */}
+                                {item.justificativa && (
+                                  <div className="p-3 rounded-lg bg-amber-50/70 border border-amber-200/80 text-xs sm:text-[13px] text-amber-950 leading-relaxed shadow-2xs">
+                                    <span className="font-bold text-amber-900">Justificativa: </span>
+                                    <span className="whitespace-pre-wrap">{item.justificativa}</span>
+                                  </div>
+                                )}
+
+                                {/* Anexos da Funcionalidade */}
+                                {item.anexos && item.anexos.length > 0 && (
+                                  <div className="pt-2 border-t mt-2">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider mb-2 text-muted-foreground">
+                                      Anexos ({item.anexos.length})
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {item.anexos.map((a, idx) => {
+                                        const ehImagem = a.tipo === 'imagem' || /\.(png|jpe?g|webp)$/i.test(a.nome)
+                                        if (ehImagem) {
+                                          return (
+                                            <div
+                                              key={`${a.url}-${idx}`}
+                                              className="group relative flex flex-col items-center rounded-lg border overflow-hidden bg-slate-50 transition-all shadow-2xs"
+                                              style={{ width: '110px' }}
+                                            >
+                                              <div
+                                                onClick={() => setImagemAmpliada({ url: a.url, nome: a.nome })}
+                                                className="h-20 w-full cursor-pointer overflow-hidden relative bg-slate-100"
+                                              >
+                                                <img
+                                                  src={a.url}
+                                                  alt={a.nome}
+                                                  className="h-full w-full object-cover group-hover:scale-105 transition-transform"
+                                                />
+                                                <span className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                                                  🔍 Ampliar
+                                                </span>
+                                              </div>
+                                              <div className="w-full flex items-center justify-between px-2 py-1 bg-white text-[9px] border-t">
+                                                <span className="truncate max-w-[70px] font-medium" title={a.nome}>
+                                                  {a.nome}
+                                                </span>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => baixarArquivo(a.url, a.nome)}
+                                                  className="text-purple-700 hover:text-purple-900 p-0.5 cursor-pointer"
+                                                  title="Baixar imagem"
+                                                >
+                                                  <Icone nome="baixar" className="h-3 w-3" />
+                                                </button>
+                                              </div>
+                                            </div>
+                                          )
+                                        }
+                                        return (
+                                          <div
+                                            key={`${a.url}-${idx}`}
+                                            className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-semibold bg-slate-50 hover:bg-slate-100 transition-colors shadow-2xs"
+                                            style={{ borderColor: 'var(--color-border)' }}
+                                          >
+                                            <span className="text-sm">📦</span>
+                                            <div className="min-w-0 text-left">
+                                              <p className="truncate max-w-[140px] font-medium leading-tight text-slate-800">
+                                                {a.nome}
+                                              </p>
+                                              {a.tamanho && (
+                                                <p className="text-[9px] text-slate-500">
+                                                  {formatarTamanhoArquivo(a.tamanho)}
+                                                </p>
+                                              )}
+                                            </div>
+                                            <button
+                                              type="button"
+                                              onClick={() => baixarArquivo(a.url, a.nome)}
+                                              className="ml-1 text-purple-700 hover:text-purple-900 p-1 cursor-pointer rounded hover:bg-purple-100 transition-colors"
+                                              title={`Baixar ${a.nome}`}
+                                            >
+                                              <Icone nome="baixar" className="h-3.5 w-3.5 shrink-0" />
+                                            </button>
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Rodapé da observação funcional */}
+                                {(item.autorIdentificacao || item.atualizadoEm) && (
+                                  <div className="pt-2 border-t flex items-center justify-between text-[11px] text-muted-foreground font-medium">
+                                    {item.autorIdentificacao ? (
+                                      <span>
+                                        Registrado por: <strong className="text-foreground">{item.autorIdentificacao}</strong>
+                                      </span>
+                                    ) : (
+                                      <span />
+                                    )}
+                                    {item.atualizadoEm && (
+                                      <span>
+                                        {new Date(item.atualizadoEm).toLocaleDateString('pt-BR')} às{' '}
+                                        {new Date(item.atualizadoEm).toLocaleTimeString('pt-BR', {
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                        })}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Seção 2: Observações Gerais */}
+                      {observacoesGerais.length > 0 && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                              Observações gerais ({observacoesGerais.length})
+                            </h3>
+                          </div>
+
+                          <div className="space-y-3">
+                            {observacoesGerais.map((obs) => (
+                              <div
+                                key={obs.id}
+                                className="p-4 rounded-xl border shadow-2xs space-y-3"
+                                style={{ borderColor: 'var(--color-border)', background: 'var(--color-card)' }}
+                              >
+                                <div className="flex items-center justify-between gap-2 border-b pb-2">
+                                  <span className="font-bold text-sm text-foreground">{obs.titulo}</span>
+                                  {(obs.autorEmail || obs.autorNome) && (
+                                    <span className="text-[11px] text-muted-foreground font-medium">
+                                      Por <strong className="text-foreground">{obs.autorEmail || obs.autorNome}</strong>
+                                      {obs.data || obs.criadoEm
+                                        ? ` em ${new Date(obs.data || obs.criadoEm!).toLocaleDateString('pt-BR')} às ${new Date(obs.data || obs.criadoEm!).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                                        : ''}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {obs.texto && (
+                                  <p className="text-xs sm:text-[13px] leading-relaxed whitespace-pre-wrap text-foreground">
+                                    {obs.texto}
+                                  </p>
+                                )}
+
+                                {/* Anexos gerais */}
+                                {obs.anexos && obs.anexos.length > 0 && (
+                                  <div className="pt-2 border-t mt-2">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider mb-2 text-muted-foreground">
+                                      Anexos ({obs.anexos.length})
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {obs.anexos.map((a, idx) => {
+                                        const ehImagem = a.tipo === 'imagem' || /\.(png|jpe?g|webp)$/i.test(a.nome)
+                                        if (ehImagem) {
+                                          return (
+                                            <div
+                                              key={`${a.url}-${idx}`}
+                                              className="group relative flex flex-col items-center rounded-lg border overflow-hidden bg-slate-50 transition-all shadow-2xs"
+                                              style={{ width: '110px' }}
+                                            >
+                                              <div
+                                                onClick={() => setImagemAmpliada({ url: a.url, nome: a.nome })}
+                                                className="h-20 w-full cursor-pointer overflow-hidden relative bg-slate-100"
+                                              >
+                                                <img
+                                                  src={a.url}
+                                                  alt={a.nome}
+                                                  className="h-full w-full object-cover group-hover:scale-105 transition-transform"
+                                                />
+                                                <span className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-[10px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                                                  🔍 Ampliar
+                                                </span>
+                                              </div>
+                                              <div className="w-full flex items-center justify-between px-2 py-1 bg-white text-[9px] border-t">
+                                                <span className="truncate max-w-[70px] font-medium" title={a.nome}>
+                                                  {a.nome}
+                                                </span>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => baixarArquivo(a.url, a.nome)}
+                                                  className="text-purple-700 hover:text-purple-900 p-0.5 cursor-pointer"
+                                                  title="Baixar imagem"
+                                                >
+                                                  <Icone nome="baixar" className="h-3 w-3" />
+                                                </button>
+                                              </div>
+                                            </div>
+                                          )
+                                        }
+                                        return (
+                                          <div
+                                            key={`${a.url}-${idx}`}
+                                            className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-semibold bg-slate-50 hover:bg-slate-100 transition-colors shadow-2xs"
+                                            style={{ borderColor: 'var(--color-border)' }}
+                                          >
+                                            <span className="text-sm">📦</span>
+                                            <div className="min-w-0 text-left">
+                                              <p className="truncate max-w-[140px] font-medium leading-tight text-slate-800">
+                                                {a.nome}
+                                              </p>
+                                              {a.tamanho && (
+                                                <p className="text-[9px] text-slate-500">
+                                                  {formatarTamanhoArquivo(a.tamanho)}
+                                                </p>
+                                              )}
+                                            </div>
+                                            <button
+                                              type="button"
+                                              onClick={() => baixarArquivo(a.url, a.nome)}
+                                              className="ml-1 text-purple-700 hover:text-purple-900 p-1 cursor-pointer rounded hover:bg-purple-100 transition-colors"
+                                              title={`Baixar ${a.nome}`}
+                                            >
+                                              <Icone nome="baixar" className="h-3.5 w-3.5 shrink-0" />
+                                            </button>
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
