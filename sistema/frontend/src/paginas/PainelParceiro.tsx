@@ -344,8 +344,8 @@ function CardDispositivoParceiro({
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2 min-w-0">
                 <p className="text-[12px] truncate leading-tight">
-                  <strong className="text-[var(--color-foreground)] font-bold">
-                    {revisao.tecnicoNome}
+                  <strong className="font-bold text-[var(--color-primary)]">
+                    MOBILTEC
                   </strong>
                   <span className="text-[var(--color-muted-foreground)] font-normal ml-1">
                     enviou para revisão

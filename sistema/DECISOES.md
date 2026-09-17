@@ -1134,6 +1134,15 @@ encerra as sete rodadas anteriores: **assinatura do produto, não botão.**
 |---|---|---|
 | D461 | Eliminação do card amarelo de apontamentos de revisão acima da planilha de testes na Matriz de Homologação | Em `Matriz.tsx`: remove a renderização do bloco de aviso amarelo `AvisoRevisao` que era exibido acima da planilha quando havia modelos com status `EM_REVISAO`, limpando a visualização e focando a tela de testes estritamente na planilha e na interação da homologação. |
 
+---
+
+## Etapa 93 — Padronização Institucional do Remetente de Revisão Técnica (D462)
+
+| # | Decisão | Justificativa |
+|---|---|---|
+| D462 | Identificação institucional 'MOBILTEC' em fonte roxa oficial nas mensagens de revisão no painel do parceiro | Em `PainelParceiro.tsx`: substitui a exibição do nome do técnico/administrador por **MOBILTEC** em tipografia roxa oficial (`text-[var(--color-primary)] font-bold`), sem background de card ou flag, comunicando de forma institucional o envio da revisão para o parceiro. |
+
+
 
 
 
