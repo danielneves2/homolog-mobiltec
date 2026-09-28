@@ -109,6 +109,54 @@ export async function salvarCertificadoPdf(
 }
 
 /**
+ * Salva o arquivo PDF de um datasheet de dispositivo.
+ */
+export async function salvarDatasheetDispositivo(
+  dispositivoId: string,
+  buffer: Buffer,
+): Promise<string> {
+  const nomeArquivo = `datasheet-${dispositivoId}-${Date.now()}.pdf`
+
+  if (ehSupabaseStorageAtivo) {
+    const endpoint = `${supabaseUrl}/storage/v1/object/${BUCKET_CERTIFICADOS}/${nomeArquivo}`
+    const resposta = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${supabaseServiceKey}`,
+        'Content-Type': 'application/pdf',
+        'x-upsert': 'true',
+      },
+      body: new Uint8Array(buffer),
+    })
+
+    if (!resposta.ok) {
+      const endpointAnexo = `${supabaseUrl}/storage/v1/object/${BUCKET_ANEXOS}/${nomeArquivo}`
+      const respAnexo = await fetch(endpointAnexo, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${supabaseServiceKey}`,
+          'Content-Type': 'application/pdf',
+          'x-upsert': 'true',
+        },
+        body: new Uint8Array(buffer),
+      })
+      if (respAnexo.ok) {
+        return `${supabaseUrl}/storage/v1/object/public/${BUCKET_ANEXOS}/${nomeArquivo}`
+      }
+      const erroTexto = await resposta.text().catch(() => '')
+      throw new Error(`Falha no upload do datasheet para o Supabase Storage (${resposta.status}): ${erroTexto}`)
+    }
+
+    return `${supabaseUrl}/storage/v1/object/public/${BUCKET_CERTIFICADOS}/${nomeArquivo}`
+  }
+
+  const dir = obterDiretorioUploads('datasheets')
+  await mkdir(dir, { recursive: true })
+  await writeFile(path.join(dir, nomeArquivo), buffer)
+  return `/uploads/datasheets/${nomeArquivo}`
+}
+
+/**
  * Salva um anexo de observação (.zip ou imagem).
  *
  * @param extensao - Extensão com ponto (ex: `.zip`, `.png`).

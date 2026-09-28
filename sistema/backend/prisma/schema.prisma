@@ -118,6 +118,7 @@ model Dispositivo {
   modelo         String
   nomeComercial  String        @map("nome_comercial")
   fotoUrl        String?       @map("foto_url")
+  datasheetUrl   String?       @map("datasheet_url")
   linkFabricante String?       @map("link_fabricante")
   empresa        String?
   ativo          Boolean       @default(true)

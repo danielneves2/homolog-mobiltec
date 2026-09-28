@@ -9,7 +9,7 @@
 import { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { parceiroPodeAlterarFoto } from '../lib/autorizacao-foto.js'
-import { salvarFotoDispositivo } from '../lib/storage.js'
+import { salvarFotoDispositivo, salvarDatasheetDispositivo } from '../lib/storage.js'
 
 /**
  * `fotoUrl` aceita URL absoluta OU caminho servido por nós (`/uploads/...`).
@@ -241,6 +241,55 @@ const dispositivoRoutes: FastifyPluginAsync = async (fastify) => {
     return fastify.prisma.dispositivo.update({
       where: { id },
       data: { fotoUrl },
+    })
+  })
+
+  // POST /dispositivos/:id/datasheet — Upload de datasheet PDF (Admin/Mobiltec)
+  fastify.post('/dispositivos/:id/datasheet', {
+    onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR'])],
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+
+    const dispositivo = await fastify.prisma.dispositivo.findUnique({
+      where: { id },
+      select: { id: true, modelo: true, fabricante: true },
+    })
+
+    if (!dispositivo) {
+      return reply.status(404).send({ erro: 'Dispositivo não encontrado.' })
+    }
+
+    let arquivo
+    try {
+      arquivo = await request.file({ limits: { fileSize: 15 * 1024 * 1024 } })
+    } catch {
+      return reply.status(413).send({ erro: 'Arquivo muito grande. O limite é 15 MB.' })
+    }
+    if (!arquivo) return reply.status(400).send({ erro: 'Nenhum arquivo enviado.' })
+
+    const ehPdf = arquivo.mimetype === 'application/pdf' || arquivo.filename.toLowerCase().endsWith('.pdf')
+    if (!ehPdf) {
+      return reply.status(415).send({
+        erro: 'Formato não suportado. O datasheet deve ser um arquivo PDF.',
+      })
+    }
+
+    let conteudo: Buffer
+    try {
+      conteudo = await arquivo.toBuffer()
+    } catch {
+      return reply.status(413).send({ erro: 'Arquivo muito grande. O limite é 15 MB.' })
+    }
+
+    if (arquivo.file.truncated || conteudo.length > 15 * 1024 * 1024) {
+      return reply.status(413).send({ erro: 'Arquivo muito grande. O limite é 15 MB.' })
+    }
+
+    const datasheetUrl = await salvarDatasheetDispositivo(id, conteudo)
+
+    return fastify.prisma.dispositivo.update({
+      where: { id },
+      data: { datasheetUrl },
     })
   })
 

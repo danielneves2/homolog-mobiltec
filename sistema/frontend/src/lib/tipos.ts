@@ -414,6 +414,7 @@ export interface Dispositivo {
   modelo: string
   nomeComercial: string
   fotoUrl: string | null
+  datasheetUrl?: string | null
   linkFabricante: string | null
   ativo: boolean
   criadoEm: string

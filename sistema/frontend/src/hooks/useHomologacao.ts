@@ -310,3 +310,26 @@ export function useUploadFotoDispositivo(dispositivoId: string, homologacaoId?: 
   })
 }
 
+/** Upload do datasheet PDF oficial do dispositivo (apenas Admin) */
+export function useUploadDatasheetDispositivo(dispositivoId: string, homologacaoId?: string) {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (arquivo: File) => {
+      const dados = new FormData()
+      dados.append('arquivo', arquivo)
+      return api.postMultipart<{ id: string; datasheetUrl: string }>(
+        `/dispositivos/${dispositivoId}/datasheet`,
+        dados,
+      )
+    },
+    onSuccess: () => {
+      if (homologacaoId) {
+        qc.invalidateQueries({ queryKey: chaves.homologacao(homologacaoId) })
+      }
+      qc.invalidateQueries({ queryKey: ['dispositivo', dispositivoId] })
+      qc.invalidateQueries({ queryKey: ['dispositivos'] })
+    },
+  })
+}
+

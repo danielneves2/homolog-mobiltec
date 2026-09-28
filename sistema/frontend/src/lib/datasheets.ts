@@ -169,8 +169,26 @@ export function obterDatasheetDispositivo(dispositivo?: {
   fabricante?: string | null
   modelo?: string | null
   nomeComercial?: string | null
+  datasheetUrl?: string | null
 } | null): DatasheetInfo | null {
   if (!dispositivo) return null
+
+  const nomeFinal = (dispositivo.nomeComercial || `${dispositivo.fabricante ?? ''} ${dispositivo.modelo ?? ''}`).trim()
+
+  // 0. Se já tem datasheetUrl anexado pelo Admin (upload no banco/storage)
+  if (dispositivo.datasheetUrl && dispositivo.datasheetUrl.trim()) {
+    const url = dispositivo.datasheetUrl.trim()
+    const urlFormatada =
+      url.startsWith('/uploads/')
+        ? `/api${url}`
+        : url
+
+    return {
+      arquivo: 'datasheet.pdf',
+      url: urlFormatada,
+      nomeDownload: `Datasheet - ${nomeFinal}.pdf`,
+    }
+  }
 
   const fab = (dispositivo.fabricante || '').trim().toLowerCase()
   const mod = (dispositivo.modelo || '').trim().toLowerCase()

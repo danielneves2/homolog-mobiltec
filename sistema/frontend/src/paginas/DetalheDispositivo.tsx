@@ -7,6 +7,7 @@ import { gerarNomeArquivoCertificado } from '@/lib/imprimir'
 import { obterDatasheetDispositivo } from '@/lib/datasheets'
 import { baixarPdfDireto } from '@/lib/gerarPdfClient'
 import { ModalUploadFoto } from '@/componentes/dispositivo/ModalUploadFoto'
+import { ModalUploadDatasheet } from '@/componentes/dispositivo/ModalUploadDatasheet'
 import {
   FichaUnidadeTestada,
   ResultadoHomologacao,
@@ -30,11 +31,12 @@ import { LoadingTela } from '@/componentes/LoadingTela'
 export function DetalheDispositivo() {
   const { id = '' } = useParams<{ id: string }>()
   const consulta = useHomologacao(id)
-  const { usuario, ehMobiltec, ehParceiro } = useAuth()
+  const { usuario, ehMobiltec, ehParceiro, ehAdmin } = useAuth()
 
   const [baixando, setBaixando] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
   const [modalFotoAberto, setModalFotoAberto] = useState(false)
+  const [modalDatasheetAberto, setModalDatasheetAberto] = useState(false)
 
   const homologacao = consulta.data
 
@@ -218,6 +220,18 @@ export function DetalheDispositivo() {
                 <Icone nome="anexo" className="h-4 w-4 shrink-0" />
                 Exportar Datasheet
               </button>
+              {(ehAdmin || ehMobiltec) && (
+                <button
+                  type="button"
+                  onClick={() => setModalDatasheetAberto(true)}
+                  title={datasheet ? 'Substituir ou atualizar o arquivo PDF do datasheet' : 'Anexar arquivo PDF do datasheet oficial'}
+                  className="flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-semibold transition-colors hover:bg-muted"
+                  style={{ borderColor: 'var(--color-border)', color: 'var(--color-primary)' }}
+                >
+                  <Icone nome="upload" className="h-4 w-4 shrink-0" />
+                  {datasheet ? 'Editar Datasheet' : 'Anexar Datasheet'}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={exportarCertificado}
@@ -251,6 +265,22 @@ export function DetalheDispositivo() {
           homologacaoId={id}
           nomeDispositivo={`${fabricante} ${modelo}`}
           fotoAtualUrl={homologacao.dispositivo.fotoUrl ?? null}
+        />
+      )}
+
+      {modalDatasheetAberto && homologacao.dispositivo?.id && (
+        <ModalUploadDatasheet
+          aberto={modalDatasheetAberto}
+          aoFechar={() => setModalDatasheetAberto(false)}
+          dispositivoId={homologacao.dispositivo.id}
+          homologacaoId={id}
+          nomeDispositivo={`${fabricante} ${modelo}`}
+          datasheetAtualUrl={datasheet?.url ?? homologacao.dispositivo.datasheetUrl ?? null}
+          aoSucesso={() => {
+            consulta.refetch()
+            setAviso('Datasheet salvo com sucesso!')
+            setTimeout(() => setAviso(null), 3500)
+          }}
         />
       )}
     </div>
