@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "npx prisma generate --schema=sistema/backend/prisma/schema.prisma && npm --prefix sistema/frontend install --include=dev && npm run build --prefix sistema/frontend",
+    "build": "npm --prefix sistema/backend exec prisma -- generate --schema=sistema/backend/prisma/schema.prisma && npm --prefix sistema/frontend install --include=dev && npm run build --prefix sistema/frontend",
     "agent": "tsx tools/agent/cli.ts"
   },
   "dependencies": {
