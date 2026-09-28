@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/contextos/AuthContext'
 import { api, ErroApi } from '@/lib/api'
-import { imprimirCertificadoHtml, gerarNomeArquivoCertificado } from '@/lib/imprimir'
+import { gerarNomeArquivoCertificado } from '@/lib/imprimir'
+import { baixarPdfDireto } from '@/lib/gerarPdfClient'
 import {
   useDashboard,
   useEditarDivergencia,
@@ -36,7 +37,6 @@ export function Certificado() {
   const { id = '' } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const { usuario, ehParceiro } = useAuth()
-  const qc = useQueryClient()
   const { data: homologacao } = useHomologacao(id)
   const { data: dashboard } = useDashboard(id)
   const [baixando, setBaixando] = useState(false)
@@ -99,15 +99,6 @@ export function Certificado() {
     queryFn: () => api.get<CertificadoEmitido[]>(`/homologacoes/${id}/certificados`),
   })
 
-  const emitir = useMutation({
-    mutationFn: () => api.post<{ aviso: string | null }>(`/homologacoes/${id}/certificados`, { formato: 'PDF' }),
-    onSuccess: (r) => {
-      setAviso(r.aviso ?? 'Certificado emitido e arquivado.')
-      qc.invalidateQueries({ queryKey: ['certificado', id, 'emitidos'] })
-    },
-    onError: (e) => setAviso(e instanceof ErroApi ? e.message : 'Falha ao emitir.'),
-  })
-
   const nomeArquivo = gerarNomeArquivoCertificado(homologacao?.dispositivo, id)
   const tituloDocumento = nomeArquivo.replace(/\.pdf$/i, '')
 
@@ -124,22 +115,28 @@ export function Certificado() {
     setBaixando(true)
     setAviso(null)
     try {
-      const blob = await api.getBlob(`/homologacoes/${id}/certificado/pdf?ambiente=${ambiente}`)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = nomeArquivo
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (e: any) {
-      // Fallback: se a geração no servidor estiver indisponível (serverless / sem Playwright),
-      // acionamos o diálogo nativo do navegador para Salvar como PDF
-      if (html) {
-        setAviso('Abrindo diálogo de impressão (Salvar como PDF)...')
-        imprimirCertificadoHtml(html, tituloDocumento)
-      } else {
-        setAviso(e instanceof ErroApi ? e.message : 'Não foi possível gerar o PDF.')
+      try {
+        const blob = await api.getBlob(`/homologacoes/${id}/certificado/pdf?ambiente=${ambiente}`)
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = nomeArquivo
+        a.click()
+        URL.revokeObjectURL(url)
+        setAviso('Certificado baixado com sucesso!')
+        setTimeout(() => setAviso(null), 3500)
+        return
+      } catch {
+        // Fallback automático client-side (Vercel serverless sem Playwright)
       }
+
+      setAviso('Gerando arquivo PDF para download…')
+      const htmlParaPdf = html || (await api.getTexto(`/homologacoes/${id}/certificado/preview?ambiente=${ambiente}`))
+      await baixarPdfDireto(htmlParaPdf, nomeArquivo)
+      setAviso('Certificado baixado com sucesso!')
+      setTimeout(() => setAviso(null), 3500)
+    } catch (e: any) {
+      setAviso(e instanceof ErroApi ? e.message : 'Não foi possível gerar o PDF.')
     } finally {
       setBaixando(false)
     }
@@ -205,23 +202,12 @@ export function Certificado() {
             onClick={baixarPdf}
             disabled={baixando || (ehParceiro && !estaAprovado)}
             title={ehParceiro && !estaAprovado ? 'Download disponível apenas após aprovação formal pela Mobiltec' : undefined}
-            className="px-4 py-2 rounded-md text-sm font-medium border disabled:opacity-50"
-            style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
+            className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold text-white shadow-xs transition-opacity hover:opacity-90 disabled:opacity-50"
+            style={{ background: 'var(--gradient-brand-purple)' }}
           >
-            {baixando ? 'Gerando…' : 'Baixar PDF'}
+            <Icone nome="baixar" className="h-4 w-4 shrink-0" />
+            {baixando ? 'Gerando…' : 'Baixar Certificado'}
           </button>
-          {!ehParceiro && (
-            <button
-              type="button"
-              onClick={() => emitir.mutate()}
-              disabled={emitir.isPending}
-              title="Arquiva o PDF e um snapshot imutável dos dados"
-              className="px-4 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50"
-              style={{ background: 'var(--gradient-brand-purple)' }}
-            >
-              {emitir.isPending ? 'Emitindo…' : 'Emitir e arquivar'}
-            </button>
-          )}
         </div>
       </header>
 
@@ -256,23 +242,30 @@ export function Certificado() {
           role="alert"
           className="mx-6 mt-3 px-4 py-2.5 rounded-md text-sm shrink-0 border transition-all"
           style={
-            aviso.toLowerCase().includes('abrindo')
+            aviso.toLowerCase().includes('sucesso')
               ? {
-                  background: 'var(--color-brand-purple-soft)',
-                  color: 'var(--color-brand-purple-fg)',
-                  borderColor: 'var(--color-brand-purple-border)',
+                  background: 'var(--color-success-soft, #e6f9f0)',
+                  color: 'var(--color-success-fg, #0d7045)',
+                  borderColor: 'var(--color-success-border, #a3e6cb)',
                 }
-              : {
-                  background: 'var(--color-info-soft)',
-                  color: 'var(--color-info-fg)',
-                  borderColor: 'transparent',
-                }
+              : aviso.toLowerCase().includes('gerando')
+                ? {
+                    background: 'var(--color-brand-purple-soft)',
+                    color: 'var(--color-brand-purple-fg)',
+                    borderColor: 'var(--color-brand-purple-border)',
+                  }
+                : {
+                    background: 'var(--color-destructive-soft)',
+                    color: 'var(--color-destructive-fg)',
+                    borderColor: 'var(--color-destructive-soft)',
+                  }
           }
         >
           <div className="flex items-center gap-2">
-            {aviso.toLowerCase().includes('abrindo') && (
-              <Icone nome="printer" className="h-4 w-4 shrink-0 animate-pulse text-[var(--color-primary)]" />
-            )}
+            <Icone
+              nome={aviso.toLowerCase().includes('sucesso') ? 'homologacao' : 'baixar'}
+              className={`h-4 w-4 shrink-0 ${aviso.toLowerCase().includes('gerando') ? 'animate-bounce' : ''}`}
+            />
             <span>{aviso}</span>
           </div>
         </div>

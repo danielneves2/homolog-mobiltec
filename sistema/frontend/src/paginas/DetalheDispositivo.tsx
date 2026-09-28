@@ -3,7 +3,9 @@ import { Link, useParams } from 'react-router-dom'
 import { useHomologacao } from '@/hooks/useHomologacao'
 import { api, ErroApi } from '@/lib/api'
 import { useAuth } from '@/contextos/AuthContext'
-import { imprimirCertificadoHtml, gerarNomeArquivoCertificado } from '@/lib/imprimir'
+import { gerarNomeArquivoCertificado } from '@/lib/imprimir'
+import { obterDatasheetDispositivo } from '@/lib/datasheets'
+import { baixarPdfDireto } from '@/lib/gerarPdfClient'
 import { ModalUploadFoto } from '@/componentes/dispositivo/ModalUploadFoto'
 import {
   FichaUnidadeTestada,
@@ -65,27 +67,42 @@ export function DetalheDispositivo() {
     }
   }, [tituloDocumento, homologacao?.dispositivo])
 
+  const datasheet = obterDatasheetDispositivo(homologacao?.dispositivo)
+
+  function baixarDatasheet() {
+    if (!datasheet) return
+    const a = document.createElement('a')
+    a.href = datasheet.url
+    a.download = datasheet.nomeDownload
+    a.click()
+  }
+
   async function exportarCertificado() {
     setBaixando(true)
     setAviso(null)
     try {
-      const blob = await api.getBlob(`/homologacoes/${id}/certificado/pdf?ambiente=mobiltec`)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = nomeArquivo
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (e: any) {
-      // Fallback: se a geração no servidor estiver indisponível (serverless / sem Playwright),
-      // buscamos o preview HTML e abrimos o diálogo nativo do navegador para Salvar como PDF
       try {
-        setAviso('Abrindo diálogo de impressão (Salvar como PDF)...')
-        const html = await api.getTexto(`/homologacoes/${id}/certificado/preview?ambiente=mobiltec`)
-        imprimirCertificadoHtml(html, tituloDocumento)
+        const blob = await api.getBlob(`/homologacoes/${id}/certificado/pdf?ambiente=mobiltec`)
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = nomeArquivo
+        a.click()
+        URL.revokeObjectURL(url)
+        setAviso('Certificado baixado com sucesso!')
+        setTimeout(() => setAviso(null), 3500)
+        return
       } catch {
-        setAviso(e instanceof ErroApi ? e.message : 'Não foi possível gerar o PDF.')
+        // Fallback automático client-side (Vercel serverless sem Playwright)
       }
+
+      setAviso('Gerando arquivo PDF para download…')
+      const html = await api.getTexto(`/homologacoes/${id}/certificado/preview?ambiente=mobiltec`)
+      await baixarPdfDireto(html, nomeArquivo)
+      setAviso('Certificado baixado com sucesso!')
+      setTimeout(() => setAviso(null), 3500)
+    } catch (e: any) {
+      setAviso(e instanceof ErroApi ? e.message : 'Não foi possível gerar o PDF.')
     } finally {
       setBaixando(false)
     }
@@ -131,36 +148,32 @@ export function DetalheDispositivo() {
         {aviso && (
           <div
             role="status"
-            className="mt-3 rounded-lg px-4 py-3 text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2 border transition-all"
+            className="mt-3 rounded-lg px-4 py-3 text-sm flex items-center gap-2 border transition-all"
             style={
-              aviso.toLowerCase().includes('abrindo')
+              aviso.toLowerCase().includes('sucesso')
                 ? {
-                    background: 'var(--color-brand-purple-soft)',
-                    color: 'var(--color-brand-purple-fg)',
-                    borderColor: 'var(--color-brand-purple-border)',
+                    background: 'var(--color-success-soft, #e6f9f0)',
+                    color: 'var(--color-success-fg, #0d7045)',
+                    borderColor: 'var(--color-success-border, #a3e6cb)',
                   }
-                : {
-                    background: 'var(--color-destructive-soft)',
-                    color: 'var(--color-destructive-fg)',
-                    borderColor: 'var(--color-destructive-soft)',
-                  }
+                : aviso.toLowerCase().includes('gerando')
+                  ? {
+                      background: 'var(--color-brand-purple-soft)',
+                      color: 'var(--color-brand-purple-fg)',
+                      borderColor: 'var(--color-brand-purple-border)',
+                    }
+                  : {
+                      background: 'var(--color-destructive-soft)',
+                      color: 'var(--color-destructive-fg)',
+                      borderColor: 'var(--color-destructive-soft)',
+                    }
             }
           >
-            <div className="flex items-center gap-2">
-              {aviso.toLowerCase().includes('abrindo') && (
-                <Icone nome="printer" className="h-4 w-4 shrink-0 animate-pulse text-[var(--color-primary)]" />
-              )}
-              <span>{aviso}</span>
-            </div>
-            <Link
-              to={`/homologacoes/${id}/certificado?ambiente=mobiltec`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 font-semibold underline underline-offset-2 shrink-0 hover:opacity-80 transition-opacity"
-              style={{ color: 'var(--color-primary)' }}
-            >
-              Abrir Certificado no navegador →
-            </Link>
+            <Icone
+              nome={aviso.toLowerCase().includes('sucesso') ? 'homologacao' : 'baixar'}
+              className={`h-4 w-4 shrink-0 ${aviso.toLowerCase().includes('gerando') ? 'animate-bounce' : ''}`}
+            />
+            <span>{aviso}</span>
           </div>
         )}
 
@@ -195,27 +208,27 @@ export function DetalheDispositivo() {
             </h2>
 
             <div className="flex items-center gap-2">
-              <Link
-                to={`/homologacoes/${id}/certificado?ambiente=mobiltec`}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Abrir visualização do certificado técnico"
-                className="flex shrink-0 items-center gap-1.5 rounded-md border px-3.5 py-2 text-sm font-semibold transition-colors hover:bg-muted"
+              <button
+                type="button"
+                onClick={baixarDatasheet}
+                disabled={!datasheet}
+                title={datasheet ? `Baixar datasheet de ${datasheet.nomeDownload}` : 'Datasheet não disponível para este modelo'}
+                className="flex shrink-0 items-center gap-1.5 rounded-md border px-3.5 py-2 text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-muted"
                 style={{ borderColor: 'var(--color-border)', color: 'var(--color-foreground)' }}
               >
-                <Icone nome="certificado" className="h-4 w-4 shrink-0" />
-                Visualizar Certificado
-              </Link>
+                <Icone nome="anexo" className="h-4 w-4 shrink-0" />
+                Exportar Datasheet
+              </button>
               <button
                 type="button"
                 onClick={exportarCertificado}
                 disabled={baixando}
-                title="Baixar o certificado em PDF com os dados atuais"
+                title="Baixar o certificado em PDF"
                 className="flex shrink-0 items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-45"
                 style={{ background: 'var(--gradient-brand-purple)' }}
               >
                 <Icone nome="baixar" className="h-4 w-4 shrink-0" />
-                {baixando ? 'Gerando…' : 'Baixar PDF'}
+                {baixando ? 'Gerando…' : 'Baixar Certificado'}
               </button>
             </div>
           </div>
