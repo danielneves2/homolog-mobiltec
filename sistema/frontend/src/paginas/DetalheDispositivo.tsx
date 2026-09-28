@@ -11,7 +11,6 @@ import {
   FichaUnidadeTestada,
   ResultadoHomologacao,
 } from '@/componentes/homologacao/FichaHomologacao'
-import { BlocoObservacoesParceiro } from '@/componentes/homologacao/BlocoObservacoesParceiro'
 import { AvisoRevisao } from '@/componentes/homologacao/AvisoRevisao'
 import { Icone } from '@/componentes/Icone'
 import { LoadingTela } from '@/componentes/LoadingTela'
@@ -242,8 +241,6 @@ export function DetalheDispositivo() {
         </section>
 
         <ResultadoHomologacao homologacao={homologacao} />
-
-        <BlocoObservacoesParceiro observacoes={homologacao.observacoes} />
       </div>
 
       {modalFotoAberto && homologacao.dispositivo?.id && (
