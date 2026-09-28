@@ -56,15 +56,23 @@ export function ModalEditarTexto({
       >
         <div className="p-5 border-b">
           <h2 className="text-lg font-semibold">{TITULO[edicao.tipo] ?? 'Editar texto'}</h2>
-          {ehDivergencia && qtdItens > 1 && (
-            <p className="mt-1 text-sm" style={{ color: 'var(--color-warning-fg)' }}>
-              Este parágrafo é compartilhado por {qtdItens} itens — a edição vale para todos.
+          {ehDivergencia && !texto.trim() ? (
+            <p className="mt-1 text-sm font-medium" style={{ color: 'var(--color-destructive)' }}>
+              Atenção: apagar o texto removerá a justificativa {qtdItens > 1 ? 'destes itens' : 'deste item'}.
             </p>
-          )}
-          {ehDivergencia && qtdItens <= 1 && (
-            <p className="mt-1 text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
-              Substitui o texto da biblioteca só nesta homologação.
-            </p>
+          ) : (
+            <>
+              {ehDivergencia && qtdItens > 1 && (
+                <p className="mt-1 text-sm" style={{ color: 'var(--color-warning-fg)' }}>
+                  Este parágrafo é compartilhado por {qtdItens} itens — a edição vale para todos.
+                </p>
+              )}
+              {ehDivergencia && qtdItens <= 1 && (
+                <p className="mt-1 text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
+                  Substitui o texto da biblioteca só nesta homologação.
+                </p>
+              )}
+            </>
           )}
         </div>
 
@@ -106,7 +114,7 @@ export function ModalEditarTexto({
             <button
               type="button"
               onClick={() => aoSalvar(texto)}
-              disabled={salvando || (ehDivergencia && !texto.trim())}
+              disabled={salvando}
               className="px-4 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50"
               style={{ background: 'var(--gradient-brand-purple)' }}
             >

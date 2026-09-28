@@ -147,6 +147,25 @@ export function PainelJustificativa({
     }
   }
 
+  async function removerJustificativa() {
+    if (salvando) return
+    setSalvando(true)
+    setAvisoSucesso(false)
+    try {
+      await aoConfirmar({ justificativaId: null, justificativaTexto: null })
+      setAvisoSucesso(true)
+      setSelecionada(null)
+      setTextoLivre('')
+      setModoTextoLivre(false)
+      setRegistroInfo({
+        email: usuario?.email ?? registroInfo.email,
+        dataHora: new Date().toISOString(),
+      })
+    } finally {
+      setSalvando(false)
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6"
@@ -393,6 +412,17 @@ export function PainelJustificativa({
             <kbd className="font-mono">Ctrl+Enter</kbd> confirma
           </p>
           <div className="flex gap-2">
+            {(justificativaIdAtual || justificativaTextoAtual) && (
+              <button
+                type="button"
+                onClick={removerJustificativa}
+                disabled={salvando}
+                className="px-4 py-2 rounded-md text-sm font-medium transition-colors hover:bg-red-50"
+                style={{ color: 'var(--color-destructive)' }}
+              >
+                Remover
+              </button>
+            )}
             <button
               type="button"
               onClick={aoCancelar}

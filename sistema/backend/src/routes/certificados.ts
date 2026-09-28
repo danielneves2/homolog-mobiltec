@@ -161,7 +161,7 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
     const { itemIds, texto } = z
       .object({
         itemIds: z.array(z.string().uuid()).min(1),
-        texto: z.string().min(1).max(4000),
+        texto: z.string().max(4000),
       })
       .parse(request.body)
 
@@ -174,9 +174,12 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(403).send({ erro: 'Homologação aprovada é somente leitura. Reabra para editar.' })
     }
 
+    const textoLimpo = texto.trim()
     const { count } = await fastify.prisma.resultado.updateMany({
       where: { homologacaoId: id, itemId: { in: itemIds } },
-      data: { justificativaTexto: texto.trim() },
+      data: textoLimpo === ''
+        ? { justificativaTexto: null, justificativaId: null }
+        : { justificativaTexto: textoLimpo },
     })
 
     return { atualizados: count }
@@ -309,10 +312,37 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
 
-    const nome = `certificado-${h.dispositivo.fabricante}-${h.dispositivo.modelo}-agente-${h.versaoAgente}.pdf`.replace(
-      /[^\w.-]/g,
-      '_',
-    )
+    const modelo = h.dispositivo.modelo?.trim() || ''
+    const fabricante = h.dispositivo.fabricante?.trim() || ''
+    const nomeComercial = h.dispositivo.nomeComercial?.trim() || ''
+
+    const partes: string[] = []
+    if (nomeComercial) {
+      partes.push(nomeComercial)
+      if (modelo && !nomeComercial.toLowerCase().includes(modelo.toLowerCase())) {
+        partes.push(modelo)
+      }
+      if (
+        fabricante &&
+        !nomeComercial.toLowerCase().includes(fabricante.toLowerCase()) &&
+        fabricante.toLowerCase() !== 'fabricante'
+      ) {
+        partes.unshift(fabricante)
+      }
+    } else if (fabricante || modelo) {
+      if (fabricante && fabricante.toLowerCase() !== 'fabricante') partes.push(fabricante)
+      if (modelo && modelo.toLowerCase() !== 'modelo') partes.push(modelo)
+    }
+
+    const base = partes.join(' ').trim() || id
+    const limpo = base
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\w.-]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .replace(/-{2,}/g, '-')
+
+    const nome = `certificado-${limpo || id}.pdf`
 
     const html = gerarCertificadoHtml(h as unknown as HomologacaoCertificado, {
       ambiente: ambienteEfetivo,

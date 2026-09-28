@@ -3,7 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contextos/AuthContext'
 import { api, ErroApi } from '@/lib/api'
-import { imprimirCertificadoHtml } from '@/lib/imprimir'
+import { imprimirCertificadoHtml, gerarNomeArquivoCertificado } from '@/lib/imprimir'
 import {
   useDashboard,
   useEditarDivergencia,
@@ -116,7 +116,7 @@ export function Certificado() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `certificado-${homologacao?.dispositivo?.modelo ?? id}.pdf`
+      a.download = gerarNomeArquivoCertificado(homologacao?.dispositivo, id)
       a.click()
       URL.revokeObjectURL(url)
     } catch (e: any) {

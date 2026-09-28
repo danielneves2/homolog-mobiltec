@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useHomologacao } from '@/hooks/useHomologacao'
 import { api, ErroApi } from '@/lib/api'
 import { useAuth } from '@/contextos/AuthContext'
-import { imprimirCertificadoHtml } from '@/lib/imprimir'
+import { imprimirCertificadoHtml, gerarNomeArquivoCertificado } from '@/lib/imprimir'
 import { ModalUploadFoto } from '@/componentes/dispositivo/ModalUploadFoto'
 import {
   FichaUnidadeTestada,
@@ -61,7 +61,7 @@ export function DetalheDispositivo() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `certificado-${homologacao?.dispositivo?.modelo ?? id}.pdf`
+      a.download = gerarNomeArquivoCertificado(homologacao?.dispositivo, id)
       a.click()
       URL.revokeObjectURL(url)
     } catch (e: any) {
