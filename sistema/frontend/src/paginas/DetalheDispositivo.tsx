@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useHomologacao } from '@/hooks/useHomologacao'
 import { api, ErroApi } from '@/lib/api'
@@ -53,6 +53,18 @@ export function DetalheDispositivo() {
       ? homologacao.historicoStatus?.find((h) => h.statusNovo === 'EM_REVISAO')
       : undefined
 
+  const nomeArquivo = gerarNomeArquivoCertificado(homologacao?.dispositivo, id)
+  const tituloDocumento = nomeArquivo.replace(/\.pdf$/i, '')
+
+  useEffect(() => {
+    if (homologacao?.dispositivo) {
+      document.title = tituloDocumento
+    }
+    return () => {
+      document.title = 'Homologação · Mobiltec'
+    }
+  }, [tituloDocumento, homologacao?.dispositivo])
+
   async function exportarCertificado() {
     setBaixando(true)
     setAviso(null)
@@ -61,7 +73,7 @@ export function DetalheDispositivo() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = gerarNomeArquivoCertificado(homologacao?.dispositivo, id)
+      a.download = nomeArquivo
       a.click()
       URL.revokeObjectURL(url)
     } catch (e: any) {
@@ -70,7 +82,7 @@ export function DetalheDispositivo() {
       try {
         setAviso('Abrindo diálogo de impressão (Salvar como PDF)...')
         const html = await api.getTexto(`/homologacoes/${id}/certificado/preview?ambiente=mobiltec`)
-        imprimirCertificadoHtml(html)
+        imprimirCertificadoHtml(html, tituloDocumento)
       } catch {
         setAviso(e instanceof ErroApi ? e.message : 'Não foi possível gerar o PDF.')
       }

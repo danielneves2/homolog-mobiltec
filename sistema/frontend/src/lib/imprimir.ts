@@ -6,7 +6,12 @@
  * Ao carregar o HTML em um iframe e chamar `print()`, o navegador abre a caixa
  * de diálogo nativa onde o usuário pode escolher "Salvar como PDF".
  */
-export function imprimirCertificadoHtml(html: string): void {
+export function imprimirCertificadoHtml(html: string, tituloDocumento?: string): void {
+  const tituloAnterior = document.title
+  if (tituloDocumento) {
+    document.title = tituloDocumento
+  }
+
   const iframe = document.createElement('iframe')
   iframe.style.position = 'fixed'
   iframe.style.right = '0'
@@ -18,10 +23,27 @@ export function imprimirCertificadoHtml(html: string): void {
   document.body.appendChild(iframe)
 
   const doc = iframe.contentWindow?.document
-  if (!doc) return
+  if (!doc) {
+    if (tituloDocumento) {
+      document.title = tituloAnterior
+    }
+    return
+  }
+
+  let htmlComTitulo = html
+  if (tituloDocumento) {
+    if (htmlComTitulo.includes('<title>')) {
+      htmlComTitulo = htmlComTitulo.replace(/<title>.*?<\/title>/i, `<title>${tituloDocumento}</title>`)
+    } else {
+      htmlComTitulo = htmlComTitulo.replace('<head>', `<head><title>${tituloDocumento}</title>`)
+    }
+  }
 
   doc.open()
-  doc.write(html)
+  doc.write(htmlComTitulo)
+  if (tituloDocumento) {
+    doc.title = tituloDocumento
+  }
   doc.close()
 
   iframe.contentWindow?.focus()
@@ -33,22 +55,24 @@ export function imprimirCertificadoHtml(html: string): void {
         if (document.body.contains(iframe)) {
           document.body.removeChild(iframe)
         }
+        if (tituloDocumento) {
+          document.title = tituloAnterior
+        }
       }, 3000)
     }
   }, 400)
 }
 
 /**
- * Gera o nome padronizado do arquivo PDF do certificado para download,
- * contendo o nome e o modelo do dispositivo para salvar pré-pronto.
+ * Retorna a identificação textual do dispositivo (nome comercial e modelo).
  */
-export function gerarNomeArquivoCertificado(
+export function obterIdentificadorDispositivo(
   dispositivo?: {
     nomeComercial?: string | null
     fabricante?: string | null
     modelo?: string | null
   } | null,
-  fallbackId?: string,
+  fallback?: string,
 ): string {
   const modelo = dispositivo?.modelo?.trim() || ''
   const fabricante = dispositivo?.fabricante?.trim() || ''
@@ -62,7 +86,7 @@ export function gerarNomeArquivoCertificado(
     if (modelo && !nomeComercial.toLowerCase().includes(modelo.toLowerCase())) {
       partes.push(modelo)
     }
-    // Se o fabricante não estiver no nome comercial e não for genérico, inclui no início
+    // Se o fabricante não estiver no nome comercial e for conhecido, inclui no início
     if (
       fabricante &&
       !nomeComercial.toLowerCase().includes(fabricante.toLowerCase()) &&
@@ -75,14 +99,29 @@ export function gerarNomeArquivoCertificado(
     if (modelo && modelo.toLowerCase() !== 'modelo') partes.push(modelo)
   }
 
-  const base = partes.join(' ').trim() || fallbackId || 'homologacao'
+  return partes.join(' ').trim() || fallback || 'Dispositivo'
+}
 
-  const limpo = base
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^\w.-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .replace(/-{2,}/g, '-')
+/**
+ * Gera o nome padronizado do arquivo PDF do certificado para download,
+ * contendo o prefixo "Homologação Mobiltec" e o nome comercial do dispositivo.
+ * Exemplo: "Homologação Mobiltec - Positivo L400.pdf"
+ */
+export function gerarNomeArquivoCertificado(
+  dispositivo?: {
+    nomeComercial?: string | null
+    fabricante?: string | null
+    modelo?: string | null
+  } | null,
+  fallbackId?: string,
+): string {
+  const identificador = obterIdentificadorDispositivo(dispositivo, fallbackId)
 
-  return `certificado-${limpo || fallbackId || 'homologacao'}.pdf`
+  // Sanitiza caracteres proibidos em nomes de arquivos: \ / : * ? " < > |
+  const sanitizado = identificador
+    .replace(/[\\/:*?"<>|]+/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  return `Homologação Mobiltec - ${sanitizado || 'Certificado'}.pdf`
 }

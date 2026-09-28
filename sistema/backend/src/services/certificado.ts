@@ -894,7 +894,7 @@ export function gerarCertificadoHtml(
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Certificado — ${esc(h.dispositivo.nomeComercial)}</title>
+<title>Homologação Mobiltec - ${esc(h.dispositivo.nomeComercial)}</title>
 <style>
 :root { --roxo:#6E236B; --texto:#231F20; --margem:0.24in; --linha-ficha:0.262in; }
 @page { size: A4; margin: 0; }

@@ -342,7 +342,9 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
       .replace(/^-+|-+$/g, '')
       .replace(/-{2,}/g, '-')
 
-    const nome = `certificado-${limpo || id}.pdf`
+    const nome = `Homologação Mobiltec - ${base || id}.pdf`.replace(/[\\/:*?"<>|]+/g, '-')
+    const nomeAscii = `Homologacao Mobiltec - ${limpo || id}.pdf`
+    const headerContentDisposition = `attachment; filename="${nomeAscii}"; filename*=UTF-8''${encodeURIComponent(nome)}`
 
     const html = gerarCertificadoHtml(h as unknown as HomologacaoCertificado, {
       ambiente: ambienteEfetivo,
@@ -352,7 +354,7 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
       const pdf = await renderizarPdf(html)
       return reply
         .type('application/pdf')
-        .header('Content-Disposition', `attachment; filename="${nome}"`)
+        .header('Content-Disposition', headerContentDisposition)
         .send(pdf)
     } catch (errPdf: any) {
       // Fallback: se houver arquivo pré-emitido no storage e for ambiente mobiltec
@@ -369,7 +371,7 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
                 const bufferArquivo = Buffer.from(await resp.arrayBuffer())
                 return reply
                   .type('application/pdf')
-                  .header('Content-Disposition', `attachment; filename="${nome}"`)
+                  .header('Content-Disposition', headerContentDisposition)
                   .send(bufferArquivo)
               }
             } catch (errRemoto) {
@@ -386,7 +388,7 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
               const bufferArquivo = readFileSync(caminhoLocal)
               return reply
                 .type('application/pdf')
-                .header('Content-Disposition', `attachment; filename="${nome}"`)
+                .header('Content-Disposition', headerContentDisposition)
                 .send(bufferArquivo)
             }
           }

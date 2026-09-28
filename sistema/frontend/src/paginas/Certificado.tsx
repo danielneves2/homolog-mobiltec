@@ -108,6 +108,18 @@ export function Certificado() {
     onError: (e) => setAviso(e instanceof ErroApi ? e.message : 'Falha ao emitir.'),
   })
 
+  const nomeArquivo = gerarNomeArquivoCertificado(homologacao?.dispositivo, id)
+  const tituloDocumento = nomeArquivo.replace(/\.pdf$/i, '')
+
+  useEffect(() => {
+    if (homologacao?.dispositivo) {
+      document.title = tituloDocumento
+    }
+    return () => {
+      document.title = 'Homologação · Mobiltec'
+    }
+  }, [tituloDocumento, homologacao?.dispositivo])
+
   async function baixarPdf() {
     setBaixando(true)
     setAviso(null)
@@ -116,7 +128,7 @@ export function Certificado() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = gerarNomeArquivoCertificado(homologacao?.dispositivo, id)
+      a.download = nomeArquivo
       a.click()
       URL.revokeObjectURL(url)
     } catch (e: any) {
@@ -124,7 +136,7 @@ export function Certificado() {
       // acionamos o diálogo nativo do navegador para Salvar como PDF
       if (html) {
         setAviso('Abrindo diálogo de impressão (Salvar como PDF)...')
-        imprimirCertificadoHtml(html)
+        imprimirCertificadoHtml(html, tituloDocumento)
       } else {
         setAviso(e instanceof ErroApi ? e.message : 'Não foi possível gerar o PDF.')
       }
