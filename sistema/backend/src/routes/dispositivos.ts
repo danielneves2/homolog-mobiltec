@@ -9,6 +9,7 @@
 import { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { parceiroPodeAlterarFoto } from '../lib/autorizacao-foto.js'
+import { carregarUsuarioEscopo, whereVeParceiro } from '../lib/escopo.js'
 import { salvarFotoDispositivo, salvarDatasheetDispositivo } from '../lib/storage.js'
 
 /**
@@ -55,9 +56,15 @@ const dispositivoRoutes: FastifyPluginAsync = async (fastify) => {
       ativo?: string
     }
 
+    // Parceiro só enxerga dispositivos com homologação ao seu alcance
+    const escopoParceiro = request.user.papel === 'PARCEIRO'
+      ? { homologacoes: { some: whereVeParceiro(await carregarUsuarioEscopo(fastify.prisma, request.user)) } }
+      : {}
+
     return fastify.prisma.dispositivo.findMany({
       where: {
-        ativo: ativo === 'false' ? false : true,
+        ...escopoParceiro,
+        ativo: ativo === 'false' && request.user.papel !== 'PARCEIRO' ? false : true,
         ...(categoriaId ? { categoriaId } : {}),
         ...(fabricante ? { fabricante: { contains: fabricante, mode: 'insensitive' } } : {}),
         ...(busca ? {
@@ -129,11 +136,15 @@ const dispositivoRoutes: FastifyPluginAsync = async (fastify) => {
     onRequest: [fastify.autenticar],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
+    const escopoHomologacao = request.user.papel === 'PARCEIRO'
+      ? whereVeParceiro(await carregarUsuarioEscopo(fastify.prisma, request.user))
+      : undefined
     const dispositivo = await fastify.prisma.dispositivo.findUnique({
       where: { id },
       include: {
         categoria: true,
         homologacoes: {
+          where: escopoHomologacao,
           include: {
             bateria: { select: { id: true, nome: true } },
             responsavel: { select: { id: true, nome: true, email: true } },
@@ -145,6 +156,9 @@ const dispositivoRoutes: FastifyPluginAsync = async (fastify) => {
     })
 
     if (!dispositivo) return reply.status(404).send({ erro: 'Dispositivo não encontrado' })
+    if (escopoHomologacao && dispositivo.homologacoes.length === 0) {
+      return reply.status(404).send({ erro: 'Dispositivo não encontrado' })
+    }
     return dispositivo
   })
 

@@ -12,6 +12,12 @@
 import { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { StatusHomologacao, StatusResultado } from '@prisma/client'
+import {
+  carregarUsuarioEscopo,
+  whereMatrizMobiltec,
+  whereMatrizParceiro,
+  usuarioPodeOperar,
+} from '../lib/escopo.js'
 
 const matrizRoutes: FastifyPluginAsync = async (fastify) => {
 
@@ -30,64 +36,31 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
     if (!categoria) return reply.status(404).send({ erro: 'Categoria não encontrada' })
 
     const ehParceiro = request.user.papel === 'PARCEIRO'
-    let usuarioParceiro: { empresa: string | null; categoriasPermitidas: string[] } | null = null
-
-    if (ehParceiro) {
-      usuarioParceiro = await fastify.prisma.usuario.findUnique({
-        where: { id: request.user.id },
-        select: { empresa: true, categoriasPermitidas: true },
-      })
-
-      if (!usuarioParceiro?.categoriasPermitidas.includes(categoriaSlug)) {
-        return reply.status(403).send({ erro: 'Acesso não permitido a esta categoria de dispositivo' })
-      }
-    }
-
     const whereHomologacao: any = {
       dispositivo: { categoriaId: categoria.id, ativo: true },
     }
 
-    // Exceção solicitada: hgomes@tnsi.com recebe a mesma planilha de POS completa do admin
-    const ehExcecaoHgomesPos =
-      ehParceiro &&
-      request.user.email?.toLowerCase() === 'hgomes@tnsi.com' &&
-      categoriaSlug === 'pos'
-
-    if (ehParceiro && !ehExcecaoHgomesPos) {
-      const empresa = usuarioParceiro?.empresa?.trim()
-      if (empresa) {
-        whereHomologacao.OR = [
-          { dispositivo: { empresa: { equals: empresa, mode: 'insensitive' } } },
-          { responsavel: { empresa: { equals: empresa, mode: 'insensitive' } } },
-          { responsavelId: request.user.id },
-        ]
-      } else {
-        whereHomologacao.responsavelId = request.user.id
+    if (ehParceiro) {
+      const usuarioParceiro = await fastify.prisma.usuario.findUnique({
+        where: { id: request.user.id },
+        select: { categoriasPermitidas: true },
+      })
+      if (!usuarioParceiro?.categoriasPermitidas.includes(categoriaSlug)) {
+        return reply.status(403).send({ erro: 'Acesso não permitido a esta categoria de dispositivo' })
       }
-    } else if (!ehParceiro) {
-      // ADMIN: Isolamento entre planilhas
-      if (empresaFiltro && empresaFiltro.trim() && empresaFiltro.trim().toLowerCase() !== 'mobiltec') {
-        whereHomologacao.OR = [
-          { dispositivo: { empresa: { equals: empresaFiltro.trim(), mode: 'insensitive' } } },
-          { responsavel: { empresa: { equals: empresaFiltro.trim(), mode: 'insensitive' } } },
-        ]
-      } else {
-        // Planilha interna da Mobiltec: EXCLUSIVAMENTE dispositivos Mobiltec (não misturar com parceiros)
-        whereHomologacao.AND = [
-          {
-            OR: [
-              { dispositivo: { empresa: null } },
-              { dispositivo: { empresa: { equals: 'Mobiltec', mode: 'insensitive' } } },
-            ],
-          },
-          {
-            OR: [
-              { responsavel: { empresa: null } },
-              { responsavel: { empresa: { equals: 'Mobiltec', mode: 'insensitive' } } },
-            ],
-          },
-        ]
-      }
+      // Planilha própria da empresa; a TNS divide a de PoS com a Mobiltec
+      const escopo = await carregarUsuarioEscopo(fastify.prisma, request.user)
+      whereHomologacao.AND = [whereMatrizParceiro(escopo, categoriaSlug)]
+    } else if (empresaFiltro && empresaFiltro.trim() && empresaFiltro.trim().toLowerCase() !== 'mobiltec') {
+      // ADMIN consultando a planilha de um parceiro
+      const alvo = empresaFiltro.trim()
+      whereHomologacao.OR = [
+        { dispositivo: { empresa: { equals: alvo, mode: 'insensitive' } } },
+        { responsavel: { empresa: { equals: alvo, mode: 'insensitive' } } },
+      ]
+    } else {
+      // Planilha Mobiltec: só o ambiente Mobiltec (+ TNS em PoS, que divide a planilha)
+      whereHomologacao.AND = [whereMatrizMobiltec(categoriaSlug)]
     }
 
     const homologacoes = await fastify.prisma.homologacao.findMany({
@@ -385,6 +358,12 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
       include: { bateria: { include: { itens: { select: { itemId: true } } } } },
     })
     if (!base) return reply.status(404).send({ erro: 'Homologação base não encontrada' })
+    if (base.dispositivoId !== body.dispositivoId) {
+      return reply.status(400).send({ erro: 'A homologação base não pertence a este dispositivo.' })
+    }
+    if (!(await usuarioPodeOperar(fastify.prisma, request.user, base.id))) {
+      return reply.status(403).send({ erro: 'Você não tem acesso a este dispositivo.' })
+    }
 
     const nova = await fastify.prisma.homologacao.create({
       data: {

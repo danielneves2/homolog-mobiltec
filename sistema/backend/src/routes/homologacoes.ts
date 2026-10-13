@@ -17,6 +17,12 @@ import {
   TRANSICOES_PERMITIDAS,
   validarTransicao,
 } from '../lib/transicoes.js'
+import {
+  carregarUsuarioEscopo,
+  usuarioPodeOperar,
+  usuarioPodeVer,
+  whereVeParceiro,
+} from '../lib/escopo.js'
 
 // Status que EXIGEM justificativa (regra central da spec)
 const STATUS_COM_JUSTIFICATIVA_OBRIGATORIA: StatusResultado[] = [
@@ -141,8 +147,13 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
       ? { in: [StatusHomologacao.APROVADO, StatusHomologacao.PUBLICADO, StatusHomologacao.REPROVADO] }
       : (status ? (status as StatusHomologacao) : undefined)
 
+    const escopoParceiro = request.user.papel === 'PARCEIRO'
+      ? whereVeParceiro(await carregarUsuarioEscopo(fastify.prisma, request.user))
+      : {}
+
     return fastify.prisma.homologacao.findMany({
       where: {
+        ...escopoParceiro,
         dispositivo: { ativo: true },
         ...(dispositivoId ? { dispositivoId } : {}),
         ...(whereStatus ? { status: whereStatus } : {}),
@@ -230,8 +241,8 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
     // (primeira execução) ou EM_REVISAO (ajustes pedidos pelo Admin, D434) — e
     // apenas de homologações próprias
     if (request.user.papel === 'PARCEIRO') {
-      if (atual.responsavelId !== request.user.id && atual.apoioId !== request.user.id) {
-        return reply.status(403).send({ erro: 'Parceiros só podem editar homologações atribuídas a eles.' })
+      if (!(await usuarioPodeOperar(fastify.prisma, request.user, id))) {
+        return reply.status(403).send({ erro: 'Parceiros só podem editar homologações atribuídas a eles ou à sua empresa.' })
       }
       if (!STATUS_EDITAVEIS_PARCEIRO.includes(atual.status)) {
         return reply.status(403).send({ erro: 'Homologação em análise ou finalizada é somente leitura para parceiros.' })
@@ -289,6 +300,9 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
     })
 
     if (!homologacao) return reply.status(404).send({ erro: 'Homologação não encontrada' })
+    if (!(await usuarioPodeVer(fastify.prisma, request.user, id))) {
+      return reply.status(404).send({ erro: 'Homologação não encontrada' })
+    }
     return homologacao
   })
 
@@ -299,6 +313,10 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
     onRequest: [fastify.autenticar],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
+
+    if (!(await usuarioPodeVer(fastify.prisma, request.user, id))) {
+      return reply.status(404).send({ erro: 'Homologação não encontrada' })
+    }
 
     const resultados = await fastify.prisma.resultado.findMany({
       where: { homologacaoId: id },
@@ -389,21 +407,10 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Regras RBAC para Parceiro:
     if (request.user.papel === 'PARCEIRO') {
-      const ehExcecaoHgomes = request.user.email?.toLowerCase() === 'hgomes@tnsi.com'
-      const usuarioLogado = await fastify.prisma.usuario.findUnique({
-        where: { id: request.user.id },
-        select: { empresa: true },
-      })
-      const mesmaEmpresa =
-        Boolean(usuarioLogado?.empresa) &&
-        Boolean(homologacao.responsavel?.empresa) &&
-        usuarioLogado?.empresa?.trim().toLowerCase() === homologacao.responsavel?.empresa?.trim().toLowerCase()
-
-      // Ownership check: parceiro só opera em homologações atribuídas a ele ou à sua empresa, exceto exceção hgomes@tnsi.com
-      if (!ehExcecaoHgomes && homologacao.responsavelId !== request.user.id && homologacao.apoioId !== request.user.id && !mesmaEmpresa) {
-        return reply.status(403).send({ erro: 'Parceiros só podem editar resultados de homologações atribuídas a eles.' })
+      if (!(await usuarioPodeOperar(fastify.prisma, request.user, id))) {
+        return reply.status(403).send({ erro: 'Parceiros só podem editar resultados de homologações atribuídas a eles ou à sua empresa.' })
       }
-      if (!ehExcecaoHgomes && !STATUS_EDITAVEIS_PARCEIRO.includes(homologacao.status)) {
+      if (!STATUS_EDITAVEIS_PARCEIRO.includes(homologacao.status)) {
         return reply.status(403).send({ erro: 'Homologação em análise ou finalizada é somente leitura para parceiros.' })
       }
       if (body.justificativaId || body.justificativaTexto) {
@@ -533,16 +540,7 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Ownership check: parceiro só pode transicionar homologações atribuídas a ele ou à sua empresa
     if (ehParceiro) {
-      const usuarioLogado = await fastify.prisma.usuario.findUnique({
-        where: { id: request.user.id },
-        select: { empresa: true },
-      })
-      const mesmaEmpresa =
-        Boolean(usuarioLogado?.empresa) &&
-        Boolean(homologacao.responsavel?.empresa) &&
-        usuarioLogado?.empresa?.trim().toLowerCase() === homologacao.responsavel?.empresa?.trim().toLowerCase()
-
-      if (homologacao.responsavelId !== request.user.id && homologacao.apoioId !== request.user.id && !mesmaEmpresa) {
+      if (!(await usuarioPodeOperar(fastify.prisma, request.user, id))) {
         return reply.status(403).send({ erro: 'Parceiros só podem submeter homologações atribuídas a eles ou à sua empresa.' })
       }
     }

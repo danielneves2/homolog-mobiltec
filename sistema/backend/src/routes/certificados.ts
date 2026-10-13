@@ -9,6 +9,7 @@
  *      snapshot JSON. Certificado emitido é imutável (spec §11.3)
  * GET  /homologacoes/:id/certificados        → histórico de emissões
  */
+import { usuarioPodeVer } from '../lib/escopo.js'
 import { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
@@ -487,8 +488,11 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
   // ============================================================
   fastify.get('/homologacoes/:id/certificados', {
     onRequest: [fastify.autenticar],
-  }, async (request) => {
+  }, async (request, reply) => {
     const { id } = request.params as { id: string }
+    if (!(await usuarioPodeVer(fastify.prisma, request.user, id))) {
+      return reply.status(404).send({ erro: 'Homologação não encontrada' })
+    }
     return fastify.prisma.certificadoEmitido.findMany({
       where: { homologacaoId: id },
       select: {

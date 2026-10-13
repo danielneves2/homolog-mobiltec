@@ -8,6 +8,13 @@ import { ModalReabrir } from '@/componentes/matriz/ModalReabrir'
 import { Icone, iconeDaCategoria } from '@/componentes/Icone'
 import { ErroApi } from '@/lib/api'
 
+const STATUS_FINALIZADOS = ['APROVADO', 'PUBLICADO', 'REPROVADO']
+const ROTULO_STATUS_ANDAMENTO: Record<string, string> = {
+  EM_REVISAO: 'Em revisão',
+  AGUARDANDO_ANALISE: 'Aguardando validação',
+  RASCUNHO: 'Em homologação',
+}
+
 export function ConfigurarDispositivos() {
   const { ehAdmin } = useAuth()
   const { data: homologacoes = [], isLoading, isError, error } = useHomologacoesFinalizadas()
@@ -106,7 +113,7 @@ export function ConfigurarDispositivos() {
                 Configurar Dispositivos
               </h1>
               <p className="text-xs mt-1" style={{ color: 'var(--color-muted-foreground)' }}>
-                Painel consultivo de modelos finalizados na Mobiltec e parceiros. Reabra para ajustes ou exclua definitivamente da base.
+                Gestão de todos os modelos da Mobiltec e dos parceiros, em qualquer etapa. Reabra os finalizados para ajustes ou exclua definitivamente da base.
               </p>
             </div>
 
@@ -216,6 +223,9 @@ export function ConfigurarDispositivos() {
             <option value="APROVADO">Aprovado</option>
             <option value="PUBLICADO">Publicado</option>
             <option value="REPROVADO">Reprovado</option>
+            <option value="EM_REVISAO">Em revisão</option>
+            <option value="AGUARDANDO_ANALISE">Aguardando validação</option>
+            <option value="RASCUNHO">Em homologação (rascunho)</option>
           </select>
 
           {(busca || filtroCategoria || filtroParceiro || filtroStatus) && (
@@ -369,7 +379,7 @@ export function ConfigurarDispositivos() {
                               <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
                               <span>Publicado</span>
                             </span>
-                          ) : (
+                          ) : h.status === 'REPROVADO' ? (
                             <span
                               className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold select-none"
                               style={{
@@ -380,6 +390,18 @@ export function ConfigurarDispositivos() {
                             >
                               <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
                               <span>Reprovado</span>
+                            </span>
+                          ) : (
+                            <span
+                              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold select-none"
+                              style={{
+                                color: '#b45309',
+                                background: '#fef3c7',
+                                border: '1px solid rgba(245, 158, 11, 0.25)',
+                              }}
+                            >
+                              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
+                              <span>{ROTULO_STATUS_ANDAMENTO[h.status] ?? h.status}</span>
                             </span>
                           )}
                         </td>
@@ -397,15 +419,17 @@ export function ConfigurarDispositivos() {
                               Certificado
                             </Link>
 
-                            {/* Reabrir */}
-                            <button
-                              type="button"
-                              onClick={() => setItemParaReabrir(h)}
-                              className="px-2.5 py-1.5 rounded-md border text-xs font-semibold text-[var(--color-primary)] border-[var(--color-primary)]/40 hover:bg-[var(--color-primary)]/10 transition-colors"
-                              title="Reabrir homologação para rascunho"
-                            >
-                              Reabrir
-                            </button>
+                            {/* Reabrir — só faz sentido para o que já foi finalizado */}
+                            {STATUS_FINALIZADOS.includes(h.status) && (
+                              <button
+                                type="button"
+                                onClick={() => setItemParaReabrir(h)}
+                                className="px-2.5 py-1.5 rounded-md border text-xs font-semibold text-[var(--color-primary)] border-[var(--color-primary)]/40 hover:bg-[var(--color-primary)]/10 transition-colors"
+                                title="Reabrir homologação para rascunho"
+                              >
+                                Reabrir
+                              </button>
+                            )}
 
                             {/* Excluir da base */}
                             <button

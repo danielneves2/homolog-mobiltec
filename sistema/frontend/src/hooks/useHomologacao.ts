@@ -131,10 +131,15 @@ export function useRemoverHomologacao() {
   })
 }
 
+/**
+ * Todas as homologações da base, em qualquer status — é a visão de gestão do
+ * Admin. Não pode se limitar às finalizadas: uma homologação reaberta volta
+ * para EM_REVISAO e, se sumisse daqui, ficaria impossível de remover.
+ */
 export function useHomologacoesFinalizadas() {
   return useQuery({
     queryKey: ['homologacoes-finalizadas'],
-    queryFn: () => api.get<any[]>('/homologacoes', { finalizados: 'true' }),
+    queryFn: () => api.get<any[]>('/homologacoes'),
   })
 }
 

@@ -74,3 +74,6 @@ Thumbs.db
 CLAUDE.md
 
 .review-prompt.md
+
+# Credenciais de deploy (tokens)
+credenciais-deploy.txt

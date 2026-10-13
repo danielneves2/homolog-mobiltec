@@ -1,3 +1,4 @@
+import { ehTns, ESCOPO_MOBILTEC } from '../lib/escopo.js'
 import { FastifyPluginAsync } from 'fastify'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
@@ -299,13 +300,7 @@ const parceirosRoutes: FastifyPluginAsync = async (fastify) => {
 async function montarDadosPainel(fastify: any, parceiro: any) {
   const empresa = parceiro.empresa?.trim()
 
-  const ehTNS =
-    Boolean(empresa && (empresa.toLowerCase() === 'tns' || empresa.toLowerCase() === 'tnsi')) ||
-    Boolean(
-      parceiro.email &&
-        (parceiro.email.toLowerCase() === 'hgomes@tnsi.com' ||
-          parceiro.email.toLowerCase().endsWith('@tnsi.com')),
-    )
+  const ehTNS = ehTns({ empresa, email: parceiro.email })
 
   // Escopo estrito do parceiro:
   // Dispositivos cadastrados pela empresa do parceiro, com fabricante igual à empresa,
@@ -323,8 +318,12 @@ async function montarDadosPainel(fastify: any, parceiro: any) {
   }
 
   // TNS ou parceiro de PoS visualiza os dispositivos da categoria PoS
+  // (só a planilha compartilhada com a Mobiltec — nunca a de outros parceiros)
   if (ehTNS) {
-    filtroDispositivoDoParceiro.push({ categoria: { slug: 'pos' } })
+    filtroDispositivoDoParceiro.push({
+      categoria: { slug: 'pos' },
+      homologacoes: { some: ESCOPO_MOBILTEC },
+    })
   }
 
   const filtroHomologacaoDoParceiro: any[] = [
@@ -336,6 +335,12 @@ async function montarDadosPainel(fastify: any, parceiro: any) {
     })
   }
 
+  if (ehTNS) {
+    filtroHomologacaoDoParceiro.push({
+      AND: [{ dispositivo: { categoria: { slug: 'pos' } } }, ESCOPO_MOBILTEC],
+    })
+  }
+
   const dispositivos = await fastify.prisma.dispositivo.findMany({
     where: {
       ativo: true,
@@ -344,11 +349,7 @@ async function montarDadosPainel(fastify: any, parceiro: any) {
     include: {
       categoria: { select: { id: true, nome: true, slug: true, icone: true } },
       homologacoes: {
-        where: ehTNS
-          ? undefined
-          : {
-              OR: filtroHomologacaoDoParceiro,
-            },
+        where: { OR: filtroHomologacaoDoParceiro },
         include: {
           resultados: { select: { status: true, justificativaId: true, justificativaTexto: true } },
           responsavel: { select: { id: true, nome: true, email: true, empresa: true } },
