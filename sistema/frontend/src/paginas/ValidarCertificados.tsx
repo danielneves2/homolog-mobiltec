@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useListaHomologacoes, useTransicaoStatus, type ItemListaHomologacao } from '@/hooks/useHomologacao'
+import { useListaHomologacoes, useRemoverHomologacao, useTransicaoStatus, type ItemListaHomologacao } from '@/hooks/useHomologacao'
 import { Icone, iconeDaCategoria } from '@/componentes/Icone'
 import { LoadingTela } from '@/componentes/LoadingTela'
 import { ErroApi } from '@/lib/api'
@@ -24,6 +24,8 @@ const MINIMO_MOTIVO_REVISAO = 10
 
 export function ValidarCertificados() {
   const { data: homologacoes = [], isLoading, isError, error } = useListaHomologacoes()
+  const removerHomologacao = useRemoverHomologacao()
+  const [homologacaoParaExcluir, setHomologacaoParaExcluir] = useState<ItemListaHomologacao | null>(null)
   const [aba, setAba] = useState<AbaFiltro>('pendentes')
   const [busca, setBusca] = useState('')
   const [homologacaoEmAprovacao, setHomologacaoEmAprovacao] = useState<ItemListaHomologacao | null>(null)
@@ -629,6 +631,23 @@ export function ValidarCertificados() {
                             ↩ Reabrir
                           </button>
                         )}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setErroAcao(null)
+                            setHomologacaoParaExcluir(h)
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-colors hover:bg-black/[0.04]"
+                          style={{
+                            borderColor: 'var(--color-destructive)',
+                            color: 'var(--color-destructive)',
+                            background: 'transparent',
+                          }}
+                          title="Excluir esta homologação e o dispositivo da base"
+                        >
+                          Excluir
+                        </button>
                       </div>
                     </div>
 
@@ -817,6 +836,69 @@ export function ValidarCertificados() {
           }}
           aoFechar={() => setHomologacaoInfo(null)}
         />
+      )}
+
+      {/* Modal Excluir homologação (qualquer status) */}
+      {homologacaoParaExcluir && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(15,15,18,.45)' }}
+          onClick={() => setHomologacaoParaExcluir(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Excluir homologação"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.key === 'Escape' && setHomologacaoParaExcluir(null)}
+            className="w-full max-w-md rounded-xl border shadow-xl p-5 space-y-4"
+            style={{ background: 'var(--color-popover)', color: 'var(--color-foreground)' }}
+          >
+            <h3 className="text-base font-semibold">Excluir homologação</h3>
+            <p className="text-sm leading-relaxed">
+              Excluir permanentemente <strong>{homologacaoParaExcluir.dispositivo.nomeComercial}</strong>?
+              Isso remove a homologação, certificados e registros atrelados, tanto da Mobiltec quanto do parceiro.
+            </p>
+            {erroAcao && (
+              <div
+                role="alert"
+                className="px-3 py-2 rounded-md text-xs"
+                style={{ background: 'var(--color-destructive-soft)', color: 'var(--color-destructive-fg)' }}
+              >
+                {erroAcao}
+              </div>
+            )}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t" style={{ borderColor: 'var(--color-border)' }}>
+              <button
+                type="button"
+                onClick={() => setHomologacaoParaExcluir(null)}
+                disabled={removerHomologacao.isPending}
+                className="px-3 py-1.5 rounded-md text-xs font-medium"
+                style={{ color: 'var(--color-muted-foreground)' }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={removerHomologacao.isPending}
+                onClick={async () => {
+                  try {
+                    await removerHomologacao.mutateAsync(homologacaoParaExcluir.id)
+                    setSucesso(`${homologacaoParaExcluir.dispositivo.nomeComercial} excluído da base.`)
+                    setHomologacaoParaExcluir(null)
+                    setTimeout(() => setSucesso(null), 5000)
+                  } catch (err) {
+                    setErroAcao(err instanceof ErroApi ? err.message : 'Não foi possível excluir.')
+                  }
+                }}
+                className="px-3.5 py-1.5 rounded-md text-xs font-semibold text-white disabled:opacity-60"
+                style={{ background: 'var(--color-destructive)' }}
+              >
+                {removerHomologacao.isPending ? 'Excluindo…' : 'Excluir definitivamente'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal Reabrir Homologação Aprovada (D475) */}
