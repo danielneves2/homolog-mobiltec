@@ -548,7 +548,7 @@ function CardDispositivoParceiro({
               className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 shadow-xs inline-flex items-center gap-1.5"
               style={{ background: 'var(--gradient-brand-purple)' }}
             >
-              <span>Bateria de testes</span>
+              <span>Matriz de testes</span>
               <span>→</span>
             </Link>
           ) : null}

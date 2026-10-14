@@ -23,7 +23,7 @@ interface Passo {
 const PASSOS: Passo[] = [
   { id: 'comece', titulo: 'Comece por aqui', icone: 'home' },
   { id: 'paineis', titulo: 'Os painéis', icone: 'dashboard' },
-  { id: 'planilha', titulo: 'A planilha de testes', icone: 'homologacao' },
+  { id: 'planilha', titulo: 'A matriz de testes', icone: 'homologacao' },
   { id: 'cadastrar', titulo: 'Cadastrar um modelo', icone: 'registro' },
   { id: 'testar', titulo: 'Registrar os testes', icone: 'lapis' },
   { id: 'enviar', titulo: 'Enviar para validação', icone: 'upload' },
@@ -177,7 +177,7 @@ export function Guia() {
 
             {/* 2 ------------------------------------------------------------ */}
             <Secao passo={PASSOS[1]} numero={2}>
-              <p>No menu, em <Rotulo>Painel</Rotulo>, há dois painéis:</p>
+              <p>No menu, em <Rotulo>Painéis</Rotulo>, há dois painéis:</p>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <Cartao titulo="Painel Mobiltec" icone="home">
                   A vitrine geral. Mostra os modelos <strong>homologados</strong> de toda a plataforma e o
@@ -198,14 +198,14 @@ export function Guia() {
                 <Chip tipo="ok">Homologados</Chip>
               </ul>
               <p className="mt-3">
-                Em cada card, <Botao>Bateria de testes →</Botao> leva direto à planilha do dispositivo.
+                Em cada card, <Botao>Matriz de testes →</Botao> leva direto à matriz do dispositivo.
               </p>
             </Secao>
 
             {/* 3 ------------------------------------------------------------ */}
             <Secao passo={PASSOS[2]} numero={3}>
               <p>
-                No menu, abra <Rotulo>Homologações</Rotulo> e escolha o tipo de dispositivo (por exemplo,
+                No menu, abra <Rotulo>Matriz de testes</Rotulo> e escolha o tipo de dispositivo (por exemplo,
                 Terminal PoS). Você vê só os tipos liberados para a sua empresa.
               </p>
               <ul className="mt-3 space-y-2">
@@ -218,17 +218,17 @@ export function Guia() {
                 </Item>
                 <Item>
                   Os filtros <Rotulo>Fabricante</Rotulo>, <Rotulo>Modelo</Rotulo>,{' '}
-                  <Rotulo>Versão do agente</Rotulo> e <Rotulo>Status</Rotulo> ajudam quando a planilha cresce.
+                  <Rotulo>Versão do agente</Rotulo> e <Rotulo>Status</Rotulo> ajudam quando a matriz cresce.
                 </Item>
               </ul>
-              <Dica>A planilha da sua empresa é só sua: outros parceiros não veem os seus modelos.</Dica>
+              <Dica>A matriz da sua empresa é só sua: outros parceiros não veem os seus modelos.</Dica>
             </Secao>
 
             {/* 4 ------------------------------------------------------------ */}
             <Secao passo={PASSOS[3]} numero={4}>
               <Passos>
                 <PassoItem>
-                  Na planilha, clique em <Botao destaque>+ Novo modelo</Botao>.
+                  Na matriz, clique em <Botao destaque>+ Novo modelo</Botao>.
                 </PassoItem>
                 <PassoItem>
                   Preencha o essencial: <strong>Fabricante</strong>, <strong>Modelo</strong>, sistema e
@@ -317,7 +317,7 @@ export function Guia() {
                   Mobiltec saber que você viu.
                 </PassoItem>
                 <PassoItem>
-                  Clique em <Botao>Ajustar</Botao>, corrija o que foi pedido na planilha e, no menu ☰ da
+                  Clique em <Botao>Ajustar</Botao>, corrija o que foi pedido na matriz e, no menu ☰ da
                   coluna, use <Botao destaque>Reenviar para Validação</Botao>.
                 </PassoItem>
               </Passos>
@@ -334,7 +334,7 @@ export function Guia() {
                   no card do dispositivo, no painel da sua empresa: <Botao>Certificado</Botao>;
                 </Item>
                 <Item>
-                  no menu ☰ da coluna, na planilha: <Rotulo>Certificado</Rotulo>;
+                  no menu ☰ da coluna, na matriz: <Rotulo>Certificado</Rotulo>;
                 </Item>
                 <Item>
                   no próprio aviso do sino: <Rotulo>Acessar →</Rotulo>.
@@ -362,7 +362,7 @@ export function Guia() {
             {/* 10 ----------------------------------------------------------- */}
             <Secao passo={PASSOS[9]} numero={10}>
               <div className="space-y-2">
-                <Pergunta q="Não consigo editar a planilha.">
+                <Pergunta q="Não consigo editar a matriz.">
                   O dispositivo está com a Mobiltec (<em>Em validação</em>) ou já foi finalizado. Você só
                   edita em <em>Em homologação</em> ou <em>Em revisão</em>.
                 </Pergunta>

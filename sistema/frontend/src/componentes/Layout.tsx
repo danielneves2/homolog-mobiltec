@@ -529,7 +529,7 @@ function MenuPaineis({
         type="button"
         onClick={alternar}
         aria-expanded={aberto ? abertoVisivel : secundarioAberto}
-        title={aberto ? undefined : 'Painel'}
+        title={aberto ? undefined : 'Painéis'}
         data-grupo-menu="Painel"
         className={`btn-menu-lateral relative flex items-center select-none outline-none focus:outline-none focus-visible:outline-none ${
           aberto
@@ -555,7 +555,7 @@ function MenuPaineis({
         )}
         {aberto && (
           <>
-            <span className="flex-1 truncate text-left">Painel</span>
+            <span className="flex-1 truncate text-left">Painéis</span>
             {ehParceiro && revisoesPendentes > 0 && (
               <span
                 className="px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white shadow-xs"
@@ -701,7 +701,7 @@ function MenuPaineis({
       {/* Coluna secundária (menu recolhido) */}
       {!aberto && secundario.conteudo === chave && secundario.slot &&
         createPortal(
-          <ConteudoSecundario titulo="Painel de homologação">
+          <ConteudoSecundario titulo="Painéis">
             <ItemSecundario para="/" fim rotulo="Mobiltec" />
             {ehParceiro && usuario?.empresa && usuario.empresa.trim().toLowerCase() !== 'mobiltec' && (
               <ItemSecundario
@@ -913,7 +913,7 @@ export function Layout() {
     fim: false,
   }))
 
-  const homologacoes = { para: '/matriz', rotulo: 'Homologações', icone: 'homologacao' as NomeIcone }
+  const homologacoes = { para: '/matriz', rotulo: 'Matriz de testes', icone: 'homologacao' as NomeIcone }
 
   /**
    * Ambiente: tudo o que configura o sistema, num grupo só, abaixo do traço.
@@ -935,7 +935,7 @@ export function Layout() {
     { para: '/parceiros/validar-certificados', rotulo: 'Validar certificado', icone: 'certificado', fim: true },
   ]
   const secoesAmbiente: SecaoMenu[] = [
-    { titulo: 'Bateria de testes', icone: 'checklist', itens: opcoesHomologacaoConfig },
+    { titulo: 'Itens de teste', icone: 'checklist', itens: opcoesHomologacaoConfig },
     ...(ehAdmin
       ? [
           { icone: 'smartphone' as NomeIcone, itens: opcoesDispositivos },
@@ -971,14 +971,14 @@ export function Layout() {
       return { rotulo: 'Ambiente · Dispositivos', icone: 'engrenagem' as NomeIcone }
     }
     if (opcoesHomologacaoConfig.some((i) => (i.fim ? pathname === i.para : pathname.startsWith(i.para)))) {
-      return { rotulo: 'Ambiente · Bateria de testes', icone: 'engrenagem' as NomeIcone }
+      return { rotulo: 'Ambiente · Itens de teste', icone: 'engrenagem' as NomeIcone }
     }
     if (opcoesParceiros.some((i) => (i.fim ? pathname === i.para : pathname.startsWith(i.para)))) {
       return { rotulo: 'Ambiente · Parceiros', icone: 'engrenagem' as NomeIcone }
     }
     const cat = itensCategorias.find((i) => (i.fim ? pathname === i.para : pathname.startsWith(i.para)))
     if (cat) {
-      return { rotulo: `Homologações · ${cat.rotulo}`, icone: cat.icone }
+      return { rotulo: `Matriz de testes · ${cat.rotulo}`, icone: cat.icone }
     }
     return { rotulo: 'Painel · Mobiltec', icone: 'dashboard' as NomeIcone }
   })()
