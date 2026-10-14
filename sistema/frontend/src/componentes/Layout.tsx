@@ -73,6 +73,7 @@ function ConteudoSecundario({ titulo, children }: { titulo: string; children: Re
 function ItemSecundario({
   para,
   fim,
+  icone,
   rotulo,
   selo = 0,
   corSelo,
@@ -80,6 +81,7 @@ function ItemSecundario({
 }: {
   para: string
   fim?: boolean
+  icone?: NomeIcone
   rotulo: string
   selo?: number
   corSelo?: string
@@ -96,6 +98,7 @@ function ItemSecundario({
       }}
       className={({ isActive }) => `item-secundario${isActive ? ' item-secundario-ativo' : ''}`}
     >
+      {icone && <Icone nome={icone} className="h-4 w-4 shrink-0 opacity-80" />}
       <span className="flex-1 truncate">{rotulo}</span>
       {selo > 0 && (
         <span
@@ -121,12 +124,15 @@ function GrupoMenu({
   filhos,
   aberto,
   totalPendentes = 0,
+  comIcones = false,
   aoClicarItem,
 }: {
   item: Omit<ItemMenuDados, 'fim'>
   filhos: ItemMenuDados[]
   aberto: boolean
   totalPendentes?: number
+  /** Mostra o ícone de cada opção (os tipos de dispositivo) */
+  comIcones?: boolean
   aoClicarItem?: (item: ItemMenuDados) => void
 }) {
   const { pathname } = useLocation()
@@ -275,8 +281,7 @@ function GrupoMenu({
         >
           <div className="menu-accordion-content">
             <div
-              className="mt-1 ml-5 space-y-0.5 border-l pl-2"
-              style={{ borderColor: 'var(--color-border)' }}
+              className="mt-1 ml-5 space-y-0.5"
             >
               {filhos.map((f) => {
                 const isCertificado = f.para.includes('validar-certificados')
@@ -287,14 +292,15 @@ function GrupoMenu({
                     end={f.fim}
                     onClick={() => aoClicarItem?.(f)}
                     className={({ isActive }) =>
-                      `btn-menu-subitem flex items-center justify-between truncate rounded-md px-2.5 py-1.5 text-[13px] font-medium leading-tight outline-none focus:outline-none focus-visible:outline-none ${
+                      `btn-menu-subitem flex items-center gap-2 truncate rounded-md px-2.5 py-1.5 text-[13px] font-medium leading-tight outline-none focus:outline-none focus-visible:outline-none ${
                         isActive
                           ? 'btn-subitem-ativo bg-[var(--color-muted)] text-[var(--color-primary)] font-semibold'
                           : 'text-[var(--color-muted-foreground)]'
                       }`
                     }
                   >
-                    <span className="truncate">{f.rotulo}</span>
+                    {comIcones && <Icone nome={f.icone} className="h-[15px] w-[15px] shrink-0 opacity-80" />}
+                    <span className="flex-1 truncate">{f.rotulo}</span>
                     {isCertificado && totalPendentes > 0 && (
                       <span
                         className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white shrink-0"
@@ -319,6 +325,7 @@ function GrupoMenu({
                 key={f.para}
                 para={f.para}
                 fim={f.fim}
+                icone={comIcones ? f.icone : undefined}
                 rotulo={f.rotulo}
                 selo={f.para.includes('validar-certificados') ? totalPendentes : 0}
                 aoClicar={() => aoClicarItem?.(f)}
@@ -537,8 +544,7 @@ function MenuPaineis({
         >
           <div className="menu-accordion-content">
             <div
-              className="mt-1 ml-5 space-y-0.5 border-l pl-2"
-              style={{ borderColor: 'var(--color-border)' }}
+              className="mt-1 ml-5 space-y-0.5"
             >
               {/* Mobiltec — Painel Geral Público */}
               <NavLink
@@ -613,8 +619,7 @@ function MenuPaineis({
 
                   {parceirosExpandido && (
                     <div
-                      className="mt-0.5 ml-2.5 space-y-0.5 border-l pl-2"
-                      style={{ borderColor: 'var(--color-border)' }}
+                      className="mt-0.5 ml-2.5 space-y-0.5"
                     >
                       {empresasParceirasUnicas.length === 0 ? (
                         <span className="text-[11px] text-slate-400 italic px-2 py-1 block">
@@ -982,6 +987,7 @@ export function Layout() {
                 item={homologacoes}
                 filhos={itensCategorias}
                 aberto={aberto}
+                comIcones
               />
             )}
 
