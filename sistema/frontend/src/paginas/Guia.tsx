@@ -724,9 +724,9 @@ export function Guia() {
     // Fundo da janela + o guia inteiro num card grande, como as telas do
     // sistema: o fundo aparece nas laterais e no topo. `overflow-clip` (e não
     // `hidden`) para não quebrar o cabeçalho e as colunas fixas.
-    <div className="guia-fundo min-h-screen px-2 py-2 sm:px-4 sm:py-4 lg:px-6 lg:py-5" style={{ color: 'var(--color-foreground)' }}>
+    <div className="guia-fundo min-h-screen px-2 pb-2 pt-1.5 sm:px-4 sm:pb-4 lg:px-6" style={{ color: 'var(--color-foreground)' }}>
     <div
-      className="mx-auto min-h-[calc(100vh-2.5rem)] max-w-[1320px] overflow-clip rounded-2xl border shadow-[0_1px_3px_rgba(30,10,40,0.06),0_12px_40px_-16px_rgba(30,10,40,0.18)]"
+      className="mx-auto min-h-[calc(100vh-1.5rem)] max-w-[1320px] overflow-clip rounded-2xl border shadow-[0_1px_3px_rgba(30,10,40,0.06),0_12px_40px_-16px_rgba(30,10,40,0.18)]"
       style={{ background: 'var(--color-card)', borderColor: 'var(--color-border)' }}
     >
       {/* Topo */}
