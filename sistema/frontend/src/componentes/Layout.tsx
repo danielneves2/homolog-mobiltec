@@ -451,6 +451,10 @@ function MenuPaineis({
   const [parceirosExpandido, setParceirosExpandido] = useState(noSubParceiros)
   const [emHover, setEmHover] = useState(false)
   const refTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Submenu Parceiros: abre por hover com a mesma intenção dos grupos
+  const [parceirosHover, setParceirosHover] = useState(false)
+  const refTimeoutParceiros = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const parceirosVisivel = parceirosExpandido || parceirosHover
   const secundario = useContext(SecundarioCtx)
   const saidaNav = useContext(SaidaNavCtx)
   const chave = 'Painel'
@@ -468,9 +472,15 @@ function MenuPaineis({
     }
   }, [aberto])
 
+  // Saiu do menu: o submenu aberto só por hover recolhe junto com o grupo
+  useEffect(() => {
+    if (saidaNav > 0) setParceirosHover(false)
+  }, [saidaNav])
+
   useEffect(() => {
     return () => {
       if (refTimeout.current) clearTimeout(refTimeout.current)
+      if (refTimeoutParceiros.current) clearTimeout(refTimeoutParceiros.current)
     }
   }, [])
 
@@ -633,10 +643,25 @@ function MenuPaineis({
 
               {/* Se for ADMIN: mostra submenu Parceiros ˅ com a lista de todos os parceiros */}
               {ehAdmin && (
-                <div className="pt-0.5">
+                <div
+                  className="pt-0.5"
+                  onMouseEnter={() => {
+                    if (refTimeoutParceiros.current) clearTimeout(refTimeoutParceiros.current)
+                    refTimeoutParceiros.current = setTimeout(() => setParceirosHover(true), ATRASO_ABRIR_HOVER)
+                  }}
+                  onMouseLeave={() => {
+                    if (refTimeoutParceiros.current) clearTimeout(refTimeoutParceiros.current)
+                  }}
+                >
                   <button
                     type="button"
-                    onClick={() => setParceirosExpandido((v) => !v)}
+                    onClick={() => {
+                      // Fixa (ou solta) o submenu; soltar também desfaz o hover
+                      setParceirosExpandido((v) => {
+                        if (v) setParceirosHover(false)
+                        return !v
+                      })
+                    }}
                     className={`btn-menu-subitem flex items-center justify-between w-full truncate rounded-md px-2.5 py-1.5 text-[13px] font-medium leading-tight cursor-pointer outline-none focus:outline-none focus-visible:outline-none ${
                       noSubParceiros
                         ? 'text-[var(--color-primary)] font-semibold'
@@ -648,7 +673,7 @@ function MenuPaineis({
                       <svg
                         viewBox="0 0 16 16"
                         className="h-3 w-3 shrink-0 transition-transform duration-200 opacity-70"
-                        style={{ transform: parceirosExpandido ? 'rotate(180deg)' : 'none' }}
+                        style={{ transform: parceirosVisivel ? 'rotate(180deg)' : 'none' }}
                         aria-hidden
                       >
                         <path
@@ -663,7 +688,8 @@ function MenuPaineis({
                     </div>
                   </button>
 
-                  {parceirosExpandido && (
+                  <div className="menu-accordion-wrapper" data-aberto={parceirosVisivel ? 'true' : 'false'}>
+                  <div className="menu-accordion-content">
                     <div
                       className="mt-0.5 ml-2.5 space-y-0.5"
                     >
@@ -690,7 +716,8 @@ function MenuPaineis({
                         ))
                       )}
                     </div>
-                  )}
+                  </div>
+                  </div>
                 </div>
               )}
             </div>
