@@ -49,7 +49,7 @@ export function AvisoRevisao({
 
       {comoAgir && (
         <p className="mt-2 opacity-80">
-          Faça as correções necessárias e use <strong>Enviar para Validação</strong> no menu da
+          Faça as correções necessárias e use <strong>Reenviar para Validação</strong> no menu da
           coluna para devolver o dispositivo à análise da Mobiltec.
         </p>
       )}

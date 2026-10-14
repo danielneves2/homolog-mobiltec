@@ -266,14 +266,14 @@ export function ModalInformacoesHomologacao({
                   Resultado da homologação
                 </h2>
 
-                <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                <div className="flex items-center gap-0.5 p-0.5 rounded-lg border" style={{ background: 'var(--color-muted)', borderColor: 'var(--color-border)' }}>
                   <button
                     type="button"
                     onClick={() => setAbaAtiva('MATRIZ')}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    className={`px-3.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                       abaAtiva === 'MATRIZ'
-                        ? 'text-white font-bold shadow-xs'
-                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-200/60'
+                        ? 'text-white shadow-xs'
+                        : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-white'
                     }`}
                     style={abaAtiva === 'MATRIZ' ? { background: 'var(--gradient-brand-purple)' } : {}}
                   >
@@ -282,18 +282,18 @@ export function ModalInformacoesHomologacao({
                   <button
                     type="button"
                     onClick={() => setAbaAtiva('OBSERVACOES')}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                    className={`px-3.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                       abaAtiva === 'OBSERVACOES'
-                        ? 'text-white font-bold shadow-xs'
-                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-200/60'
+                        ? 'text-white shadow-xs'
+                        : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-white'
                     }`}
                     style={abaAtiva === 'OBSERVACOES' ? { background: 'var(--gradient-brand-purple)' } : {}}
                   >
-                    <span>💬 Observações</span>
+                    <span>Observações</span>
                     {totalObservacoes > 0 && (
                       <span
                         className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                          abaAtiva === 'OBSERVACOES' ? 'bg-white/25 text-white' : 'bg-slate-200 text-slate-700'
+                          abaAtiva === 'OBSERVACOES' ? 'bg-white/25 text-white' : 'bg-white text-[var(--color-primary)] border border-[var(--color-border)]'
                         }`}
                       >
                         {totalObservacoes}

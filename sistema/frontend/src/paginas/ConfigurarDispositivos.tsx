@@ -373,10 +373,10 @@ export function ConfigurarDispositivos() {
                               style={{
                                 color: 'var(--color-info-fg, #1e40af)',
                                 background: 'var(--color-info-soft, #eff6ff)',
-                                border: '1px solid rgba(37, 99, 235, 0.25)',
+                                border: '1px solid rgba(126, 32, 101, 0.25)',
                               }}
                             >
-                              <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
+                              <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: 'var(--color-primary)' }} />
                               <span>Publicado</span>
                             </span>
                           ) : h.status === 'REPROVADO' ? (

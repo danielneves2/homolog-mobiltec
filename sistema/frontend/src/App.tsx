@@ -14,6 +14,7 @@ import { GerenciarParceiros } from '@/paginas/GerenciarParceiros'
 import { ValidarCertificados } from '@/paginas/ValidarCertificados'
 import { PainelParceiro } from '@/paginas/PainelParceiro'
 import { ConfigurarDispositivos } from '@/paginas/ConfigurarDispositivos'
+import { Guia } from '@/paginas/Guia'
 
 const clienteQuery = new QueryClient({
   defaultOptions: {
@@ -34,6 +35,16 @@ export default function App() {
         <ProvedorAuth>
           <Routes>
             <Route path="/login" element={<Login />} />
+
+            {/* Guia de uso: página própria, aberta em outra guia a partir do menu */}
+            <Route
+              path="/guia"
+              element={
+                <RotaProtegida>
+                  <Guia />
+                </RotaProtegida>
+              }
+            />
 
             {/* O certificado ocupa a tela toda: é a prévia de um documento. */}
             <Route

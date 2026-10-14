@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* O sistema é só claro. Sem isto, as classes `dark:` seguiam o modo escuro
+   do Windows/macOS e pintavam elementos de cinza-escuro no meio da tela. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ============================================================
    Mobiltec Design System v1.0.0
    Fonte: design-system.md (raiz do repositório).
@@ -23,9 +27,10 @@
   --color-hero-accent: #d987c1;
 
   /* --- Estados funcionais (DS §2) --- */
-  --color-info: #2563eb;
-  --color-info-soft: #eff6ff;
-  --color-info-fg: #1e40af;
+  /* Informativo na paleta da marca (antes azul, fora do design) */
+  --color-info: #7e2065;
+  --color-info-soft: #f7f2f6;
+  --color-info-fg: #5e1a4c;
   --color-success: #16a34a;
   --color-success-soft: #f0fdf4;
   --color-success-fg: #166534;
@@ -426,6 +431,17 @@
       animation: none !important;
     }
   }
+}
+
+/* Guia de uso: numeração automática dos passos */
+.guia-passos {
+  counter-reset: guia-passo;
+}
+.guia-passos > li {
+  counter-increment: guia-passo;
+}
+.guia-passo-n::before {
+  content: counter(guia-passo);
 }
 
 @keyframes itemSecundarioEntrada {

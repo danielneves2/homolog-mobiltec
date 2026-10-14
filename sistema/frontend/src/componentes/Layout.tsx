@@ -1050,6 +1050,36 @@ export function Layout() {
                 />
               </div>
             )}
+            {/* Guia de uso: opção solta, a última do menu. Abre em outra guia
+                para o usuário seguir o passo a passo com o sistema ao lado. */}
+            <div
+              className={ehParceiro ? '!mt-2 pt-2' : undefined}
+              style={ehParceiro ? { borderTop: '1px solid var(--color-border)' } : undefined}
+            >
+              <a
+                href="/guia"
+                target="_blank"
+                rel="noopener"
+                title={aberto ? 'Abre o guia em uma nova guia' : 'Guia de uso'}
+                data-item-menu="Guia de uso"
+                className={`btn-menu-lateral relative flex items-center select-none outline-none focus:outline-none focus-visible:outline-none text-[var(--color-muted-foreground)] ${
+                  aberto
+                    ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium leading-tight'
+                    : 'mx-auto h-9 w-9 items-center justify-center rounded-lg'
+                }`}
+                style={{ justifyContent: aberto ? 'flex-start' : 'center' }}
+              >
+                <Icone nome="guia" className="h-[18px] w-[18px] shrink-0" />
+                {aberto && (
+                  <>
+                    <span className="flex-1 truncate text-left">Guia de uso</span>
+                    <svg viewBox="0 0 16 16" className="h-3 w-3 shrink-0 opacity-60" aria-hidden>
+                      <path d="M6 3.5h6.5V10M12.5 3.5 4 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </>
+                )}
+              </a>
+            </div>
           </nav>
           </SaidaNavCtx.Provider>
 

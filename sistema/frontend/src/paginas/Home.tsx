@@ -307,8 +307,8 @@ export function Home() {
           <>
             {retestados.length === 0 ? (
               <Vazio>
-                Nenhum modelo foi retestado ainda. Um reteste começa pela matriz, no botão
-                "Reteste" da coluna do modelo.
+                Nenhum modelo foi retestado ainda. Um reteste começa pela matriz, no menu
+                da coluna do modelo → "Reteste".
               </Vazio>
             ) : (
               // Cada um com o card do seu estágio: retestado e finalizado é

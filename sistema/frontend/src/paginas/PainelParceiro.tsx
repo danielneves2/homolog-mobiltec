@@ -462,12 +462,12 @@ function CardDispositivoParceiro({
                 <span className="text-[var(--color-muted-foreground)]">Testes executados:</span>
                 <span className="font-semibold text-[var(--color-foreground)]">{pctAvaliado}%</span>
               </div>
-              <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+              <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: 'var(--color-muted)' }}>
                 <div
                   className="h-full rounded-full transition-all duration-300"
                   style={{
                     width: `${pctAvaliado}%`,
-                    background: d.homologado ? 'var(--color-primary)' : '#6366f1',
+                    background: d.homologado ? 'var(--color-primary)' : 'var(--gradient-brand-purple)',
                   }}
                 />
               </div>
@@ -571,8 +571,9 @@ function CardDispositivoParceiro({
 function BadgeStatusProcesso({ status }: { status: StatusHomologacao }) {
   const configs: Record<StatusHomologacao, { rotulo: string; bg: string; fg: string }> = {
     RASCUNHO: { rotulo: 'Em homologação', bg: '#f1f5f9', fg: '#475569' },
-    AGUARDANDO_ANALISE: { rotulo: 'Em validação', bg: '#fef3c7', fg: '#b45309' },
-    EM_REVISAO: { rotulo: 'Em revisão', bg: '#dbeafe', fg: '#1d4ed8' },
+    // Mesmas cores da tela Validar Certificado: validação em roxo, revisão em âmbar
+    AGUARDANDO_ANALISE: { rotulo: 'Em validação', bg: 'rgba(126,32,101,0.08)', fg: 'var(--color-primary)' },
+    EM_REVISAO: { rotulo: 'Em revisão', bg: '#fef3c7', fg: '#b45309' },
     APROVADO: { rotulo: 'Homologado', bg: 'rgba(126,32,101,0.08)', fg: 'var(--color-primary)' },
     PUBLICADO: { rotulo: 'Homologado', bg: 'rgba(126,32,101,0.08)', fg: 'var(--color-primary)' },
     REPROVADO: { rotulo: 'Reprovado', bg: '#fee2e2', fg: '#b91c1c' },
