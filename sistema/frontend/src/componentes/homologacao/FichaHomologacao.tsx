@@ -344,7 +344,16 @@ export function ResultadoHomologacao({
                         <div className="leading-snug text-foreground/90">{l.acao}</div>
                       </td>
                       <td className="py-2.5 pr-4 text-right">
+                        {/* O "?" vem antes do status: assim os status ficam
+                            alinhados à direita em todas as linhas, com ou sem
+                            justificativa */}
                         <div className="inline-flex items-center justify-end gap-1.5">
+                          {(l.justificativa || l.tituloJustificativa) && (
+                            <IconeDuvidaJustificativa
+                              titulo={l.tituloJustificativa}
+                              texto={l.justificativa}
+                            />
+                          )}
                           <span
                             className="inline-block rounded px-2.5 py-1 text-xs font-semibold whitespace-nowrap shadow-2xs"
                             style={{
@@ -355,12 +364,6 @@ export function ResultadoHomologacao({
                           >
                             {META_STATUS[l.status].rotulo}
                           </span>
-                          {(l.justificativa || l.tituloJustificativa) && (
-                            <IconeDuvidaJustificativa
-                              titulo={l.tituloJustificativa}
-                              texto={l.justificativa}
-                            />
-                          )}
                         </div>
                       </td>
                     </tr>
