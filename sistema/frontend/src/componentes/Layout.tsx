@@ -301,7 +301,10 @@ function GrupoMenu({
           data-aberto={abertoVisivel ? 'true' : 'false'}
         >
           <div className="menu-accordion-content">
-            <div className="mt-1 ml-5 space-y-0.5">
+            {/* Com seções (Ambiente), os ícones ficam na coluna do ícone do
+                grupo e os textos alinham com o rótulo dele; lista simples
+                mantém o recuo de sempre. */}
+            <div className={`mt-1 space-y-0.5 ${secoesProp ? 'menu-com-secoes' : 'ml-5'}`}>
               {secoes.map((sec, i) => (
                 <div key={sec.titulo ?? sec.itens[0]?.para ?? i} className={i > 0 ? 'menu-secao-divisor' : undefined}>
                   {sec.titulo && (
@@ -320,6 +323,8 @@ function GrupoMenu({
                         onClick={() => aoClicarItem?.(f)}
                         className={({ isActive }) =>
                           `btn-menu-subitem flex items-center gap-2 truncate rounded-md px-2.5 py-1.5 text-[13px] font-medium leading-tight outline-none focus:outline-none focus-visible:outline-none ${
+                            secoesProp ? (sec.titulo ? 'menu-secao-item' : 'menu-secao-item-solto') : ''
+                          } ${
                             isActive
                               ? 'btn-subitem-ativo bg-[var(--color-muted)] text-[var(--color-primary)] font-semibold'
                               : 'text-[var(--color-muted-foreground)]'
@@ -1072,7 +1077,7 @@ export function Layout() {
                 rel="noopener"
                 title={aberto ? 'Abre o guia em uma nova guia' : 'Guia de uso'}
                 data-item-menu="Guia de uso"
-                className={`btn-menu-lateral relative flex items-center select-none outline-none focus:outline-none focus-visible:outline-none text-[var(--color-foreground)] ${
+                className={`btn-menu-lateral btn-menu-guia relative flex items-center select-none outline-none focus:outline-none focus-visible:outline-none ${
                   aberto
                     ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium leading-tight'
                     : 'mx-auto h-9 w-9 items-center justify-center rounded-lg'

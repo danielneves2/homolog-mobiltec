@@ -381,6 +381,26 @@
     text-transform: uppercase;
     opacity: 0.85;
   }
+  /* Grupo com seções: ícone sob o ícone do grupo (12px), texto alinhado ao
+     rótulo do grupo (38px) */
+  .menu-com-secoes .menu-secao-titulo {
+    gap: 12px;
+    padding-left: 12px;
+  }
+  .menu-com-secoes .menu-secao-item {
+    padding-left: 38px !important;
+  }
+  .menu-com-secoes .menu-secao-item-solto {
+    gap: 11px !important;
+    padding-left: 12px !important;
+  }
+
+  /* Guia de uso: roxo da marca, um tom mais claro que o primário */
+  .btn-menu-lateral.btn-menu-guia,
+  .btn-menu-lateral.btn-menu-guia:not(.btn-menu-ativo):hover {
+    color: #9b3d84 !important;
+  }
+
   .menu-secao-divisor {
     margin-top: 6px;
     padding-top: 4px;
