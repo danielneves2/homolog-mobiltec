@@ -113,6 +113,16 @@ function ItemSecundario({
 }
 
 /**
+ * Bloco de opções dentro de um grupo. Com `titulo`, ganha um subtítulo; sem
+ * ele, é uma opção solta (ex.: Configurar dispositivos). Seções são separadas
+ * por uma linha sutil.
+ */
+interface SecaoMenu {
+  titulo?: string
+  itens: ItemMenuDados[]
+}
+
+/**
  * Item do menu que abre um grupo de opções, e não uma tela.
  *
  * Com o menu aberto o grupo se desdobra no lugar, recuado, ao passar o mouse
@@ -121,20 +131,29 @@ function ItemSecundario({
  */
 function GrupoMenu({
   item,
-  filhos,
+  filhos: filhosSimples,
+  secoes: secoesProp,
+  tituloGaveta,
   aberto,
   totalPendentes = 0,
   comIcones = false,
   aoClicarItem,
 }: {
   item: Omit<ItemMenuDados, 'fim'>
-  filhos: ItemMenuDados[]
+  /** Opções numa lista única */
+  filhos?: ItemMenuDados[]
+  /** Ou opções agrupadas em seções com subtítulo */
+  secoes?: SecaoMenu[]
+  /** Título da gaveta do menu recolhido (padrão: o rótulo do grupo) */
+  tituloGaveta?: string
   aberto: boolean
   totalPendentes?: number
   /** Mostra o ícone de cada opção (os tipos de dispositivo) */
   comIcones?: boolean
   aoClicarItem?: (item: ItemMenuDados) => void
 }) {
+  const secoes: SecaoMenu[] = secoesProp ?? [{ itens: filhosSimples ?? [] }]
+  const filhos = secoes.flatMap((sec) => sec.itens)
   const { pathname } = useLocation()
   const noGrupo = filhos.some((f) => pathname === f.para || pathname.startsWith(`${f.para}/`))
   const [expandido, setExpandido] = useState(noGrupo)
@@ -238,7 +257,7 @@ function GrupoMenu({
         }}
       >
         <Icone nome={item.icone} className="h-[18px] w-[18px] shrink-0" />
-        {!aberto && item.rotulo === 'Parceiros' && totalPendentes > 0 && (
+        {!aberto && totalPendentes > 0 && (
           <span
             className="absolute top-1 right-1 h-2 w-2 rounded-full ring-2 shadow-xs"
             style={{ background: '#F59E0B' }}
@@ -247,7 +266,7 @@ function GrupoMenu({
         {aberto && (
           <>
             <span className="flex-1 truncate text-left">{item.rotulo}</span>
-            {item.rotulo === 'Parceiros' && totalPendentes > 0 && (
+            {totalPendentes > 0 && (
               <span
                 className="px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white shadow-xs"
                 style={{ background: noGrupo ? '#F59E0B' : 'var(--gradient-brand-purple)' }}
@@ -280,38 +299,41 @@ function GrupoMenu({
           data-aberto={abertoVisivel ? 'true' : 'false'}
         >
           <div className="menu-accordion-content">
-            <div
-              className="mt-1 ml-5 space-y-0.5"
-            >
-              {filhos.map((f) => {
-                const isCertificado = f.para.includes('validar-certificados')
-                return (
-                  <NavLink
-                    key={f.para}
-                    to={f.para}
-                    end={f.fim}
-                    onClick={() => aoClicarItem?.(f)}
-                    className={({ isActive }) =>
-                      `btn-menu-subitem flex items-center gap-2 truncate rounded-md px-2.5 py-1.5 text-[13px] font-medium leading-tight outline-none focus:outline-none focus-visible:outline-none ${
-                        isActive
-                          ? 'btn-subitem-ativo bg-[var(--color-muted)] text-[var(--color-primary)] font-semibold'
-                          : 'text-[var(--color-muted-foreground)]'
-                      }`
-                    }
-                  >
-                    {comIcones && <Icone nome={f.icone} className="h-[15px] w-[15px] shrink-0 opacity-80" />}
-                    <span className="flex-1 truncate">{f.rotulo}</span>
-                    {isCertificado && totalPendentes > 0 && (
-                      <span
-                        className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white shrink-0"
-                        style={{ background: 'var(--gradient-brand-purple)' }}
+            <div className="mt-1 ml-5 space-y-0.5">
+              {secoes.map((sec, i) => (
+                <div key={sec.titulo ?? sec.itens[0]?.para ?? i} className={i > 0 ? 'menu-secao-divisor' : undefined}>
+                  {sec.titulo && <div className="menu-secao-titulo">{sec.titulo}</div>}
+                  {sec.itens.map((f) => {
+                    const isCertificado = f.para.includes('validar-certificados')
+                    return (
+                      <NavLink
+                        key={f.para}
+                        to={f.para}
+                        end={f.fim}
+                        onClick={() => aoClicarItem?.(f)}
+                        className={({ isActive }) =>
+                          `btn-menu-subitem flex items-center gap-2 truncate rounded-md px-2.5 py-1.5 text-[13px] font-medium leading-tight outline-none focus:outline-none focus-visible:outline-none ${
+                            isActive
+                              ? 'btn-subitem-ativo bg-[var(--color-muted)] text-[var(--color-primary)] font-semibold'
+                              : 'text-[var(--color-muted-foreground)]'
+                          }`
+                        }
                       >
-                        {totalPendentes}
-                      </span>
-                    )}
-                  </NavLink>
-                )
-              })}
+                        {comIcones && <Icone nome={f.icone} className="h-[15px] w-[15px] shrink-0 opacity-80" />}
+                        <span className="flex-1 truncate">{f.rotulo}</span>
+                        {isCertificado && totalPendentes > 0 && (
+                          <span
+                            className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white shrink-0"
+                            style={{ background: 'var(--gradient-brand-purple)' }}
+                          >
+                            {totalPendentes}
+                          </span>
+                        )}
+                      </NavLink>
+                    )
+                  })}
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -319,18 +341,27 @@ function GrupoMenu({
 
       {!aberto && secundario.conteudo === chave && secundario.slot &&
         createPortal(
-          <ConteudoSecundario titulo={item.rotulo}>
-            {filhos.map((f) => (
-              <ItemSecundario
-                key={f.para}
-                para={f.para}
-                fim={f.fim}
-                icone={comIcones ? f.icone : undefined}
-                rotulo={f.rotulo}
-                selo={f.para.includes('validar-certificados') ? totalPendentes : 0}
-                aoClicar={() => aoClicarItem?.(f)}
-              />
-            ))}
+          <ConteudoSecundario titulo={tituloGaveta ?? item.rotulo}>
+            {secoes.map((sec, i) => [
+              sec.titulo ? (
+                <div key={`t-${sec.titulo}`} className={`painel-secundario-secao${i === 0 ? ' painel-secundario-secao-primeira' : ''}`}>
+                  {sec.titulo}
+                </div>
+              ) : i > 0 ? (
+                <div key={`d-${i}`} className="painel-secundario-divisor" />
+              ) : null,
+              ...sec.itens.map((f) => (
+                <ItemSecundario
+                  key={f.para}
+                  para={f.para}
+                  fim={f.fim}
+                  icone={comIcones ? f.icone : undefined}
+                  rotulo={f.rotulo}
+                  selo={f.para.includes('validar-certificados') ? totalPendentes : 0}
+                  aoClicar={() => aoClicarItem?.(f)}
+                />
+              )),
+            ])}
           </ConteudoSecundario>,
           secundario.slot,
         )}
@@ -500,7 +531,7 @@ function MenuPaineis({
           justifyContent: aberto ? 'flex-start' : 'center',
         }}
       >
-        <Icone nome="painel" className="h-[18px] w-[18px] shrink-0" />
+        <Icone nome="dashboard" className="h-[18px] w-[18px] shrink-0" />
         {!aberto && ehParceiro && revisoesPendentes > 0 && (
           <span
             className="absolute top-1 right-1 h-2 w-2 rounded-full ring-2 shadow-xs"
@@ -870,22 +901,32 @@ export function Layout() {
   const homologacoes = { para: '/matriz', rotulo: 'Homologações', icone: 'homologacao' as NomeIcone }
 
   /**
-   * Fica sempre abaixo dos tipos de dispositivo, separado por um traço: é de
-   * onde saem os itens acima dele, não mais um deles. Não é tela: abre as duas
-   * opções que configuram a lista e os tipos de dispositivo.
+   * Ambiente: tudo o que configura o sistema, num grupo só, abaixo do traço.
+   * Hoje é área da Mobiltec — o HOMOLOGADOR vê só a bateria de testes; o
+   * ADMIN vê também dispositivos e parceiros.
    */
-  const homologacaoConfig = { para: '/registro', rotulo: 'Configurar Homologação', icone: 'registro' as NomeIcone }
+  const ambiente = { para: '/registro', rotulo: 'Ambiente', icone: 'engrenagem' as NomeIcone }
   const opcoesHomologacaoConfig: ItemMenuDados[] = [
     { para: '/registro', rotulo: 'Registrar homologação', icone: 'registro', fim: true },
     // `fim: false`: editar um tipo é `/registro/tipos/:id`, e a opção continua
     // sendo esta. O item acima é `fim: true` para não engolir esta rota.
     { para: '/registro/tipos', rotulo: 'Editar homologação', icone: 'registro', fim: false },
   ]
-
-  const parceiros = { para: '/parceiros', rotulo: 'Parceiros', icone: 'parceiros' as NomeIcone }
+  const opcoesDispositivos: ItemMenuDados[] = [
+    { para: '/configurar-dispositivos', rotulo: 'Configurar dispositivos', icone: 'smartphone', fim: false },
+  ]
   const opcoesParceiros: ItemMenuDados[] = [
     { para: '/ambiente/parceiros', rotulo: 'Registrar parceiro', icone: 'parceiros', fim: true },
     { para: '/parceiros/validar-certificados', rotulo: 'Validar certificado', icone: 'certificado', fim: true },
+  ]
+  const secoesAmbiente: SecaoMenu[] = [
+    { titulo: 'Bateria de testes', itens: opcoesHomologacaoConfig },
+    ...(ehAdmin
+      ? [
+          { itens: opcoesDispositivos },
+          { titulo: 'Parceiros', itens: opcoesParceiros },
+        ]
+      : []),
   ]
 
   // 224px: o item mais largo é "Painel de Homologação" (~150px) mais ícone e
@@ -901,30 +942,30 @@ export function Layout() {
    */
   const secao = (() => {
     if (pathname === '/' || pathname === '/paineis/mobiltec') {
-      return { rotulo: 'Painel · Mobiltec', icone: 'painel' as NomeIcone }
+      return { rotulo: 'Painel · Mobiltec', icone: 'dashboard' as NomeIcone }
     }
     if (pathname === '/paineis/meu-painel') {
-      return { rotulo: `Painel · ${usuario?.empresa || 'Meu Painel'}`, icone: 'painel' as NomeIcone }
+      return { rotulo: `Painel · ${usuario?.empresa || 'Meu Painel'}`, icone: 'dashboard' as NomeIcone }
     }
     if (pathname.startsWith('/paineis/parceiro/')) {
       const idOuEmpresa = pathname.replace('/paineis/parceiro/', '')
       const p = todosParceiros.find((x) => x.id === idOuEmpresa || x.empresa.toLowerCase() === idOuEmpresa.toLowerCase())
-      return { rotulo: `Painel · ${p?.empresa || idOuEmpresa}`, icone: 'painel' as NomeIcone }
+      return { rotulo: `Painel · ${p?.empresa || idOuEmpresa}`, icone: 'dashboard' as NomeIcone }
     }
     if (pathname.startsWith('/configurar-dispositivos') || pathname.startsWith('/dispositivos/gerenciar')) {
-      return { rotulo: 'Configurar Dispositivos', icone: 'smartphone' as NomeIcone }
+      return { rotulo: 'Ambiente · Dispositivos', icone: 'engrenagem' as NomeIcone }
     }
     if (opcoesHomologacaoConfig.some((i) => (i.fim ? pathname === i.para : pathname.startsWith(i.para)))) {
-      return homologacaoConfig
+      return { rotulo: 'Ambiente · Bateria de testes', icone: 'engrenagem' as NomeIcone }
     }
     if (opcoesParceiros.some((i) => (i.fim ? pathname === i.para : pathname.startsWith(i.para)))) {
-      return parceiros
+      return { rotulo: 'Ambiente · Parceiros', icone: 'engrenagem' as NomeIcone }
     }
     const cat = itensCategorias.find((i) => (i.fim ? pathname === i.para : pathname.startsWith(i.para)))
     if (cat) {
       return { rotulo: `Homologações · ${cat.rotulo}`, icone: cat.icone }
     }
-    return { rotulo: 'Painel · Mobiltec', icone: 'painel' as NomeIcone }
+    return { rotulo: 'Painel · Mobiltec', icone: 'dashboard' as NomeIcone }
   })()
 
   /** Só as telas de planilha registram testes */
@@ -995,46 +1036,18 @@ export function Layout() {
                 existem; abaixo, quem cria e mantém a lista deles. */}
             {!ehParceiro && (
               <div className="!mt-2 pt-2 space-y-1" style={{ borderTop: '1px solid var(--color-border)' }}>
-                <GrupoMenu item={homologacaoConfig} filhos={opcoesHomologacaoConfig} aberto={aberto} />
-                {ehAdmin && (
-                  <NavLink
-                    to="/configurar-dispositivos"
-                    title={aberto ? undefined : 'Configurar dispositivos'}
-                    data-item-menu="Configurar dispositivos"
-                    className={({ isActive }) =>
-                      `btn-menu-lateral relative flex items-center select-none outline-none focus:outline-none focus-visible:outline-none ${
-                        aberto
-                          ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium leading-tight'
-                          : 'mx-auto h-9 w-9 items-center justify-center rounded-lg'
-                      } ${
-                        isActive
-                          ? 'btn-menu-ativo text-white'
-                          : 'text-[var(--color-muted-foreground)] hover:bg-black/[0.04] dark:hover:bg-white/[0.04]'
-                      }`
+                <GrupoMenu
+                  item={ambiente}
+                  secoes={secoesAmbiente}
+                  tituloGaveta="Configuração do ambiente"
+                  aberto={aberto}
+                  totalPendentes={totalPendentes}
+                  aoClicarItem={(item) => {
+                    if (item.para.includes('validar-certificados')) {
+                      marcarPendenciasComoVistas()
                     }
-                    style={({ isActive }) => ({
-                      background: isActive ? 'var(--gradient-brand-purple)' : undefined,
-                      boxShadow: isActive ? '0 2px 6px -1px rgba(126, 32, 101, 0.35)' : undefined,
-                      justifyContent: aberto ? 'flex-start' : 'center',
-                    })}
-                  >
-                    <Icone nome="smartphone" className="h-[18px] w-[18px] shrink-0" />
-                    {aberto && <span className="flex-1 truncate text-left">Configurar dispositivos</span>}
-                  </NavLink>
-                )}
-                {ehAdmin && (
-                  <GrupoMenu
-                    item={parceiros}
-                    filhos={opcoesParceiros}
-                    aberto={aberto}
-                    totalPendentes={totalPendentes}
-                    aoClicarItem={(item) => {
-                      if (item.para.includes('validar-certificados')) {
-                        marcarPendenciasComoVistas()
-                      }
-                    }}
-                  />
-                )}
+                  }}
+                />
               </div>
             )}
           </nav>

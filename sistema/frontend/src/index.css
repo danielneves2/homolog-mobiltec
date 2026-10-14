@@ -350,6 +350,32 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
+  .painel-secundario-secao-primeira {
+    margin-top: 2px;
+    padding-top: 0;
+    border-top: 0;
+  }
+  .painel-secundario-divisor {
+    margin: 8px 0 6px 16px;
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* Seções dentro de um grupo do menu aberto (ex.: Ambiente) */
+  .menu-secao-titulo {
+    padding: 6px 10px 3px;
+    color: var(--color-muted-foreground);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.85;
+  }
+  .menu-secao-divisor {
+    margin-top: 6px;
+    padding-top: 4px;
+    border-top: 1px solid var(--color-border);
+  }
+
   .painel-secundario-vazio {
     padding: 8px 16px;
     font-size: 12px;
