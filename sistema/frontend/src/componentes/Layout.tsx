@@ -1061,24 +1061,6 @@ export function Layout() {
           </div>
         </aside>
 
-        {/* Gaveta do menu recolhido: sai de dentro do trilho, por cima do
-            painel, enquanto o mouse estiver no ícone ou nela. */}
-        <div
-          className="painel-secundario"
-          data-aberto={secundarioVisivel ? 'true' : 'false'}
-          aria-hidden={!secundarioVisivel}
-          inert={!secundarioVisivel}
-          onMouseEnter={ctxSecundario.cancelarFechar}
-          onMouseLeave={ctxSecundario.agendarFechar}
-          onTransitionEnd={(e) => {
-            if (e.target === e.currentTarget && e.propertyName === 'opacity' && !secundarioAtivo) {
-              setSecundarioConteudo(null)
-            }
-          }}
-        >
-          <nav ref={setSlotSecundario} className="painel-secundario-conteudo" aria-label="Opções do menu" />
-        </div>
-
         {/* O painel inteiro é um card: a folga de 8px em volta deixa aparecer a
             faixa de fundo, e é ela que separa o card do menu — daí o `aside` ter
             perdido a borda direita. */}
@@ -1140,7 +1122,26 @@ export function Layout() {
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-hidden">
+            <div className="relative min-h-0 flex-1 overflow-hidden">
+                    {/* Gaveta do menu recolhido: desliza da borda esquerda do card,
+                        logo abaixo da barra de título, por cima do conteúdo,
+                        enquanto o mouse estiver no ícone ou nela. */}
+              <div
+                className="painel-secundario"
+                data-aberto={secundarioVisivel ? 'true' : 'false'}
+                aria-hidden={!secundarioVisivel}
+                inert={!secundarioVisivel}
+                onMouseEnter={ctxSecundario.cancelarFechar}
+                onMouseLeave={ctxSecundario.agendarFechar}
+                onTransitionEnd={(e) => {
+                  if (e.target === e.currentTarget && e.propertyName === 'opacity' && !secundarioAtivo) {
+                    setSecundarioConteudo(null)
+                  }
+                }}
+              >
+                <nav ref={setSlotSecundario} className="painel-secundario-conteudo" aria-label="Opções do menu" />
+              </div>
+
               <Outlet />
             </div>
           </div>
