@@ -430,6 +430,8 @@ export interface ItemTeste {
   descricaoAcao: string
   ordem: number
   ativo: boolean
+  /** Em quantos tipos de dispositivo o item está (vem de GET /itens-teste) */
+  tipos?: number
 }
 
 export interface BateriaItem {

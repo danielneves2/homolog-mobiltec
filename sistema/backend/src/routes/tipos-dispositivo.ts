@@ -11,9 +11,9 @@
  * já nasce apontando para a bateria da sua categoria, só os modelos cadastrados
  * neste tipo herdam essa bateria; os outros tipos seguem intocados.
  */
-import { FastifyPluginAsync } from 'fastify'
+import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
-import { StatusResultado } from '@prisma/client'
+import { Prisma, StatusResultado } from '@prisma/client'
 
 const GRUPOS = ['TELEMETRIA', 'COLETA', 'COMANDOS', 'PERFIS'] as const
 
@@ -34,6 +34,88 @@ function aoSlug(nome: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
+}
+
+type Tx = Prisma.TransactionClient
+
+/**
+ * Edita um item de teste SÓ para um tipo de dispositivo.
+ *
+ * O catálogo é compartilhado: o mesmo item ("IMEI 1") está na bateria de
+ * vários tipos. Renomear no lugar mudava a linha em todas as planilhas. Se o
+ * item é usado por outro tipo, este tipo ganha uma cópia própria — a bateria
+ * dele passa a apontar para a cópia e os resultados já preenchidos nas
+ * homologações dele vão junto. Os outros tipos ficam com o original.
+ *
+ * Devolve o id que o tipo deve usar daqui em diante.
+ */
+async function editarItemDoTipo(
+  tx: Tx,
+  categoriaId: string | null,
+  editado: { id: string; nome: string; descricaoAcao?: string },
+): Promise<string> {
+  const original = await tx.itemTeste.findUnique({ where: { id: editado.id } })
+  if (!original) return editado.id
+
+  const usoEmOutros = await tx.bateriaItem.count({
+    where: {
+      itemId: editado.id,
+      ...(categoriaId ? { bateria: { categoriaId: { not: categoriaId } } } : {}),
+    },
+  })
+
+  if (usoEmOutros === 0) {
+    await tx.itemTeste.update({
+      where: { id: editado.id },
+      data: {
+        nome: editado.nome,
+        ...(editado.descricaoAcao !== undefined ? { descricaoAcao: editado.descricaoAcao } : {}),
+      },
+    })
+    return editado.id
+  }
+
+  const copia = await tx.itemTeste.create({
+    data: {
+      grupo: original.grupo,
+      nome: editado.nome,
+      descricaoAcao: editado.descricaoAcao ?? original.descricaoAcao,
+      ordem: original.ordem,
+      ativo: original.ativo,
+    },
+  })
+
+  if (categoriaId) {
+    // A bateria deste tipo troca o original pela cópia, na mesma posição
+    const vinculos = await tx.bateriaItem.findMany({
+      where: { itemId: editado.id, bateria: { categoriaId } },
+    })
+    for (const v of vinculos) {
+      await tx.bateriaItem.delete({ where: { bateriaId_itemId: { bateriaId: v.bateriaId, itemId: v.itemId } } })
+      await tx.bateriaItem.create({
+        data: { bateriaId: v.bateriaId, itemId: copia.id, ordem: v.ordem, obrigatorio: v.obrigatorio },
+      })
+    }
+    // O que já foi avaliado neste tipo acompanha a linha
+    await tx.resultado.updateMany({
+      where: { itemId: editado.id, homologacao: { dispositivo: { categoriaId } } },
+      data: { itemId: copia.id },
+    })
+  }
+
+  // Justificativas sugeridas para o original continuam sugeridas para a cópia
+  const sugeridas = await tx.justificativa.findMany({
+    where: { itensSugeridos: { has: editado.id } },
+    select: { id: true, itensSugeridos: true },
+  })
+  for (const j of sugeridas) {
+    await tx.justificativa.update({
+      where: { id: j.id },
+      data: { itensSugeridos: [...j.itensSugeridos, copia.id] },
+    })
+  }
+
+  return copia.id
 }
 
 const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
@@ -150,14 +232,10 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
         },
       })
 
+      // Tipo novo: qualquer item já usado por outro tipo vira cópia própria
+      const trocados = new Map<string, string>()
       for (const editado of body.itensEditados) {
-        await tx.itemTeste.update({
-          where: { id: editado.id },
-          data: {
-            nome: editado.nome,
-            ...(editado.descricaoAcao !== undefined ? { descricaoAcao: editado.descricaoAcao } : {}),
-          },
-        })
+        trocados.set(editado.id, await editarItemDoTipo(tx, null, editado))
       }
 
       const idsNovos: string[] = []
@@ -187,7 +265,7 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
       // Só os IDs que de fato existem: um uuid inventado no corpo viraria uma
       // violação de chave estrangeira no meio da transação.
       const existentes = await tx.itemTeste.findMany({
-        where: { id: { in: body.itensExistentes } },
+        where: { id: { in: body.itensExistentes.map((i) => trocados.get(i) ?? i) } },
         select: { id: true },
       })
 
@@ -289,14 +367,10 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
         },
       })
 
+      // Editar vale só para este tipo (cópia própria se o item é compartilhado)
+      const trocados = new Map<string, string>()
       for (const editado of body.itensEditados) {
-        await tx.itemTeste.update({
-          where: { id: editado.id },
-          data: {
-            nome: editado.nome,
-            ...(editado.descricaoAcao !== undefined ? { descricaoAcao: editado.descricaoAcao } : {}),
-          },
-        })
+        trocados.set(editado.id, await editarItemDoTipo(tx, id, editado))
       }
 
       if (!itensPedidos) return
@@ -340,7 +414,7 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const existentes = await tx.itemTeste.findMany({
-        where: { id: { in: itensPedidos } },
+        where: { id: { in: itensPedidos.map((i) => trocados.get(i) ?? i) } },
         select: { id: true },
       })
       const alvo = new Set([...existentes.map((i) => i.id), ...idsNovos])

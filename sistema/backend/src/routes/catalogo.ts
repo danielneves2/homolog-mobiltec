@@ -26,13 +26,18 @@ const catalogoRoutes: FastifyPluginAsync = async (fastify) => {
   // ============================================================
   fastify.get('/itens-teste', { onRequest: [fastify.autenticar] }, async (request) => {
     const { grupo, ativo } = request.query as { grupo?: string; ativo?: string }
-    return fastify.prisma.itemTeste.findMany({
+    const itens = await fastify.prisma.itemTeste.findMany({
       where: {
         ativo: ativo === 'false' ? false : true,
         ...(grupo ? { grupo: grupo as any } : {}),
       },
+      include: { _count: { select: { bateriaItems: true } } },
       orderBy: [{ grupo: 'asc' }, { ordem: 'asc' }],
     })
+    // `tipos`: em quantas baterias (≈ tipos de dispositivo) o item está. O
+    // registro de um tipo novo usa isso para pré-marcar só o conjunto padrão,
+    // e não os itens criados especificamente para outro tipo.
+    return itens.map(({ _count, ...item }) => ({ ...item, tipos: _count.bateriaItems }))
   })
 
   fastify.post('/itens-teste', { onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR'])] }, async (request, reply) => {

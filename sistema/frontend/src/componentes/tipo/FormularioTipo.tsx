@@ -36,6 +36,18 @@ const BATERIAS_PADRAO: BateriaConfig[] = [
 /**
  * O formulário de um tipo de dispositivo — o mesmo para criar e para editar.
  */
+/**
+ * Conjunto padrão do catálogo: os itens presentes em pelo menos metade das
+ * baterias de quem mais usa. Separa a base comum (IMEI, Wipe, Kiosk…) dos
+ * itens criados para um tipo só.
+ */
+function padraoDoCatalogo(catalogo: ItemTeste[]): Set<string> {
+  const maior = Math.max(0, ...catalogo.map((i) => i.tipos ?? 0))
+  if (maior === 0) return new Set(catalogo.map((i) => i.id))
+  const piso = Math.ceil(maior / 2)
+  return new Set(catalogo.filter((i) => (i.tipos ?? 0) >= piso).map((i) => i.id))
+}
+
 export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
   const navegar = useNavigate()
   const { data: catalogo, isLoading } = useItensTeste()
@@ -165,7 +177,7 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
     })
     setNovos((prev) => prev.filter((n) => n.grupo !== chave))
     setMarcados((atual) => {
-      const proximo = new Set(atual ?? (catalogo ?? []).map((i) => i.id))
+      const proximo = new Set(atual ?? padraoDoCatalogo(catalogo ?? []))
       for (const item of porGrupo.get(chave) ?? []) {
         proximo.delete(item.id)
       }
@@ -269,9 +281,17 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
     return mapa
   }, [catalogo, todasBaterias])
 
-  // `marcados` nasce nulo porque o catálogo chega depois da primeira pintura;
-  // até lá, "todos marcados" é o conjunto inteiro que acabou de carregar.
-  const selecionados = marcados ?? new Set((catalogo ?? []).map((i) => i.id))
+  // `marcados` nasce nulo porque o catálogo chega depois da primeira pintura.
+  // Registrando um tipo novo, o ponto de partida é o conjunto PADRÃO — os
+  // itens que a maioria dos tipos usa. Item criado para um tipo específico
+  // (está em poucos) não entra sozinho no tipo novo.
+  const selecionados = marcados ?? padraoDoCatalogo(catalogo ?? [])
+
+  // Editando, o formulário mostra só os itens DESTE tipo (mais os que forem
+  // desmarcados agora, para poder desfazer). O catálogo é compartilhado, e
+  // listar aqui o que é de outro tipo fazia parecer que mexer aqui mexia lá.
+  const itensDoTipo = useMemo(() => new Set(tipo?.itens ?? []), [tipo])
+  const itemVisivel = (id: string) => !editando || itensDoTipo.has(id) || selecionados.has(id)
 
   const totalItens = selecionados.size + novos.length
   const totalFicha = todasLinhasRegistro.filter(
@@ -327,7 +347,7 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
 
   function definirGrupo(grupo: string, ligado: boolean) {
     const proximo = new Set(selecionados)
-    for (const item of porGrupo.get(grupo) ?? []) {
+    for (const item of (porGrupo.get(grupo) ?? []).filter((i) => itemVisivel(i.id))) {
       if (ligado) proximo.add(item.id)
       else proximo.delete(item.id)
     }
@@ -652,7 +672,7 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
           >
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
-                Selecione os itens a serem testados em cada bateria e defina a ordem de apresentação.
+                Selecione os itens a serem testados em cada bateria e defina a ordem de apresentação. Tudo o que você incluir, remover ou editar aqui vale só para este tipo.
               </p>
               <button
                 type="button"
@@ -735,7 +755,7 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
                       titulo={bateria.titulo}
                       ordem={ordemAtual > 0 ? ordemAtual : totalOrdens}
                       totalOrdens={totalOrdens}
-                      itens={porGrupo.get(bateria.chave) ?? []}
+                      itens={(porGrupo.get(bateria.chave) ?? []).filter((i) => itemVisivel(i.id))}
                       selecionados={selecionados}
                       novos={novos.filter((n) => n.grupo === bateria.chave)}
                       itensEditados={itensCatalogoEditados}
