@@ -50,6 +50,15 @@ const SecundarioCtx = createContext<ContextoSecundario>({
   cancelarFechar: () => {},
 })
 
+/**
+ * Menu aberto: conta as saídas do mouse do menu. Grupos abertos por hover só
+ * recolhem quando isso acontece — nunca ao passar de um grupo para outro.
+ */
+const SaidaNavCtx = createContext(0)
+
+/** Pausa do mouse sobre um grupo antes de desdobrá-lo (menu aberto) */
+const ATRASO_ABRIR_HOVER = 180
+
 /** Moldura da gaveta: título do grupo e as opções */
 function ConteudoSecundario({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
@@ -129,6 +138,7 @@ function GrupoMenu({
   const [emHover, setEmHover] = useState(false)
   const refTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const secundario = useContext(SecundarioCtx)
+  const saidaNav = useContext(SaidaNavCtx)
   const chave = item.rotulo
   const secundarioAberto = !aberto && secundario.ativo === chave
 
@@ -157,11 +167,10 @@ function GrupoMenu({
       secundario.abrir(chave)
       return
     }
-    if (refTimeout.current) {
-      clearTimeout(refTimeout.current)
-      refTimeout.current = null
-    }
-    setEmHover(true)
+    // Intenção: só abre se o mouse parar no grupo. Passar por cima a caminho
+    // de outro item não dispara nada.
+    if (refTimeout.current) clearTimeout(refTimeout.current)
+    refTimeout.current = setTimeout(() => setEmHover(true), ATRASO_ABRIR_HOVER)
   }
 
   function aoSairMouse() {
@@ -169,11 +178,19 @@ function GrupoMenu({
       secundario.agendarFechar()
       return
     }
-    if (refTimeout.current) clearTimeout(refTimeout.current)
-    refTimeout.current = setTimeout(() => {
-      setEmHover(false)
-    }, 130)
+    // Não fecha ao sair do grupo: recolher aqui puxaria os itens de baixo para
+    // cima, sob o cursor, e abriria outro grupo sem querer. Quem recolhe é a
+    // saída do mouse do menu inteiro (`saidaNav`).
+    if (refTimeout.current) {
+      clearTimeout(refTimeout.current)
+      refTimeout.current = null
+    }
   }
+
+  // O mouse deixou o menu: recolhe o que foi aberto só pelo hover
+  useEffect(() => {
+    if (saidaNav > 0) setEmHover(false)
+  }, [saidaNav])
 
   function alternar() {
     if (aberto) {
@@ -386,6 +403,7 @@ function MenuPaineis({
   const [emHover, setEmHover] = useState(false)
   const refTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const secundario = useContext(SecundarioCtx)
+  const saidaNav = useContext(SaidaNavCtx)
   const chave = 'Painel'
   const secundarioAberto = !aberto && secundario.ativo === chave
 
@@ -412,11 +430,10 @@ function MenuPaineis({
       secundario.abrir(chave)
       return
     }
-    if (refTimeout.current) {
-      clearTimeout(refTimeout.current)
-      refTimeout.current = null
-    }
-    setEmHover(true)
+    // Intenção: só abre se o mouse parar no grupo. Passar por cima a caminho
+    // de outro item não dispara nada.
+    if (refTimeout.current) clearTimeout(refTimeout.current)
+    refTimeout.current = setTimeout(() => setEmHover(true), ATRASO_ABRIR_HOVER)
   }
 
   function aoSairMouse() {
@@ -424,11 +441,19 @@ function MenuPaineis({
       secundario.agendarFechar()
       return
     }
-    if (refTimeout.current) clearTimeout(refTimeout.current)
-    refTimeout.current = setTimeout(() => {
-      setEmHover(false)
-    }, 130)
+    // Não fecha ao sair do grupo: recolher aqui puxaria os itens de baixo para
+    // cima, sob o cursor, e abriria outro grupo sem querer. Quem recolhe é a
+    // saída do mouse do menu inteiro (`saidaNav`).
+    if (refTimeout.current) {
+      clearTimeout(refTimeout.current)
+      refTimeout.current = null
+    }
   }
+
+  // O mouse deixou o menu: recolhe o que foi aberto só pelo hover
+  useEffect(() => {
+    if (saidaNav > 0) setEmHover(false)
+  }, [saidaNav])
 
   function alternar() {
     if (aberto) {
@@ -774,6 +799,7 @@ export function Layout() {
   const secundarioVisivel = !aberto && secundarioAtivo !== null
 
   const refFecharSecundario = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [saidaNav, setSaidaNav] = useState(0)
 
   const ctxSecundario = useMemo<ContextoSecundario>(() => {
     const cancelarFechar = () => {
@@ -940,7 +966,11 @@ export function Layout() {
             )}
           </div>
 
-          <nav className="flex-1 overflow-y-auto p-2 space-y-1">
+          <SaidaNavCtx.Provider value={saidaNav}>
+          <nav
+            className="flex-1 overflow-y-auto p-2 space-y-1"
+            onMouseLeave={() => aberto && setSaidaNav((n) => n + 1)}
+          >
             {/* Menu Painéis (diferenciado por perfil) */}
             <MenuPaineis
               aberto={aberto}
@@ -1006,6 +1036,7 @@ export function Layout() {
               </div>
             )}
           </nav>
+          </SaidaNavCtx.Provider>
 
           <div className="border-t p-2 shrink-0">
             {aberto && (
