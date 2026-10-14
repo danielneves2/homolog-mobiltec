@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contextos/AuthContext'
 import { useCategorias } from '@/hooks/useVitrine'
 import { useListaHomologacoes } from '@/hooks/useHomologacao'
 import { useParceiros } from '@/hooks/useParceiros'
-import { ancorarMenu } from '@/lib/ancorarMenu'
 import { LogoMobiltec } from './LogoMobiltec'
 import { Icone, iconeDaCategoria, type NomeIcone } from './Icone'
 import { CentralNotificacoes } from './CentralNotificacoes'
@@ -19,13 +19,106 @@ interface ItemMenuDados {
   fim: boolean
 }
 
+/**
+ * Coluna secundária do menu recolhido.
+ *
+ * Com o menu em 64px não há onde desdobrar um grupo. Em vez de um popup
+ * solto, o grupo abre uma coluna ao lado do trilho, que desliza e empurra o
+ * painel para a direita. A coluna é uma só; quem a preenche (por portal) é o
+ * grupo ativo.
+ */
+interface ContextoSecundario {
+  /** Grupo com a coluna aberta (null = fechada) */
+  ativo: string | null
+  /** Grupo cujo conteúdo está na coluna — continua durante a animação de fechar */
+  conteudo: string | null
+  slot: HTMLElement | null
+  alternar: (chave: string) => void
+  fechar: () => void
+}
+
+const SecundarioCtx = createContext<ContextoSecundario>({
+  ativo: null,
+  conteudo: null,
+  slot: null,
+  alternar: () => {},
+  fechar: () => {},
+})
+
+/** Moldura da coluna: título do grupo, botão de fechar e as opções */
+function ConteudoSecundario({ titulo, icone, children }: { titulo: string; icone: NomeIcone; children: ReactNode }) {
+  const { fechar } = useContext(SecundarioCtx)
+  return (
+    <>
+      <div className="painel-secundario-cabecalho">
+        <span className="painel-secundario-icone">
+          <Icone nome={icone} className="h-4 w-4" />
+        </span>
+        <span className="flex-1 truncate">{titulo}</span>
+        <button
+          type="button"
+          onClick={fechar}
+          aria-label="Fechar"
+          title="Fechar (Esc)"
+          className="painel-secundario-fechar"
+        >
+          <Icone nome="x" className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <div className="painel-secundario-lista">{children}</div>
+    </>
+  )
+}
+
+/** Opção da coluna secundária */
+function ItemSecundario({
+  para,
+  fim,
+  icone,
+  rotulo,
+  selo = 0,
+  corSelo,
+  aoClicar,
+}: {
+  para: string
+  fim?: boolean
+  icone?: NomeIcone
+  rotulo: string
+  selo?: number
+  corSelo?: string
+  aoClicar?: () => void
+}) {
+  const { fechar } = useContext(SecundarioCtx)
+  return (
+    <NavLink
+      to={para}
+      end={fim}
+      onClick={() => {
+        aoClicar?.()
+        fechar()
+      }}
+      className={({ isActive }) => `item-secundario${isActive ? ' item-secundario-ativo' : ''}`}
+    >
+      {icone && <Icone nome={icone} className="h-4 w-4 shrink-0" />}
+      <span className="flex-1 truncate">{rotulo}</span>
+      {selo > 0 && (
+        <span
+          className="px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white shrink-0"
+          style={{ background: corSelo ?? 'var(--gradient-brand-purple)' }}
+        >
+          {selo}
+        </span>
+      )}
+    </NavLink>
+  )
+}
 
 /**
  * Item do menu que abre um grupo de opções, e não uma tela.
  *
  * Com o menu aberto o grupo se desdobra no lugar, recuado, ao passar o mouse
- * ou ao clicar (fixando o estado). Recolhido não há onde desdobrar — aí as opções
- * saem num painel flutuante ancorado ao lado.
+ * ou ao clicar (fixando o estado). Recolhido não há onde desdobrar — aí as
+ * opções abrem na coluna secundária ao lado do trilho.
  */
 function GrupoMenu({
   item,
@@ -44,10 +137,10 @@ function GrupoMenu({
   const noGrupo = filhos.some((f) => pathname === f.para || pathname.startsWith(`${f.para}/`))
   const [expandido, setExpandido] = useState(noGrupo)
   const [emHover, setEmHover] = useState(false)
-  const [flutuante, setFlutuante] = useState<{ x: number; y: number } | null>(null)
-  const refBotao = useRef<HTMLButtonElement>(null)
-  const refPainel = useRef<HTMLDivElement>(null)
   const refTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const secundario = useContext(SecundarioCtx)
+  const chave = item.rotulo
+  const secundarioAberto = !aberto && secundario.ativo === chave
 
   // Navegar para dentro do grupo o abre e o fixa aberto
   useEffect(() => {
@@ -59,8 +152,6 @@ function GrupoMenu({
     if (!aberto) {
       setExpandido(false)
       setEmHover(false)
-    } else {
-      setFlutuante(null)
     }
   }, [aberto])
 
@@ -88,22 +179,6 @@ function GrupoMenu({
     }, 130)
   }
 
-  useEffect(() => {
-    if (!flutuante) return
-    const fechar = (e: MouseEvent) => {
-      const alvo = e.target as Node
-      if (refBotao.current?.contains(alvo) || refPainel.current?.contains(alvo)) return
-      setFlutuante(null)
-    }
-    const aoTeclar = (e: KeyboardEvent) => e.key === 'Escape' && setFlutuante(null)
-    document.addEventListener('mousedown', fechar)
-    document.addEventListener('keydown', aoTeclar)
-    return () => {
-      document.removeEventListener('mousedown', fechar)
-      document.removeEventListener('keydown', aoTeclar)
-    }
-  }, [flutuante])
-
   function alternar() {
     if (aberto) {
       setExpandido((v) => {
@@ -113,17 +188,7 @@ function GrupoMenu({
       })
       return
     }
-    const r = refBotao.current?.getBoundingClientRect()
-    if (!r) return
-    if (flutuante) return setFlutuante(null)
-    const aoLado = {
-      top: r.top,
-      bottom: r.top,
-      left: r.right + 6,
-      right: r.right + 6,
-      width: 0,
-    } as DOMRect
-    setFlutuante(ancorarMenu(aoLado, { largura: 210, altura: filhos.length * 32 + 35 }))
+    secundario.alternar(chave)
   }
 
   const abertoVisivel = expandido || emHover
@@ -135,10 +200,9 @@ function GrupoMenu({
       onMouseLeave={aoSairMouse}
     >
       <button
-        ref={refBotao}
         type="button"
         onClick={alternar}
-        aria-expanded={aberto ? abertoVisivel : !!flutuante}
+        aria-expanded={aberto ? abertoVisivel : secundarioAberto}
         title={aberto ? undefined : item.rotulo}
         data-grupo-menu={item.rotulo}
         className={`btn-menu-lateral relative flex items-center select-none outline-none focus:outline-none focus-visible:outline-none ${
@@ -149,7 +213,7 @@ function GrupoMenu({
           noGrupo
             ? 'btn-menu-ativo text-white'
             : 'text-[var(--color-muted-foreground)]'
-        }`}
+        } ${secundarioAberto ? 'btn-menu-secundario' : ''}`}
         style={{
           background: noGrupo ? 'var(--gradient-brand-purple)' : undefined,
           boxShadow: noGrupo ? '0 2px 6px -1px rgba(126, 32, 101, 0.35)' : undefined,
@@ -236,55 +300,23 @@ function GrupoMenu({
         </div>
       )}
 
-      {!aberto && flutuante && (
-        <div
-          ref={refPainel}
-          role="menu"
-          data-menu-flutuante
-          className="fixed z-50 min-w-52 rounded-lg border py-1.5 shadow-lg bg-white"
-          style={{
-            left: flutuante.x,
-            top: flutuante.y,
-            background: 'var(--color-popover)',
-            color: 'var(--color-foreground)',
-          }}
-        >
-          <div className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b mb-1">
-            {item.rotulo}
-          </div>
-          {filhos.map((f) => {
-            const isCertificado = f.para.includes('validar-certificados')
-            return (
-              <NavLink
+      {!aberto && secundario.conteudo === chave && secundario.slot &&
+        createPortal(
+          <ConteudoSecundario titulo={item.rotulo} icone={item.icone}>
+            {filhos.map((f) => (
+              <ItemSecundario
                 key={f.para}
-                to={f.para}
-                end={f.fim}
-                role="menuitem"
-                onClick={() => {
-                  setFlutuante(null)
-                  aoClicarItem?.(f)
-                }}
-                className="flex items-center justify-between px-3 py-1.5 text-xs font-medium transition-colors hover:bg-black/[0.04] outline-none focus:outline-none focus-visible:outline-none"
-                style={({ isActive }) => ({
-                  background: isActive ? 'var(--color-muted)' : 'transparent',
-                  color: isActive ? 'var(--color-primary)' : 'inherit',
-                  fontWeight: isActive ? 600 : 400,
-                })}
-              >
-                <span className="truncate">{f.rotulo}</span>
-                {isCertificado && totalPendentes > 0 && (
-                  <span
-                    className="ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white shrink-0"
-                    style={{ background: 'var(--gradient-brand-purple)' }}
-                  >
-                    {totalPendentes}
-                  </span>
-                )}
-              </NavLink>
-            )
-          })}
-        </div>
-      )}
+                para={f.para}
+                fim={f.fim}
+                icone={f.icone}
+                rotulo={f.rotulo}
+                selo={f.para.includes('validar-certificados') ? totalPendentes : 0}
+                aoClicar={() => aoClicarItem?.(f)}
+              />
+            ))}
+          </ConteudoSecundario>,
+          secundario.slot,
+        )}
     </div>
   )
 }
@@ -355,10 +387,9 @@ function MenuPaineis({
   const [expandido, setExpandido] = useState(noPainel)
   const [parceirosExpandido, setParceirosExpandido] = useState(noSubParceiros)
   const [emHover, setEmHover] = useState(false)
-  const [flutuante, setFlutuante] = useState<{ x: number; y: number } | null>(null)
-  const refBotao = useRef<HTMLButtonElement>(null)
-  const refPainel = useRef<HTMLDivElement>(null)
   const refTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const secundario = useContext(SecundarioCtx)
+  const secundarioAberto = !aberto && secundario.ativo === 'Painel'
 
   useEffect(() => {
     if (noPainel) setExpandido(true)
@@ -369,8 +400,6 @@ function MenuPaineis({
     if (!aberto) {
       setExpandido(false)
       setEmHover(false)
-    } else {
-      setFlutuante(null)
     }
   }, [aberto])
 
@@ -397,22 +426,6 @@ function MenuPaineis({
     }, 130)
   }
 
-  useEffect(() => {
-    if (!flutuante) return
-    const fechar = (e: MouseEvent) => {
-      const alvo = e.target as Node
-      if (refBotao.current?.contains(alvo) || refPainel.current?.contains(alvo)) return
-      setFlutuante(null)
-    }
-    const aoTeclar = (e: KeyboardEvent) => e.key === 'Escape' && setFlutuante(null)
-    document.addEventListener('mousedown', fechar)
-    document.addEventListener('keydown', aoTeclar)
-    return () => {
-      document.removeEventListener('mousedown', fechar)
-      document.removeEventListener('keydown', aoTeclar)
-    }
-  }, [flutuante])
-
   function alternar() {
     if (aberto) {
       setExpandido((v) => {
@@ -422,18 +435,7 @@ function MenuPaineis({
       })
       return
     }
-    const r = refBotao.current?.getBoundingClientRect()
-    if (!r) return
-    if (flutuante) return setFlutuante(null)
-    const aoLado = {
-      top: r.top,
-      bottom: r.top,
-      left: r.right + 6,
-      right: r.right + 6,
-      width: 0,
-    } as DOMRect
-    const altura = ehAdmin ? 260 : 80
-    setFlutuante(ancorarMenu(aoLado, { largura: 210, altura }))
+    secundario.alternar('Painel')
   }
 
   const abertoVisivel = expandido || emHover
@@ -445,10 +447,9 @@ function MenuPaineis({
       onMouseLeave={aoSairMouse}
     >
       <button
-        ref={refBotao}
         type="button"
         onClick={alternar}
-        aria-expanded={aberto ? abertoVisivel : !!flutuante}
+        aria-expanded={aberto ? abertoVisivel : secundarioAberto}
         title={aberto ? undefined : 'Painel'}
         data-grupo-menu="Painel"
         className={`btn-menu-lateral relative flex items-center select-none outline-none focus:outline-none focus-visible:outline-none ${
@@ -459,7 +460,7 @@ function MenuPaineis({
           noPainel
             ? 'btn-menu-ativo text-white'
             : 'text-[var(--color-muted-foreground)]'
-        }`}
+        } ${secundarioAberto ? 'btn-menu-secundario' : ''}`}
         style={{
           background: noPainel ? 'var(--gradient-brand-purple)' : undefined,
           boxShadow: noPainel ? '0 2px 6px -1px rgba(126, 32, 101, 0.35)' : undefined,
@@ -620,93 +621,40 @@ function MenuPaineis({
         </div>
       )}
 
-      {/* Menu Flutuante (quando sidebar está recolhida) */}
-      {!aberto && flutuante && (
-        <div
-          ref={refPainel}
-          role="menu"
-          data-menu-flutuante
-          className="fixed z-50 min-w-52 rounded-lg border py-1.5 shadow-lg bg-white"
-          style={{
-            left: flutuante.x,
-            top: flutuante.y,
-            background: 'var(--color-popover)',
-            color: 'var(--color-foreground)',
-          }}
-        >
-          <div className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b mb-1">
-            Painel
-          </div>
-          <NavLink
-            to="/"
-            end
-            role="menuitem"
-            onClick={() => setFlutuante(null)}
-            className="flex items-center px-3 py-1.5 text-xs font-medium transition-colors hover:bg-black/[0.04] outline-none"
-            style={({ isActive }) => ({
-              background: isActive ? 'var(--color-muted)' : 'transparent',
-              color: isActive ? 'var(--color-primary)' : 'inherit',
-              fontWeight: isActive ? 600 : 400,
-            })}
-          >
-            Mobiltec
-          </NavLink>
-
-          {ehParceiro && usuario?.empresa && usuario.empresa.trim().toLowerCase() !== 'mobiltec' && (
-            <NavLink
-              to="/paineis/meu-painel"
-              role="menuitem"
-              onClick={() => setFlutuante(null)}
-              className="flex items-center justify-between px-3 py-1.5 text-xs font-medium transition-colors hover:bg-black/[0.04] outline-none"
-              style={({ isActive }) => ({
-                background: isActive ? 'var(--color-muted)' : 'transparent',
-                color: isActive ? 'var(--color-primary)' : 'inherit',
-                fontWeight: isActive ? 600 : 400,
-              })}
-            >
-              <span className="truncate">{usuario.empresa}</span>
-              {revisoesPendentes > 0 && (
-                <span
-                  className="ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white shrink-0"
-                  style={{ background: '#F59E0B' }}
-                >
-                  {revisoesPendentes}
-                </span>
-              )}
-            </NavLink>
-          )}
-
-          {ehAdmin && (
-            <div className="pt-1 mt-1 border-t">
-              <div className="px-3 py-1 text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider">
-                Parceiros
-              </div>
-              {empresasParceirasUnicas.length === 0 ? (
-                <span className="text-[11px] text-slate-400 italic px-3 py-1 block">
-                  Nenhum parceiro
-                </span>
-              ) : (
-                empresasParceirasUnicas.map((p) => (
-                  <NavLink
-                    key={p.empresa}
-                    to={`/paineis/parceiro/${p.id}`}
-                    role="menuitem"
-                    onClick={() => setFlutuante(null)}
-                    className="flex items-center px-3 py-1.5 text-xs font-medium transition-colors hover:bg-black/[0.04] outline-none"
-                    style={({ isActive }) => ({
-                      background: isActive ? 'var(--color-muted)' : 'transparent',
-                      color: isActive ? 'var(--color-primary)' : 'inherit',
-                      fontWeight: isActive ? 600 : 400,
-                    })}
-                  >
-                    <span className="truncate">{p.empresa}</span>
-                  </NavLink>
-                ))
-              )}
-            </div>
-          )}
-        </div>
-      )}
+      {/* Coluna secundária (menu recolhido) */}
+      {!aberto && secundario.conteudo === 'Painel' && secundario.slot &&
+        createPortal(
+          <ConteudoSecundario titulo="Painel" icone="painel">
+            <ItemSecundario para="/" fim icone="home" rotulo="Mobiltec" />
+            {ehParceiro && usuario?.empresa && usuario.empresa.trim().toLowerCase() !== 'mobiltec' && (
+              <ItemSecundario
+                para="/paineis/meu-painel"
+                icone="ambiente"
+                rotulo={usuario.empresa}
+                selo={revisoesPendentes}
+                corSelo="#F59E0B"
+              />
+            )}
+            {ehAdmin && (
+              <>
+                <div className="painel-secundario-secao">Parceiros</div>
+                {empresasParceirasUnicas.length === 0 ? (
+                  <span className="painel-secundario-vazio">Nenhum parceiro cadastrado</span>
+                ) : (
+                  empresasParceirasUnicas.map((p) => (
+                    <ItemSecundario
+                      key={p.empresa}
+                      para={`/paineis/parceiro/${p.id}`}
+                      icone="parceiros"
+                      rotulo={p.empresa}
+                    />
+                  ))
+                )}
+              </>
+            )}
+          </ConteudoSecundario>,
+          secundario.slot,
+        )}
     </div>
   )
 }
@@ -813,7 +761,38 @@ export function Layout() {
     }
   })
 
+  // Coluna secundária do menu recolhido. `conteudo` segura o último grupo até
+  // o fim da animação de fechar, para a coluna não esvaziar enquanto encolhe.
+  const [secundarioAtivo, setSecundarioAtivo] = useState<string | null>(null)
+  const [secundarioConteudo, setSecundarioConteudo] = useState<string | null>(null)
+  const [slotSecundario, setSlotSecundario] = useState<HTMLElement | null>(null)
+  const secundarioVisivel = !aberto && secundarioAtivo !== null
+
+  const ctxSecundario = useMemo<ContextoSecundario>(
+    () => ({
+      ativo: secundarioAtivo,
+      conteudo: secundarioConteudo,
+      slot: slotSecundario,
+      alternar: (chave) => {
+        setSecundarioAtivo((atual) => (atual === chave ? null : chave))
+        setSecundarioConteudo(chave)
+      },
+      fechar: () => setSecundarioAtivo(null),
+    }),
+    [secundarioAtivo, secundarioConteudo, slotSecundario],
+  )
+
+  useEffect(() => {
+    if (!secundarioAtivo) return
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSecundarioAtivo(null)
+    }
+    document.addEventListener('keydown', aoTeclar)
+    return () => document.removeEventListener('keydown', aoTeclar)
+  }, [secundarioAtivo])
+
   function alternar() {
+    setSecundarioAtivo(null)
     setAberto((v) => {
       try {
         localStorage.setItem(CHAVE_MENU, String(!v))
@@ -916,6 +895,7 @@ export function Layout() {
 
       {/* O fundo da janela é o mesmo do menu: é a faixa que aparece em volta do
           card do painel e o que dá a ele o efeito de folha solta. */}
+      <SecundarioCtx.Provider value={ctxSecundario}>
       <div className="flex-1 flex min-h-0 overflow-hidden" style={{ background: 'var(--color-sidebar)' }}>
         <aside
           className="flex flex-col shrink-0 transition-[width] duration-200"
@@ -1029,6 +1009,22 @@ export function Layout() {
           </div>
         </aside>
 
+        {/* Coluna secundária: abre ao lado do trilho recolhido e empurra o
+            painel. Fica sempre montada — a largura anima de 0 até a coluna. */}
+        <div
+          className="painel-secundario"
+          data-aberto={secundarioVisivel ? 'true' : 'false'}
+          aria-hidden={!secundarioVisivel}
+          inert={!secundarioVisivel}
+          onTransitionEnd={(e) => {
+            if (e.target === e.currentTarget && e.propertyName === 'width' && !secundarioAtivo) {
+              setSecundarioConteudo(null)
+            }
+          }}
+        >
+          <nav ref={setSlotSecundario} className="painel-secundario-conteudo" aria-label="Opções do menu" />
+        </div>
+
         {/* O painel inteiro é um card: a folga de 8px em volta deixa aparecer a
             faixa de fundo, e é ela que separa o card do menu — daí o `aside` ter
             perdido a borda direita. */}
@@ -1096,6 +1092,7 @@ export function Layout() {
           </div>
         </main>
       </div>
+      </SecundarioCtx.Provider>
     </div>
   )
 }
