@@ -30,6 +30,8 @@ interface Artigo {
   resumo: string
   destaque: ReactNode
   tags: string[]
+  /** Palavras que levam a este artigo na busca, além do título e das tags */
+  chaves?: string[]
   leitura: number
   secoes: Secao[]
   relacionados: string[]
@@ -67,6 +69,7 @@ const ARTIGOS: Artigo[] = [
       </>
     ),
     tags: ['início', 'menu', 'visão geral'],
+    chaves: ['menu', 'começar', 'sino', 'avisos', 'introdução'],
     leitura: 2,
     relacionados: ['paineis', 'matriz', 'caminho'],
     secoes: [
@@ -131,6 +134,7 @@ const ARTIGOS: Artigo[] = [
       </>
     ),
     tags: ['painel', 'mobiltec', 'empresa'],
+    chaves: ['vitrine', 'homologados', 'exibir informações', 'pendências', 'empresa', 'oficial'],
     leitura: 3,
     relacionados: ['onde-voce-esta', 'certificado', 'revisao'],
     secoes: [
@@ -210,6 +214,7 @@ const ARTIGOS: Artigo[] = [
       </>
     ),
     tags: ['matriz', 'colunas', 'filtros'],
+    chaves: ['planilha', 'coluna', 'filtro', 'divergência', 'revalidados', 'tipo de dispositivo'],
     leitura: 2,
     relacionados: ['cadastrar', 'testar', 'onde-voce-esta'],
     secoes: [
@@ -259,6 +264,7 @@ const ARTIGOS: Artigo[] = [
       </>
     ),
     tags: ['modelo', 'cadastro', 'coluna'],
+    chaves: ['novo modelo', 'cadastro', 'remover', 'excluir', 'configuração', 'imei', 'agente'],
     leitura: 2,
     relacionados: ['testar', 'matriz', 'reteste'],
     secoes: [
@@ -301,6 +307,7 @@ const ARTIGOS: Artigo[] = [
     resumo: 'Marque o resultado de cada item, anote o que observou e mantenha a ficha da unidade em dia.',
     destaque: <>Tudo é salvo na hora, sem botão de salvar.</>,
     tags: ['resultado', 'observação', 'anexo', 'ficha'],
+    chaves: ['resultado', 'status', 'observação', 'anexo', 'print', 'zip', 'log', 'foto', 'ficha', 'falha', 'justificativa'],
     leitura: 3,
     relacionados: ['cadastrar', 'caminho', 'enviar'],
     secoes: [
@@ -367,6 +374,7 @@ const ARTIGOS: Artigo[] = [
       </>
     ),
     tags: ['status', 'etapas', 'fluxo'],
+    chaves: ['status', 'etapa', 'em validação', 'em revisão', 'homologado', 'editar'],
     leitura: 2,
     relacionados: ['enviar', 'revisao', 'certificado'],
     secoes: [
@@ -401,6 +409,7 @@ const ARTIGOS: Artigo[] = [
       </>
     ),
     tags: ['enviar', 'validação', 'apoio'],
+    chaves: ['enviar', 'apoio', 'não testado', 'validação'],
     leitura: 1,
     relacionados: ['caminho', 'revisao', 'testar'],
     secoes: [
@@ -446,6 +455,7 @@ const ARTIGOS: Artigo[] = [
       </>
     ),
     tags: ['revisão', 'ajustes', 'avisos'],
+    chaves: ['ajuste', 'ciente', 'confirmar recebimento', 'sino', 'notificação', 'reenviar', 'apontamento'],
     leitura: 2,
     relacionados: ['enviar', 'paineis', 'caminho'],
     secoes: [
@@ -493,6 +503,7 @@ const ARTIGOS: Artigo[] = [
       </>
     ),
     tags: ['certificado', 'pdf', 'datasheet'],
+    chaves: ['pdf', 'baixar', 'download', 'datasheet', 'ficha técnica', 'certificado'],
     leitura: 1,
     relacionados: ['reteste', 'paineis', 'caminho'],
     secoes: [
@@ -533,6 +544,7 @@ const ARTIGOS: Artigo[] = [
     resumo: 'Saiu uma nova versão do agente? Teste de novo sem perder o histórico.',
     destaque: <>A homologação anterior continua guardada. A coluna passa a mostrar o reteste, do zero.</>,
     tags: ['reteste', 'versão', 'histórico'],
+    chaves: ['nova versão', 'versão do agente', 'histórico', 'retestar'],
     leitura: 1,
     relacionados: ['certificado', 'cadastrar', 'testar'],
     secoes: [
@@ -562,6 +574,7 @@ const ARTIGOS: Artigo[] = [
     resumo: 'As perguntas que mais aparecem no dia a dia, com a resposta direta.',
     destaque: <>Não achou o que procurava? Fale com a equipe de homologação da Mobiltec.</>,
     tags: ['faq', 'ajuda'],
+    chaves: ['faq', 'bloqueado', 'permissão', 'não consigo', 'engano', 'justificativa'],
     leitura: 2,
     relacionados: ['caminho', 'testar', 'certificado'],
     secoes: [
@@ -596,6 +609,19 @@ const ARTIGOS: Artigo[] = [
 ]
 
 const POR_ID = new Map(ARTIGOS.map((a) => [a.id, a]))
+
+/** Minúsculas e sem acento: "validacao" encontra "Validação" */
+function normalizar(t: string): string {
+  return t.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+}
+
+function buscarArtigos(termo: string): Artigo[] {
+  const t = normalizar(termo.trim())
+  if (!t) return []
+  return ARTIGOS.filter((a) =>
+    normalizar([a.titulo, a.resumo, ...a.tags, ...(a.chaves ?? []), ...a.secoes.map((x) => x.titulo)].join(' ')).includes(t),
+  )
+}
 
 function lerHash(): string | null {
   const id = window.location.hash.replace('#', '')
@@ -668,13 +694,7 @@ export function Guia() {
     return () => window.removeEventListener('scroll', aoRolar)
   }, [artigo])
 
-  const resultadosBusca = useMemo(() => {
-    const termo = busca.trim().toLowerCase()
-    if (!termo) return []
-    return ARTIGOS.filter((a) =>
-      [a.titulo, a.resumo, ...a.tags].join(' ').toLowerCase().includes(termo),
-    )
-  }, [busca])
+  const resultadosBusca = useMemo(() => buscarArtigos(busca), [busca])
 
   function alternarCategoria(id: string) {
     setAbertas((a) => {
@@ -701,7 +721,14 @@ export function Guia() {
   const categoriaAtual = artigo ? CATEGORIAS.find((c) => c.id === artigo.categoria) : null
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--color-card)', color: 'var(--color-foreground)' }}>
+    // Fundo da janela + o guia inteiro num card grande, como as telas do
+    // sistema: o fundo aparece nas laterais e no topo. `overflow-clip` (e não
+    // `hidden`) para não quebrar o cabeçalho e as colunas fixas.
+    <div className="guia-fundo min-h-screen px-2 py-2 sm:px-4 sm:py-4 lg:px-6 lg:py-5" style={{ color: 'var(--color-foreground)' }}>
+    <div
+      className="mx-auto min-h-[calc(100vh-2.5rem)] max-w-[1320px] overflow-clip rounded-2xl border shadow-[0_1px_3px_rgba(30,10,40,0.06),0_12px_40px_-16px_rgba(30,10,40,0.18)]"
+      style={{ background: 'var(--color-card)', borderColor: 'var(--color-border)' }}
+    >
       {/* Topo */}
       <header
         className="sticky top-0 z-30 border-b"
@@ -735,7 +762,7 @@ export function Guia() {
       <div className="flex">
         {/* ---------------- Esquerda: navegação ---------------- */}
         <aside
-          className="sticky top-[61px] hidden h-[calc(100vh-61px)] w-72 shrink-0 overflow-y-auto border-r px-4 py-5 lg:block"
+          className="sticky top-[61px] hidden h-[calc(100vh-61px)] w-60 shrink-0 overflow-y-auto border-r px-3 py-5 lg:block"
           style={{ background: 'var(--color-sidebar)', borderColor: 'var(--color-border)' }}
         >
           <a href="#" className={`guia-nav-item ${!artigo ? 'guia-nav-ativo' : ''}`}>
@@ -928,7 +955,7 @@ export function Guia() {
               </article>
 
               {/* ---------------- Direita ---------------- */}
-              <aside className="sticky top-[61px] hidden h-[calc(100vh-61px)] w-64 shrink-0 overflow-y-auto py-9 pr-6 xl:block">
+              <aside className="sticky top-[61px] hidden h-[calc(100vh-61px)] w-56 shrink-0 overflow-y-auto py-9 pr-6 xl:block">
                 <p className="guia-nav-rotulo !px-0">Nesta página</p>
                 <ul className="border-l" style={{ borderColor: 'var(--color-border)' }}>
                   {artigo.secoes.map((s) => (
@@ -983,33 +1010,127 @@ export function Guia() {
         </main>
       </div>
     </div>
+    </div>
   )
 }
 
-/** Página inicial do guia: boas-vindas e as categorias */
+/** Etapas do processo, para o mapa visual da página inicial */
+const MAPA_PROCESSO: { n: string; titulo: string; texto: string; artigo: string }[] = [
+  { n: '01', titulo: 'Cadastrar', texto: 'Vira uma coluna na matriz', artigo: 'cadastrar' },
+  { n: '02', titulo: 'Testar', texto: 'Resultado e observações por item', artigo: 'testar' },
+  { n: '03', titulo: 'Validar', texto: 'A Mobiltec confere e aprova', artigo: 'enviar' },
+  { n: '04', titulo: 'Certificar', texto: 'PDF oficial liberado', artigo: 'certificado' },
+]
+
+/** Página inicial do guia: boas-vindas, busca, mapa do processo e categorias */
 function Inicio() {
+  const [busca, aoBuscar] = useState('')
+  const resultados = useMemo(() => buscarArtigos(busca), [busca])
+  const totalMin = ARTIGOS.reduce((t, a) => t + a.leitura, 0)
   return (
-    <div className="px-5 py-8 sm:px-10 lg:py-10">
-      <div className="mx-auto max-w-5xl">
-        <div className="textura-grade relative overflow-hidden rounded-2xl border px-6 py-9 sm:px-10" style={{ borderColor: 'var(--color-border)' }}>
-          <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--color-primary)' }}>
-            Guia de uso
-          </p>
-          <h1 className="mt-2 max-w-xl text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
-            Como homologar na plataforma Mobiltec
-          </h1>
-          <p className="mt-3 max-w-xl text-[15px] leading-relaxed" style={{ color: 'var(--color-muted-foreground)' }}>
-            Do primeiro modelo cadastrado ao certificado baixado, em artigos curtos e diretos.
-          </p>
-          <a
-            href="#onde-voce-esta"
-            className="mt-6 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-95"
-            style={{ background: 'var(--color-primary)' }}
-          >
-            Comece por aqui
-            <span aria-hidden>→</span>
-          </a>
-        </div>
+    <div className="px-5 py-7 sm:px-8 lg:px-10 lg:py-9">
+      <div className="mx-auto max-w-[60rem]">
+        {/* Abertura: texto e busca à esquerda, mapa do processo à direita */}
+        <section className="guia-hero relative z-10 rounded-2xl border" style={{ borderColor: 'var(--color-border)' }}>
+          {/* Decoração em camada própria: recorta o brilho sem cortar o resultado da busca */}
+          <div className="guia-hero-fundo pointer-events-none absolute inset-0 overflow-hidden rounded-2xl" aria-hidden />
+          <div className="relative grid gap-8 p-6 sm:p-9 md:grid-cols-[minmax(0,1fr)_17.5rem] md:items-center">
+            <div className="min-w-0">
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full border bg-white/80 px-2.5 py-1 text-[11px] font-semibold"
+                style={{ borderColor: 'rgba(126,32,101,0.18)', color: 'var(--color-primary)' }}
+              >
+                <Icone nome="guia" className="h-3.5 w-3.5" />
+                Guia de uso · {ARTIGOS.length} artigos · ~{totalMin} min
+              </span>
+              <h1 className="mt-4 text-[1.75rem] font-bold leading-[1.15] tracking-tight text-balance sm:text-[2.1rem]">
+                Homologue seus dispositivos{' '}
+                <span style={{ color: 'var(--color-primary)' }}>do cadastro ao certificado</span>
+              </h1>
+              <p className="mt-3 max-w-[34rem] text-[15px] leading-relaxed" style={{ color: 'var(--color-muted-foreground)' }}>
+                Artigos curtos e diretos, na ordem em que você vai precisar deles.
+              </p>
+
+              {/* Busca: o caminho mais rápido numa central de ajuda */}
+              <div className="relative mt-6 max-w-[30rem]">
+                <Icone nome="busca" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+                <input
+                  value={busca}
+                  onChange={(e) => aoBuscar(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && resultados[0]) window.location.hash = resultados[0].id
+                    if (e.key === 'Escape') aoBuscar('')
+                  }}
+                  placeholder="O que você quer fazer? Ex.: enviar, certificado, foto…"
+                  className="w-full rounded-xl border bg-white py-3 pl-10 pr-4 text-sm shadow-[0_1px_2px_rgba(0,0,0,0.04)] outline-none transition-shadow focus:border-[var(--color-primary)] focus:shadow-[0_0_0_4px_rgba(126,32,101,0.08)]"
+                  style={{ borderColor: 'var(--color-border)' }}
+                  aria-label="Buscar no guia"
+                />
+                {busca.trim() && (
+                  <div
+                    className="absolute left-0 right-0 top-full z-20 mt-1.5 overflow-hidden rounded-xl border bg-white py-1 shadow-lg"
+                    style={{ borderColor: 'var(--color-border)' }}
+                  >
+                    {resultados.length === 0 ? (
+                      <p className="px-4 py-3 text-[13px]" style={{ color: 'var(--color-muted-foreground)' }}>
+                        Nada encontrado para "{busca}".
+                      </p>
+                    ) : (
+                      resultados.map((r) => (
+                        <a
+                          key={r.id}
+                          href={`#${r.id}`}
+                          onClick={() => aoBuscar('')}
+                          className="block px-4 py-2.5 transition-colors hover:bg-[var(--color-muted)]"
+                        >
+                          <span className="block text-sm font-semibold">{r.titulo}</span>
+                          <span className="block truncate text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
+                            {r.resumo}
+                          </span>
+                        </a>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <a
+                  href="#onde-voce-esta"
+                  className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition-transform hover:-translate-y-px"
+                  style={{ background: 'var(--color-primary)' }}
+                >
+                  Comece por aqui
+                  <span aria-hidden>→</span>
+                </a>
+                <a href="#duvidas" className="text-sm font-semibold hover:underline" style={{ color: 'var(--color-primary)' }}>
+                  Dúvidas rápidas
+                </a>
+              </div>
+            </div>
+
+            {/* Mapa do processo: a jornada inteira num relance */}
+            <ol className="guia-mapa relative rounded-xl border bg-white/90 p-2 shadow-[0_8px_24px_-12px_rgba(30,10,40,0.22)] backdrop-blur-sm" style={{ borderColor: 'var(--color-border)' }}>
+              {MAPA_PROCESSO.map((etapa, i) => (
+                <li key={etapa.n}>
+                  <a href={`#${etapa.artigo}`} className="guia-mapa-item group flex items-center gap-3 rounded-lg px-3 py-2.5">
+                    <span className="guia-mapa-n relative grid h-8 w-8 shrink-0 place-items-center rounded-full text-[11px] font-bold">
+                      {etapa.n}
+                      {i < MAPA_PROCESSO.length - 1 && <span className="guia-mapa-linha" aria-hidden />}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold">{etapa.titulo}</span>
+                      <span className="block truncate text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
+                        {etapa.texto}
+                      </span>
+                    </span>
+                    <span className="ml-auto text-sm opacity-0 transition-opacity group-hover:opacity-60" aria-hidden>→</span>
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
 
         <h2 className="mt-10 text-lg font-bold tracking-tight">Categorias</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

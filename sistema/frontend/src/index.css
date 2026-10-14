@@ -566,6 +566,67 @@
   background-size: 28px 28px;
 }
 
+/* Guia: fundo da janela em volta do card grande */
+.guia-fundo {
+  background-color: var(--color-sidebar);
+  background-image: radial-gradient(rgba(126, 32, 101, 0.07) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+/* Abertura do guia: grade que some em direção às bordas + brilho roxo discreto */
+.guia-hero {
+  background-color: #fdfcfd;
+}
+.guia-hero-fundo::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(126, 32, 101, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(126, 32, 101, 0.07) 1px, transparent 1px);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(ellipse 75% 85% at 75% 40%, #000 30%, transparent 78%);
+  mask-image: radial-gradient(ellipse 75% 85% at 75% 40%, #000 30%, transparent 78%);
+  pointer-events: none;
+}
+.guia-hero-fundo::after {
+  content: "";
+  position: absolute;
+  right: -90px;
+  top: -110px;
+  width: 360px;
+  height: 360px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(126, 32, 101, 0.14), transparent 65%);
+  pointer-events: none;
+}
+
+/* Mapa do processo: números ligados por uma linha vertical */
+.guia-mapa-item {
+  transition: background-color 140ms ease;
+}
+.guia-mapa-item:hover {
+  background-color: rgba(126, 32, 101, 0.05);
+}
+.guia-mapa-n {
+  background: rgba(126, 32, 101, 0.09);
+  color: var(--color-primary);
+  transition: background-color 140ms ease, color 140ms ease;
+}
+.guia-mapa-item:hover .guia-mapa-n {
+  background: var(--color-primary);
+  color: #fff;
+}
+.guia-mapa-linha {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 1px;
+  height: 20px;
+  transform: translateX(-50%);
+  background: rgba(126, 32, 101, 0.2);
+}
+
 /* Guia de uso: numeração automática dos passos */
 .guia-passos {
   counter-reset: guia-passo;
