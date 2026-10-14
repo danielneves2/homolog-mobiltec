@@ -119,6 +119,8 @@ function ItemSecundario({
  */
 interface SecaoMenu {
   titulo?: string
+  /** Ícone ao lado do subtítulo; numa seção sem título, ao lado da opção */
+  icone?: NomeIcone
   itens: ItemMenuDados[]
 }
 
@@ -302,7 +304,12 @@ function GrupoMenu({
             <div className="mt-1 ml-5 space-y-0.5">
               {secoes.map((sec, i) => (
                 <div key={sec.titulo ?? sec.itens[0]?.para ?? i} className={i > 0 ? 'menu-secao-divisor' : undefined}>
-                  {sec.titulo && <div className="menu-secao-titulo">{sec.titulo}</div>}
+                  {sec.titulo && (
+                    <div className="menu-secao-titulo">
+                      {sec.icone && <Icone nome={sec.icone} className="h-3.5 w-3.5 shrink-0" />}
+                      {sec.titulo}
+                    </div>
+                  )}
                   {sec.itens.map((f) => {
                     const isCertificado = f.para.includes('validar-certificados')
                     return (
@@ -319,7 +326,9 @@ function GrupoMenu({
                           }`
                         }
                       >
-                        {comIcones && <Icone nome={f.icone} className="h-[15px] w-[15px] shrink-0 opacity-80" />}
+                        {(comIcones || (!sec.titulo && sec.icone)) && (
+                          <Icone nome={comIcones ? f.icone : sec.icone!} className="h-[15px] w-[15px] shrink-0 opacity-80" />
+                        )}
                         <span className="flex-1 truncate">{f.rotulo}</span>
                         {isCertificado && totalPendentes > 0 && (
                           <span
@@ -345,6 +354,7 @@ function GrupoMenu({
             {secoes.map((sec, i) => [
               sec.titulo ? (
                 <div key={`t-${sec.titulo}`} className={`painel-secundario-secao${i === 0 ? ' painel-secundario-secao-primeira' : ''}`}>
+                  {sec.icone && <Icone nome={sec.icone} className="h-3.5 w-3.5 shrink-0" />}
                   {sec.titulo}
                 </div>
               ) : i > 0 ? (
@@ -355,7 +365,7 @@ function GrupoMenu({
                   key={f.para}
                   para={f.para}
                   fim={f.fim}
-                  icone={comIcones ? f.icone : undefined}
+                  icone={comIcones ? f.icone : !sec.titulo ? sec.icone : undefined}
                   rotulo={f.rotulo}
                   selo={f.para.includes('validar-certificados') ? totalPendentes : 0}
                   aoClicar={() => aoClicarItem?.(f)}
@@ -920,11 +930,11 @@ export function Layout() {
     { para: '/parceiros/validar-certificados', rotulo: 'Validar certificado', icone: 'certificado', fim: true },
   ]
   const secoesAmbiente: SecaoMenu[] = [
-    { titulo: 'Bateria de testes', itens: opcoesHomologacaoConfig },
+    { titulo: 'Bateria de testes', icone: 'checklist', itens: opcoesHomologacaoConfig },
     ...(ehAdmin
       ? [
-          { itens: opcoesDispositivos },
-          { titulo: 'Parceiros', itens: opcoesParceiros },
+          { icone: 'smartphone' as NomeIcone, itens: opcoesDispositivos },
+          { titulo: 'Parceiros', icone: 'parceiros' as NomeIcone, itens: opcoesParceiros },
         ]
       : []),
   ]
@@ -1062,7 +1072,7 @@ export function Layout() {
                 rel="noopener"
                 title={aberto ? 'Abre o guia em uma nova guia' : 'Guia de uso'}
                 data-item-menu="Guia de uso"
-                className={`btn-menu-lateral relative flex items-center select-none outline-none focus:outline-none focus-visible:outline-none text-[var(--color-muted-foreground)] ${
+                className={`btn-menu-lateral relative flex items-center select-none outline-none focus:outline-none focus-visible:outline-none text-[var(--color-foreground)] ${
                   aberto
                     ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium leading-tight'
                     : 'mx-auto h-9 w-9 items-center justify-center rounded-lg'

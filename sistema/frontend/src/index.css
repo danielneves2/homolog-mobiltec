@@ -299,7 +299,7 @@
     /* Acima dos cabeçalhos fixos da planilha (z-30) e abaixo dos modais (z-50) */
     z-index: 35;
     /* Largura única e compacta: não "pula" ao trocar de grupo */
-    width: 200px;
+    width: 216px;
     background: #fff;
     border-right: 1px solid var(--color-border);
     box-shadow: 8px 0 28px -12px rgba(30, 10, 40, 0.28);
@@ -346,6 +346,9 @@
     gap: 2px;
   }
   .painel-secundario-secao {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     margin: 10px 0 4px 16px;
     padding-top: 12px;
     border-top: 1px solid var(--color-border);
@@ -367,6 +370,9 @@
 
   /* Seções dentro de um grupo do menu aberto (ex.: Ambiente) */
   .menu-secao-titulo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     padding: 6px 10px 3px;
     color: var(--color-muted-foreground);
     font-size: 10px;

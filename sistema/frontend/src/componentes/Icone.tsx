@@ -39,6 +39,7 @@ export type NomeIcone =
   | 'dashboard'
   | 'engrenagem'
   | 'guia'
+  | 'checklist'
 
 const TRACADOS: Record<NomeIcone, string> = {
   home: 'M3 10.5 12 3l9 7.5M5.5 9.5V20h13V9.5',
@@ -77,6 +78,8 @@ const TRACADOS: Record<NomeIcone, string> = {
   email: 'M2.5 6.5h19v11h-19zM2.5 7l9.5 6.5L21.5 7',
   // Livro com interrogação: o guia de uso
   guia: 'M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20M10 8.6a2.1 2.1 0 1 1 3 1.9c-.6.3-1 .8-1 1.4v.4M12 14.6h.01',
+  // Lista com marcações: a bateria de testes
+  checklist: 'M3.5 6.5 5 8l2.5-2.5M3.5 12.5 5 14l2.5-2.5M3.5 18.5 5 20l2.5-2.5M11 7h9.5M11 13h9.5M11 19h9.5',
   dashboard: 'M3.5 3.5h7v8h-7zM13.5 3.5h7v4.5h-7zM13.5 11h7v9.5h-7zM3.5 14.5h7v6h-7z',
   engrenagem:
     'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6',
