@@ -965,8 +965,9 @@ export function Layout() {
     { titulo: 'Itens de teste', icone: 'checklist', itens: opcoesHomologacaoConfig },
     ...(ehAdmin
       ? [
-          { icone: 'smartphone' as NomeIcone, itens: opcoesDispositivos },
           { titulo: 'Parceiros', icone: 'parceiros' as NomeIcone, itens: opcoesParceiros },
+          // Opção solta fecha a lista, em vez de ficar entre duas seções
+          { icone: 'smartphone' as NomeIcone, itens: opcoesDispositivos },
         ]
       : []),
   ]
