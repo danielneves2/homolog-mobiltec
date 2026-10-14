@@ -291,7 +291,9 @@
     top: 0;
     bottom: 0;
     left: 64px;
-    z-index: 30;
+    /* Acima dos cabeçalhos fixos da planilha (z-30) e abaixo do trilho (z-40)
+       e dos modais (z-50) */
+    z-index: 35;
     width: 248px;
     background: #fff;
     border-right: 1px solid var(--color-border);
