@@ -686,7 +686,7 @@ function MenuPaineis({
       {/* Coluna secundária (menu recolhido) */}
       {!aberto && secundario.conteudo === chave && secundario.slot &&
         createPortal(
-          <ConteudoSecundario titulo="Painel">
+          <ConteudoSecundario titulo="Painel de homologação">
             <ItemSecundario para="/" fim rotulo="Mobiltec" />
             {ehParceiro && usuario?.empresa && usuario.empresa.trim().toLowerCase() !== 'mobiltec' && (
               <ItemSecundario

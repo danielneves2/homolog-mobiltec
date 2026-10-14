@@ -86,12 +86,11 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
     if (!tipo?.gruposOrdem || tipo.gruposOrdem.length === 0) {
       return padraoInicial
     }
+    // O que foi salvo vale: uma bateria padrão excluída não pode voltar
+    // sozinha só por ser padrão.
     const lista = [...tipo.gruposOrdem]
     if (!lista.includes('REGISTRO')) {
       lista.unshift('REGISTRO')
-    }
-    for (const b of ['TELEMETRIA', 'COLETA', 'COMANDOS', 'PERFIS']) {
-      if (!lista.includes(b)) lista.push(b)
     }
     return lista
   })
@@ -159,6 +158,11 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
   function removerBateria(chave: string) {
     setBateriasExtras((prev) => prev.filter((b) => b.chave !== chave))
     setOrdemBlocos((prev) => prev.filter((k) => k !== chave))
+    setBateriasTitulos((prev) => {
+      const proximo = { ...prev }
+      delete proximo[chave]
+      return proximo
+    })
     setNovos((prev) => prev.filter((n) => n.grupo !== chave))
     setMarcados((atual) => {
       const proximo = new Set(atual ?? (catalogo ?? []).map((i) => i.id))
@@ -274,10 +278,6 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
     (l) => campos.has(l.chave) || l.fixo,
   ).length
 
-  const flagadosRegistro = useMemo(() => {
-    return todasLinhasRegistro.filter((l) => !l.fixo && campos.has(l.chave)).length
-  }, [todasLinhasRegistro, campos])
-
   function alternarCampo(chave: string) {
     setCampos((atual) => {
       const proximo = new Set(atual)
@@ -307,15 +307,15 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
     setNovoNomeRegistro('')
   }
 
-  function excluirFlagadosRegistro() {
+  /** Tira uma linha da ficha. A criada aqui some de vez; a padrão só desmarca. */
+  function removerLinhaRegistro(chave: string) {
     setCampos((atual) => {
       const proximo = new Set(atual)
-      for (const l of todasLinhasRegistro) {
-        if (!l.fixo) proximo.delete(l.chave)
-      }
+      proximo.delete(chave)
       return proximo
     })
-    setLinhasRegistroCustom((prev) => prev.filter((c) => !campos.has(c.chave)))
+    setLinhasRegistroCustom((prev) => prev.filter((c) => c.chave !== chave))
+    if (registroEditandoChave === chave) cancelarEdicaoRegistro()
   }
 
   function alternarItem(id: string) {
@@ -357,17 +357,6 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
     }
   }
 
-  function excluirFlagadosGrupo(grupo: string) {
-    setMarcados((atual) => {
-      const proximo = new Set(atual ?? (catalogo ?? []).map((i) => i.id))
-      for (const item of porGrupo.get(grupo) ?? []) {
-        proximo.delete(item.id)
-      }
-      return proximo
-    })
-    setNovos((atual) => atual.filter((n) => n.grupo !== grupo))
-  }
-
   async function enviar(e: React.FormEvent) {
     e.preventDefault()
     setErro(null)
@@ -394,7 +383,11 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
         .map((l) => l.chave)
         .filter((c) => campos.has(c) || FICHA_FIXA.includes(c as ChaveFicha)),
       gruposOrdem: ordemBlocos,
-      gruposTitulos: bateriasTitulos,
+      // Títulos só das baterias que ficaram: o de uma excluída ressuscitava
+      // a bateria na próxima edição
+      gruposTitulos: Object.fromEntries(
+        Object.entries(bateriasTitulos).filter(([chave]) => ordemBlocos.includes(chave)),
+      ),
       itensExistentes: itensExistentesFinais,
       itensNovos: novos.map(({ grupo, nome, descricaoAcao }) => ({ grupo, nome, descricaoAcao })),
       itensEditados: itensEditadosFinais,
@@ -427,13 +420,20 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
 
   const totalOrdens = ordemBlocos.length
 
-  const bateriasOrdenadas = useMemo(() => {
-    return [...todasBaterias].sort((a, b) => {
+  const bateriasOrdenadas = (() => {
+    // Uma bateria aparece se está na ordem do tipo ou se ainda tem item
+    // marcado nela (o catálogo é global e traz grupos de outros tipos)
+    const temMarcado = (chave: string) =>
+      (porGrupo.get(chave) ?? []).some((i) => selecionados.has(i.id)) ||
+      novos.some((n) => n.grupo === chave)
+    return todasBaterias
+      .filter((b) => ordemBlocos.includes(b.chave) || temMarcado(b.chave))
+      .sort((a, b) => {
       const idxA = ordemBlocos.indexOf(a.chave)
       const idxB = ordemBlocos.indexOf(b.chave)
       return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB)
     })
-  }, [todasBaterias, ordemBlocos])
+  })()
 
   return (
     <form onSubmit={enviar} className="h-full flex flex-col">
@@ -517,7 +517,7 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
                 return (
                   <div
                     key={linha.chave}
-                    className="flex items-center justify-between gap-1.5 py-0.5 text-sm"
+                    className="group/item flex items-center justify-between gap-1.5 py-0.5 text-sm"
                     style={fixo ? { color: 'var(--color-muted-foreground)' } : undefined}
                   >
                     <label
@@ -531,7 +531,16 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
                         disabled={fixo}
                         onChange={() => alternarCampo(linha.chave)}
                       />
-                      <span className="truncate">{linha.rotulo}</span>
+                      <span
+                        className="truncate"
+                        style={
+                          marcada
+                            ? undefined
+                            : { color: 'var(--color-muted-foreground)', textDecoration: 'line-through', opacity: 0.7 }
+                        }
+                      >
+                        {linha.rotulo}
+                      </span>
                       {fixo && <span className="text-xs opacity-70">fixo</span>}
                       {linha.customizado && (
                         <span
@@ -543,25 +552,54 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
                       )}
                     </label>
                     {!fixo && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setRegistroEditandoChave(linha.chave)
-                          setNovoNomeRegistro(linha.rotulo)
-                        }}
-                        title={`Editar "${linha.rotulo}"`}
-                        className="opacity-40 hover:opacity-100 p-0.5 rounded transition-opacity"
-                        style={{ color: 'var(--color-muted-foreground)' }}
-                      >
-                        <Icone nome="lapis" className="h-3 w-3" />
-                      </button>
+                      <div className="flex shrink-0 items-center gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRegistroEditandoChave(linha.chave)
+                            setNovoNomeRegistro(linha.rotulo)
+                          }}
+                          title={`Editar "${linha.rotulo}"`}
+                          className="opacity-40 hover:opacity-100 p-0.5 rounded transition-opacity"
+                          style={{ color: 'var(--color-muted-foreground)' }}
+                        >
+                          <Icone nome="lapis" className="h-3 w-3" />
+                        </button>
+                        {marcada || linha.customizado ? (
+                          <button
+                            type="button"
+                            data-remover-ficha={linha.chave}
+                            onClick={() => removerLinhaRegistro(linha.chave)}
+                            title={
+                              linha.customizado
+                                ? `Excluir "${linha.rotulo}"`
+                                : `Remover "${linha.rotulo}" da ficha deste tipo`
+                            }
+                            aria-label={`Remover ${linha.rotulo}`}
+                            className="p-0.5 rounded opacity-0 transition-opacity group-hover/item:opacity-60 hover:!opacity-100 focus-visible:opacity-100"
+                            style={{ color: 'var(--color-destructive)' }}
+                          >
+                            <Icone nome="lixeira" className="h-3 w-3" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => alternarCampo(linha.chave)}
+                            title={`Incluir "${linha.rotulo}" de novo`}
+                            className="rounded px-1 text-[11px] font-semibold hover:underline"
+                            style={{ color: 'var(--color-primary)' }}
+                          >
+                            desfazer
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 )
               })}
             </div>
 
-            {/* Rodapé do registro: cadastrar, editar e lixeira reativa */}
+            {/* Rodapé do registro: cadastrar e editar (a remoção é por linha) */}
             <div className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3">
               <input
                 value={novoNomeRegistro}
@@ -602,32 +640,6 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
                 style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
               >
                 {registroEditandoChave ? 'Salvar' : 'Adicionar'}
-              </button>
-              <button
-                type="button"
-                disabled={flagadosRegistro === 0}
-                onClick={excluirFlagadosRegistro}
-                title={
-                  flagadosRegistro > 0
-                    ? `Excluir ${flagadosRegistro} item(ns) de registro flagado(s)`
-                    : 'Flag uma ou mais opções para excluir'
-                }
-                className={`rounded-md border p-1.5 flex items-center justify-center transition-all ${
-                  flagadosRegistro > 0
-                    ? 'border-red-300 text-red-600 bg-red-50 hover:bg-red-100 hover:border-red-400 cursor-pointer shadow-xs active:scale-95'
-                    : 'border-gray-200 text-gray-400 bg-gray-50/50 opacity-40 cursor-not-allowed'
-                }`}
-                style={
-                  flagadosRegistro > 0
-                    ? {
-                        borderColor: 'rgba(239, 68, 68, 0.4)',
-                        color: '#dc2626',
-                        background: 'rgba(254, 242, 242, 0.8)',
-                      }
-                    : undefined
-                  }
-              >
-                <Icone nome="lixeira" className="h-4 w-4" />
               </button>
             </div>
           </Secao>
@@ -723,7 +735,6 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
                       titulo={bateria.titulo}
                       ordem={ordemAtual > 0 ? ordemAtual : totalOrdens}
                       totalOrdens={totalOrdens}
-                      customizada={bateria.customizada}
                       itens={porGrupo.get(bateria.chave) ?? []}
                       selecionados={selecionados}
                       novos={novos.filter((n) => n.grupo === bateria.chave)}
@@ -735,7 +746,6 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
                       aoRemoverNovo={(chave) =>
                         setNovos((v) => v.filter((n) => n.chave !== chave))
                       }
-                      aoExcluirFlagados={() => excluirFlagadosGrupo(bateria.chave)}
                       aoMudarOrdem={(nova) => moverOrdem(bateria.chave, nova)}
                       aoSubir={() => subirOrdem(bateria.chave)}
                       aoDescer={() => descerOrdem(bateria.chave)}
@@ -913,7 +923,6 @@ function PainelGrupo({
   titulo,
   ordem,
   totalOrdens,
-  customizada,
   itens,
   selecionados,
   novos,
@@ -923,7 +932,6 @@ function PainelGrupo({
   aoAdicionar,
   aoSalvarEdicao,
   aoRemoverNovo,
-  aoExcluirFlagados,
   aoMudarOrdem,
   aoSubir,
   aoDescer,
@@ -934,7 +942,6 @@ function PainelGrupo({
   titulo: string
   ordem: number
   totalOrdens: number
-  customizada?: boolean
   itens: ItemTeste[]
   selecionados: Set<string>
   novos: ItemNovo[]
@@ -944,7 +951,6 @@ function PainelGrupo({
   aoAdicionar: (item: ItemNovo) => void
   aoSalvarEdicao: (idOuChave: string, ehNovo: boolean, nome: string, acao: string) => void
   aoRemoverNovo: (chave: string) => void
-  aoExcluirFlagados: () => void
   aoMudarOrdem: (n: number) => void
   aoSubir: () => void
   aoDescer: () => void
@@ -959,7 +965,7 @@ function PainelGrupo({
 
   const marcados = itens.filter((i) => selecionados.has(i.id)).length
   const total = marcados + novos.length
-  const temFlagados = marcados + novos.length > 0
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false)
 
   function submeter() {
     const n = nome.trim()
@@ -1110,17 +1116,39 @@ function PainelGrupo({
         <div className="ml-auto flex items-center gap-1.5">
           <BotaoLeve marca="todos" rotulo="Todos" aoClicar={() => aoDefinirTodos(true)} />
           <BotaoLeve marca="nenhum" rotulo="Nenhum" aoClicar={() => aoDefinirTodos(false)} />
-          {customizada && aoRemoverBateria && (
-            <button
-              type="button"
-              onClick={aoRemoverBateria}
-              title={`Remover bateria "${titulo}"`}
-              className="rounded border px-2 py-0.5 text-xs text-white bg-red-500/30 hover:bg-red-500/50 transition-colors"
-              style={{ borderColor: 'rgba(255,255,255,.38)' }}
-            >
-              Excluir bateria
-            </button>
-          )}
+          {aoRemoverBateria &&
+            (confirmandoExclusao ? (
+              <span className="flex items-center gap-1.5 rounded bg-white/15 px-2 py-0.5 text-xs text-white">
+                Excluir {total > 0 ? `a bateria e ${total} ${total === 1 ? 'item' : 'itens'}` : 'a bateria'}?
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConfirmandoExclusao(false)
+                    aoRemoverBateria()
+                  }}
+                  className="rounded bg-red-500 px-2 py-0.5 font-semibold text-white hover:bg-red-600 cursor-pointer"
+                >
+                  Excluir
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmandoExclusao(false)}
+                  className="rounded px-1.5 py-0.5 text-white/80 hover:bg-white/20 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmandoExclusao(true)}
+                title={`Excluir a bateria "${titulo}" deste tipo`}
+                className="rounded border px-2 py-0.5 text-xs text-white bg-red-500/30 hover:bg-red-500/50 transition-colors cursor-pointer"
+                style={{ borderColor: 'rgba(255,255,255,.38)' }}
+              >
+                Excluir bateria
+              </button>
+            ))}
         </div>
       </div>
 
@@ -1136,11 +1164,11 @@ function PainelGrupo({
           return (
             <div
               key={item.id}
-              className="flex items-center justify-between gap-1.5 py-0.5 text-sm"
+              className="group/item flex items-center justify-between gap-1.5 py-0.5 text-sm"
             >
               <label
                 className="flex cursor-pointer items-center gap-2 min-w-0 flex-1"
-                title={acaoExibida}
+                title={marcado ? acaoExibida : 'Fora deste tipo — marque para incluir de novo'}
               >
                 <input
                   type="checkbox"
@@ -1148,17 +1176,51 @@ function PainelGrupo({
                   checked={marcado}
                   onChange={() => aoAlternar(item.id)}
                 />
-                <span className="truncate">{nomeExibido}</span>
+                <span
+                  className="truncate"
+                  style={
+                    marcado
+                      ? undefined
+                      : { color: 'var(--color-muted-foreground)', textDecoration: 'line-through', opacity: 0.7 }
+                  }
+                >
+                  {nomeExibido}
+                </span>
               </label>
-              <button
-                type="button"
-                onClick={() => iniciarEdicao(item.id, false, nomeExibido, acaoExibida)}
-                title={`Editar "${nomeExibido}"`}
-                className="opacity-40 hover:opacity-100 p-0.5 rounded transition-opacity"
-                style={{ color: 'var(--color-muted-foreground)' }}
-              >
-                <Icone nome="lapis" className="h-3 w-3" />
-              </button>
+              <div className="flex shrink-0 items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => iniciarEdicao(item.id, false, nomeExibido, acaoExibida)}
+                  title={`Editar "${nomeExibido}"`}
+                  className="opacity-40 hover:opacity-100 p-0.5 rounded transition-opacity"
+                  style={{ color: 'var(--color-muted-foreground)' }}
+                >
+                  <Icone nome="lapis" className="h-3 w-3" />
+                </button>
+                {marcado ? (
+                  <button
+                    type="button"
+                    data-remover-item={item.id}
+                    onClick={() => aoAlternar(item.id)}
+                    title={`Remover "${nomeExibido}" deste tipo`}
+                    aria-label={`Remover ${nomeExibido}`}
+                    className="p-0.5 rounded opacity-0 transition-opacity group-hover/item:opacity-60 hover:!opacity-100 focus-visible:opacity-100"
+                    style={{ color: 'var(--color-destructive)' }}
+                  >
+                    <Icone nome="lixeira" className="h-3 w-3" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => aoAlternar(item.id)}
+                    title={`Incluir "${nomeExibido}" de novo`}
+                    className="rounded px-1 text-[11px] font-semibold hover:underline"
+                    style={{ color: 'var(--color-primary)' }}
+                  >
+                    desfazer
+                  </button>
+                )}
+              </div>
             </div>
           )
         })}
@@ -1189,11 +1251,12 @@ function PainelGrupo({
               <button
                 type="button"
                 onClick={() => aoRemoverNovo(n.chave)}
+                title={`Remover "${n.nome}"`}
                 aria-label={`Remover ${n.nome}`}
-                className="px-1 text-sm hover:opacity-70"
-                style={{ color: 'var(--color-muted-foreground)' }}
+                className="p-0.5 rounded opacity-60 hover:opacity-100 transition-opacity"
+                style={{ color: 'var(--color-destructive)' }}
               >
-                ✕
+                <Icone nome="lixeira" className="h-3 w-3" />
               </button>
             </div>
           </div>
@@ -1256,32 +1319,6 @@ function PainelGrupo({
           style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
         >
           {itemEditando ? 'Salvar' : 'Adicionar'}
-        </button>
-        <button
-          type="button"
-          disabled={!temFlagados}
-          onClick={aoExcluirFlagados}
-          title={
-            temFlagados
-              ? `Excluir ${marcados + novos.length} funcionalidade(s) flagada(s) deste modelo`
-              : 'Flag uma ou mais funcionalidades para excluir'
-          }
-          className={`rounded-md border p-1.5 flex items-center justify-center transition-all ${
-            temFlagados
-              ? 'border-red-300 text-red-600 bg-red-50 hover:bg-red-100 hover:border-red-400 cursor-pointer shadow-xs active:scale-95'
-              : 'border-gray-200 text-gray-400 bg-gray-50/50 opacity-40 cursor-not-allowed'
-          }`}
-          style={
-            temFlagados
-              ? {
-                  borderColor: 'rgba(239, 68, 68, 0.4)',
-                  color: '#dc2626',
-                  background: 'rgba(254, 242, 242, 0.8)',
-                }
-              : undefined
-          }
-        >
-          <Icone nome="lixeira" className="h-4 w-4" />
         </button>
       </div>
     </div>
