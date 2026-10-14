@@ -73,7 +73,6 @@ function ConteudoSecundario({ titulo, children }: { titulo: string; children: Re
 function ItemSecundario({
   para,
   fim,
-  icone,
   rotulo,
   selo = 0,
   corSelo,
@@ -81,7 +80,6 @@ function ItemSecundario({
 }: {
   para: string
   fim?: boolean
-  icone?: NomeIcone
   rotulo: string
   selo?: number
   corSelo?: string
@@ -98,7 +96,6 @@ function ItemSecundario({
       }}
       className={({ isActive }) => `item-secundario${isActive ? ' item-secundario-ativo' : ''}`}
     >
-      {icone && <Icone nome={icone} className="h-4 w-4 shrink-0" />}
       <span className="flex-1 truncate">{rotulo}</span>
       {selo > 0 && (
         <span
@@ -322,7 +319,6 @@ function GrupoMenu({
                 key={f.para}
                 para={f.para}
                 fim={f.fim}
-                icone={f.icone}
                 rotulo={f.rotulo}
                 selo={f.para.includes('validar-certificados') ? totalPendentes : 0}
                 aoClicar={() => aoClicarItem?.(f)}
@@ -655,11 +651,11 @@ function MenuPaineis({
       {!aberto && secundario.conteudo === chave && secundario.slot &&
         createPortal(
           <ConteudoSecundario titulo="Painel">
-            <ItemSecundario para="/" fim icone="home" rotulo="Mobiltec" />
+            <ItemSecundario para="/" fim rotulo="Mobiltec" />
             {ehParceiro && usuario?.empresa && usuario.empresa.trim().toLowerCase() !== 'mobiltec' && (
               <ItemSecundario
                 para="/paineis/meu-painel"
-                icone="ambiente"
+               
                 rotulo={usuario.empresa}
                 selo={revisoesPendentes}
                 corSelo="#F59E0B"
@@ -675,7 +671,7 @@ function MenuPaineis({
                     <ItemSecundario
                       key={p.empresa}
                       para={`/paineis/parceiro/${p.id}`}
-                      icone="parceiros"
+                     
                       rotulo={p.empresa}
                     />
                   ))
@@ -878,7 +874,7 @@ export function Layout() {
     { para: '/registro', rotulo: 'Registrar homologação', icone: 'registro', fim: true },
     // `fim: false`: editar um tipo é `/registro/tipos/:id`, e a opção continua
     // sendo esta. O item acima é `fim: true` para não engolir esta rota.
-    { para: '/registro/tipos', rotulo: 'Editar / remover homologação', icone: 'registro', fim: false },
+    { para: '/registro/tipos', rotulo: 'Editar homologação', icone: 'registro', fim: false },
   ]
 
   const parceiros = { para: '/parceiros', rotulo: 'Parceiros', icone: 'parceiros' as NomeIcone }
