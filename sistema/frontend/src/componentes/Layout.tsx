@@ -20,51 +20,41 @@ interface ItemMenuDados {
 }
 
 /**
- * Coluna secundária do menu recolhido.
+ * Gaveta do menu recolhido.
  *
- * Com o menu em 64px não há onde desdobrar um grupo. Em vez de um popup
- * solto, o grupo abre uma coluna ao lado do trilho, que desliza e empurra o
- * painel para a direita. A coluna é uma só; quem a preenche (por portal) é o
- * grupo ativo.
+ * Com o menu em 64px não há onde desdobrar um grupo. Passar o mouse num ícone
+ * faz sair de dentro do trilho uma gaveta branca com as opções, por cima do
+ * conteúdo; tirar o mouse a recolhe. Clicar no ícone também abre/fecha (toque).
+ * A gaveta é uma só; quem a preenche (por portal) é o grupo ativo.
  */
 interface ContextoSecundario {
-  /** Grupo com a coluna aberta (null = fechada) */
+  /** Grupo com a gaveta aberta (null = fechada) */
   ativo: string | null
-  /** Grupo cujo conteúdo está na coluna — continua durante a animação de fechar */
+  /** Grupo cujo conteúdo está na gaveta — continua durante a animação de fechar */
   conteudo: string | null
   slot: HTMLElement | null
-  alternar: (chave: string) => void
+  abrir: (chave: string) => void
   fechar: () => void
+  /** Fecha com um respiro, para o mouse cruzar do ícone até a gaveta */
+  agendarFechar: () => void
+  cancelarFechar: () => void
 }
 
 const SecundarioCtx = createContext<ContextoSecundario>({
   ativo: null,
   conteudo: null,
   slot: null,
-  alternar: () => {},
+  abrir: () => {},
   fechar: () => {},
+  agendarFechar: () => {},
+  cancelarFechar: () => {},
 })
 
-/** Moldura da coluna: título do grupo, botão de fechar e as opções */
-function ConteudoSecundario({ titulo, icone, children }: { titulo: string; icone: NomeIcone; children: ReactNode }) {
-  const { fechar } = useContext(SecundarioCtx)
+/** Moldura da gaveta: título do grupo e as opções */
+function ConteudoSecundario({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <>
-      <div className="painel-secundario-cabecalho">
-        <span className="painel-secundario-icone">
-          <Icone nome={icone} className="h-4 w-4" />
-        </span>
-        <span className="flex-1 truncate">{titulo}</span>
-        <button
-          type="button"
-          onClick={fechar}
-          aria-label="Fechar"
-          title="Fechar (Esc)"
-          className="painel-secundario-fechar"
-        >
-          <Icone nome="x" className="h-3.5 w-3.5" />
-        </button>
-      </div>
+      <div className="painel-secundario-cabecalho">{titulo}</div>
       <div className="painel-secundario-lista">{children}</div>
     </>
   )
@@ -163,7 +153,10 @@ function GrupoMenu({
   }, [])
 
   function aoEntrarMouse() {
-    if (!aberto) return
+    if (!aberto) {
+      secundario.abrir(chave)
+      return
+    }
     if (refTimeout.current) {
       clearTimeout(refTimeout.current)
       refTimeout.current = null
@@ -172,7 +165,10 @@ function GrupoMenu({
   }
 
   function aoSairMouse() {
-    if (!aberto) return
+    if (!aberto) {
+      secundario.agendarFechar()
+      return
+    }
     if (refTimeout.current) clearTimeout(refTimeout.current)
     refTimeout.current = setTimeout(() => {
       setEmHover(false)
@@ -188,7 +184,8 @@ function GrupoMenu({
       })
       return
     }
-    secundario.alternar(chave)
+    // Hover já abre; o clique garante a abertura no toque
+    secundario.abrir(chave)
   }
 
   const abertoVisivel = expandido || emHover
@@ -302,7 +299,7 @@ function GrupoMenu({
 
       {!aberto && secundario.conteudo === chave && secundario.slot &&
         createPortal(
-          <ConteudoSecundario titulo={item.rotulo} icone={item.icone}>
+          <ConteudoSecundario titulo={item.rotulo}>
             {filhos.map((f) => (
               <ItemSecundario
                 key={f.para}
@@ -389,7 +386,8 @@ function MenuPaineis({
   const [emHover, setEmHover] = useState(false)
   const refTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const secundario = useContext(SecundarioCtx)
-  const secundarioAberto = !aberto && secundario.ativo === 'Painel'
+  const chave = 'Painel'
+  const secundarioAberto = !aberto && secundario.ativo === chave
 
   useEffect(() => {
     if (noPainel) setExpandido(true)
@@ -410,7 +408,10 @@ function MenuPaineis({
   }, [])
 
   function aoEntrarMouse() {
-    if (!aberto) return
+    if (!aberto) {
+      secundario.abrir(chave)
+      return
+    }
     if (refTimeout.current) {
       clearTimeout(refTimeout.current)
       refTimeout.current = null
@@ -419,7 +420,10 @@ function MenuPaineis({
   }
 
   function aoSairMouse() {
-    if (!aberto) return
+    if (!aberto) {
+      secundario.agendarFechar()
+      return
+    }
     if (refTimeout.current) clearTimeout(refTimeout.current)
     refTimeout.current = setTimeout(() => {
       setEmHover(false)
@@ -435,7 +439,8 @@ function MenuPaineis({
       })
       return
     }
-    secundario.alternar('Painel')
+    // Hover já abre; o clique garante a abertura no toque
+    secundario.abrir(chave)
   }
 
   const abertoVisivel = expandido || emHover
@@ -622,9 +627,9 @@ function MenuPaineis({
       )}
 
       {/* Coluna secundária (menu recolhido) */}
-      {!aberto && secundario.conteudo === 'Painel' && secundario.slot &&
+      {!aberto && secundario.conteudo === chave && secundario.slot &&
         createPortal(
-          <ConteudoSecundario titulo="Painel" icone="painel">
+          <ConteudoSecundario titulo="Painel">
             <ItemSecundario para="/" fim icone="home" rotulo="Mobiltec" />
             {ehParceiro && usuario?.empresa && usuario.empresa.trim().toLowerCase() !== 'mobiltec' && (
               <ItemSecundario
@@ -768,19 +773,39 @@ export function Layout() {
   const [slotSecundario, setSlotSecundario] = useState<HTMLElement | null>(null)
   const secundarioVisivel = !aberto && secundarioAtivo !== null
 
-  const ctxSecundario = useMemo<ContextoSecundario>(
-    () => ({
+  const refFecharSecundario = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const ctxSecundario = useMemo<ContextoSecundario>(() => {
+    const cancelarFechar = () => {
+      if (refFecharSecundario.current) {
+        clearTimeout(refFecharSecundario.current)
+        refFecharSecundario.current = null
+      }
+    }
+    return {
       ativo: secundarioAtivo,
       conteudo: secundarioConteudo,
       slot: slotSecundario,
-      alternar: (chave) => {
-        setSecundarioAtivo((atual) => (atual === chave ? null : chave))
+      abrir: (chave) => {
+        cancelarFechar()
+        setSecundarioAtivo(chave)
         setSecundarioConteudo(chave)
       },
-      fechar: () => setSecundarioAtivo(null),
-    }),
-    [secundarioAtivo, secundarioConteudo, slotSecundario],
-  )
+      fechar: () => {
+        cancelarFechar()
+        setSecundarioAtivo(null)
+      },
+      agendarFechar: () => {
+        cancelarFechar()
+        refFecharSecundario.current = setTimeout(() => setSecundarioAtivo(null), 180)
+      },
+      cancelarFechar,
+    }
+  }, [secundarioAtivo, secundarioConteudo, slotSecundario])
+
+  useEffect(() => () => {
+    if (refFecharSecundario.current) clearTimeout(refFecharSecundario.current)
+  }, [])
 
   useEffect(() => {
     if (!secundarioAtivo) return
@@ -896,9 +921,9 @@ export function Layout() {
       {/* O fundo da janela é o mesmo do menu: é a faixa que aparece em volta do
           card do painel e o que dá a ele o efeito de folha solta. */}
       <SecundarioCtx.Provider value={ctxSecundario}>
-      <div className="flex-1 flex min-h-0 overflow-hidden" style={{ background: 'var(--color-sidebar)' }}>
+      <div className="relative flex-1 flex min-h-0 overflow-hidden" style={{ background: 'var(--color-sidebar)' }}>
         <aside
-          className="flex flex-col shrink-0 transition-[width] duration-200"
+          className="relative z-40 flex flex-col shrink-0 transition-[width] duration-200"
           style={{ width: largura, background: 'var(--color-sidebar)' }}
         >
           {/* Sem botão aqui dentro: aberto fica só o lockup, recolhido só o
@@ -1009,15 +1034,17 @@ export function Layout() {
           </div>
         </aside>
 
-        {/* Coluna secundária: abre ao lado do trilho recolhido e empurra o
-            painel. Fica sempre montada — a largura anima de 0 até a coluna. */}
+        {/* Gaveta do menu recolhido: sai de dentro do trilho, por cima do
+            painel, enquanto o mouse estiver no ícone ou nela. */}
         <div
           className="painel-secundario"
           data-aberto={secundarioVisivel ? 'true' : 'false'}
           aria-hidden={!secundarioVisivel}
           inert={!secundarioVisivel}
+          onMouseEnter={ctxSecundario.cancelarFechar}
+          onMouseLeave={ctxSecundario.agendarFechar}
           onTransitionEnd={(e) => {
-            if (e.target === e.currentTarget && e.propertyName === 'width' && !secundarioAtivo) {
+            if (e.target === e.currentTarget && e.propertyName === 'opacity' && !secundarioAtivo) {
               setSecundarioConteudo(null)
             }
           }}
