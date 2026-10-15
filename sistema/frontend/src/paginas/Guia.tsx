@@ -1119,11 +1119,12 @@ function Inicio() {
                 Guia de uso · {ARTIGOS.length} artigos · ~{totalMin} min
               </span>
               <h1 className="mt-4 text-[1.75rem] font-bold leading-[1.15] tracking-tight text-balance sm:text-[2.1rem]">
-                Homologue seus dispositivos{' '}
-                <span style={{ color: 'var(--color-primary)' }}>do cadastro ao certificado</span>
+                Homologação no Cloud4Mobile,{' '}
+                <span style={{ color: 'var(--color-primary)' }}>do teste ao certificado</span>
               </h1>
-              <p className="mt-3 max-w-[34rem] text-[15px] leading-relaxed" style={{ color: 'var(--color-muted-foreground)' }}>
-                Artigos curtos e diretos, na ordem em que você vai precisar deles.
+              <p className="mt-3 max-w-[36rem] text-[15px] leading-relaxed" style={{ color: 'var(--color-muted-foreground)' }}>
+                Veja quais dispositivos a Mobiltec já aprovou e quais estão em homologação. Teste os
+                seus, guarde o registro de cada etapa e emita seus próprios certificados.
               </p>
 
               {/* Busca: o caminho mais rápido numa central de ajuda */}

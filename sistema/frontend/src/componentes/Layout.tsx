@@ -245,7 +245,7 @@ function GrupoMenu({
         data-grupo-menu={item.rotulo}
         className={`btn-menu-lateral relative flex items-center select-none outline-none focus:outline-none focus-visible:outline-none ${
           aberto
-            ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium leading-tight'
+            ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-[15px] font-medium leading-tight'
             : 'mx-auto h-9 w-9 items-center justify-center rounded-lg'
         } ${
           noGrupo
@@ -543,7 +543,7 @@ function MenuPaineis({
         data-grupo-menu="Painel"
         className={`btn-menu-lateral relative flex items-center select-none outline-none focus:outline-none focus-visible:outline-none ${
           aberto
-            ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium leading-tight'
+            ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-[15px] font-medium leading-tight'
             : 'mx-auto h-9 w-9 items-center justify-center rounded-lg'
         } ${
           noPainel
@@ -1106,7 +1106,7 @@ export function Layout() {
                   className={({ isActive }) =>
                     `btn-menu-lateral relative flex items-center select-none outline-none focus:outline-none focus-visible:outline-none ${
                       aberto
-                        ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium leading-tight'
+                        ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-[15px] font-medium leading-tight'
                         : 'mx-auto h-9 w-9 items-center justify-center rounded-lg'
                     } ${isActive ? 'ativo' : ''}`
                   }
@@ -1134,7 +1134,7 @@ export function Layout() {
                 data-item-menu="Guia de uso"
                 className={`btn-menu-lateral btn-menu-guia relative flex items-center select-none outline-none focus:outline-none focus-visible:outline-none ${
                   aberto
-                    ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium leading-tight'
+                    ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-[15px] font-medium leading-tight'
                     : 'mx-auto h-9 w-9 items-center justify-center rounded-lg'
                 }`}
                 style={{ justifyContent: aberto ? 'flex-start' : 'center' }}
