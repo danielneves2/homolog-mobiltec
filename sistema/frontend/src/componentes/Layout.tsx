@@ -614,7 +614,7 @@ function MenuPaineis({
                   }`
                 }
               >
-                <span className="truncate">Mobiltec</span>
+                <span className="truncate">MOBILTEC</span>
               </NavLink>
 
               {/* Se for PARCEIRO: mostra diretamente o nome da própria empresa (se não for a Mobiltec) */}
@@ -729,7 +729,7 @@ function MenuPaineis({
       {!aberto && secundario.conteudo === chave && secundario.slot &&
         createPortal(
           <ConteudoSecundario titulo="Painéis">
-            <ItemSecundario para="/" fim rotulo="Mobiltec" />
+            <ItemSecundario para="/" fim rotulo="MOBILTEC" />
             {ehParceiro && usuario?.empresa && usuario.empresa.trim().toLowerCase() !== 'mobiltec' && (
               <ItemSecundario
                 para="/paineis/meu-painel"
