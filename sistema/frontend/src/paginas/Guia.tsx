@@ -1119,8 +1119,8 @@ function Inicio() {
                 Guia de uso · {ARTIGOS.length} artigos · ~{totalMin} min
               </span>
               <h1 className="mt-4 text-[1.75rem] font-bold leading-[1.15] tracking-tight text-balance sm:text-[2.1rem]">
-                Homologação no Cloud4Mobile,{' '}
-                <span style={{ color: 'var(--color-primary)' }}>do teste ao certificado</span>
+                Homologação de dispositivos{' '}
+                <span style={{ color: 'var(--color-primary)' }}>Cloud4Mobile</span>
               </h1>
               <p className="mt-3 max-w-[36rem] text-[15px] leading-relaxed" style={{ color: 'var(--color-muted-foreground)' }}>
                 Veja quais dispositivos a Mobiltec já aprovou e quais estão em homologação. Teste os
