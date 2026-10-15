@@ -234,7 +234,9 @@ export interface Usuario {
   cargo: string
   papel: PapelUsuario
   empresa?: string | null
+  /** Para parceiro, calculado pelo backend: liberadas − ocultas do ambiente (D499) */
   categoriasPermitidas?: string[]
+  podeConfigurarAmbiente?: boolean
 }
 
 export interface Parceiro {
@@ -245,6 +247,7 @@ export interface Parceiro {
   papel: PapelUsuario
   empresa: string
   categoriasPermitidas: string[]
+  podeConfigurarAmbiente?: boolean
   ativo: boolean
   criadoEm: string
 }
@@ -256,6 +259,7 @@ export interface PayloadCriarParceiro {
   senha: string
   categoriasPermitidas: string[]
   isAdmin?: boolean
+  podeConfigurarAmbiente?: boolean
 }
 
 export interface PayloadAtualizarParceiro {
@@ -266,6 +270,33 @@ export interface PayloadAtualizarParceiro {
   categoriasPermitidas?: string[]
   ativo?: boolean
   isAdmin?: boolean
+  podeConfigurarAmbiente?: boolean
+}
+
+// D500: configuração do ambiente do parceiro
+export interface CategoriaAmbiente {
+  slug: string
+  nome: string
+  icone: string
+  oculta: boolean
+}
+
+export interface ColaboradorAmbiente {
+  id: string
+  nome: string
+  email: string
+  ativo: boolean
+  podeConfigurarAmbiente: boolean
+  criadoEm: string
+  voce: boolean
+}
+
+export interface AmbienteParceiroDados {
+  empresa: string
+  dominio: string
+  podeConfigurar: boolean
+  categorias: CategoriaAmbiente[]
+  colaboradores: ColaboradorAmbiente[]
 }
 
 export interface MetricasPainelParceiro {
@@ -357,6 +388,8 @@ export interface Categoria {
   icone: string
   ordem: number
   ativo?: boolean
+  /** D498: false = homologação interna (só a Mobiltec vê) */
+  liberadaParceiros?: boolean
   /**
    * Linhas da ficha que este tipo mostra na planilha, pelas chaves de
    * `LINHAS_FICHA`. Vazio = a ficha inteira, que é o estado das categorias

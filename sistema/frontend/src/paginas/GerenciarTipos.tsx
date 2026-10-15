@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ChaveLiberarParceiros } from '@/componentes/tipo/ChaveLiberarParceiros'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ErroApi } from '@/lib/api'
 import {
@@ -150,6 +151,18 @@ export function GerenciarTipos() {
                           fora de operação
                         </span>
                       )}
+                      {/* D498: tipo só da Mobiltec */}
+                      {tipo.liberadaParceiros === false && (
+                        <span
+                          className="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase"
+                          style={{
+                            background: 'var(--color-brand-purple-soft)',
+                            color: 'var(--color-brand-purple-fg)',
+                          }}
+                        >
+                          homologação interna
+                        </span>
+                      )}
                     </p>
                     <p className="text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
                       {tipo.dispositivos} {tipo.dispositivos === 1 ? 'modelo' : 'modelos'} ·{' '}
@@ -181,7 +194,15 @@ export function GerenciarTipos() {
 
                 <div className="border-t pt-3 flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <h4 className="label-caps">Baterias de Teste</h4>
+                    <div className="flex items-center gap-4">
+                      <h4 className="label-caps">Baterias de Teste</h4>
+                      {/* D498: liberar a matriz para todos os parceiros ou deixar interna */}
+                      <ChaveLiberarParceiros
+                        ligada={tipo.liberadaParceiros !== false}
+                        desabilitada={editar.isPending}
+                        aoMudar={(v) => editar.mutate({ id: tipo.id, liberadaParceiros: v })}
+                      />
+                    </div>
                     <button
                       type="button"
                       onClick={() => setModalBateria({ categoriaId: tipo.id })}

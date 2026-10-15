@@ -15,7 +15,7 @@ import { META_STATUS } from '@/lib/tipos'
  * sistema? Mude aqui também.
  */
 
-const ATUALIZADO_EM = '14 out 2026'
+const ATUALIZADO_EM = '15 out 2026'
 
 interface Secao {
   id: string
@@ -105,6 +105,11 @@ const ARTIGOS: Artigo[] = [
             </Check>
             <Check>
               <strong>Menu recolhido:</strong> passe o mouse sobre um ícone para ver as opções dele.
+            </Check>
+            <Check>
+              <strong>Administrador do ambiente:</strong> quem a Mobiltec liberou vê também{' '}
+              <Rotulo>Configurar ambiente</Rotulo>, para escolher as matrizes da empresa e convidar colegas (
+              <LinkArtigo id="ambiente">veja como</LinkArtigo>).
             </Check>
           </ul>
         ),
@@ -198,6 +203,76 @@ const ARTIGOS: Artigo[] = [
             <Escolha pergunta="Quero acompanhar os meus dispositivos" resposta="Painel da sua empresa" />
             <Escolha pergunta="Quero registrar testes" resposta="Matriz de testes" />
           </div>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'ambiente',
+    categoria: 'inicio',
+    titulo: 'Configurar o ambiente da empresa',
+    resumo: 'O administrador do ambiente escolhe quais matrizes de teste a empresa vê no menu e convida colegas para usar a plataforma.',
+    destaque: (
+      <>
+        Todos os tipos de dispositivo liberados pela Mobiltec chegam ao seu ambiente automaticamente. Você decide quais
+        ficam no menu — ocultar <strong>não apaga nada</strong> e pode ser desfeito quando quiser.
+      </>
+    ),
+    tags: ['ambiente', 'administrador', 'colaboradores', 'matrizes'],
+    chaves: ['ocultar', 'mostrar', 'olho', 'convidar', 'colega', 'equipe', 'permissão', 'usuário', 'acesso', 'personalizar'],
+    leitura: 2,
+    relacionados: ['onde-voce-esta', 'paineis', 'matriz'],
+    secoes: [
+      {
+        id: 'quem-configura',
+        titulo: 'Quem pode configurar',
+        conteudo: (
+          <p>
+            A opção <Rotulo>Configurar ambiente</Rotulo> aparece no menu só para o <strong>administrador do ambiente</strong>{' '}
+            — a permissão é dada pela Mobiltec no cadastro da sua empresa. Não aparece para você? Peça à Mobiltec.
+          </p>
+        ),
+      },
+      {
+        id: 'matrizes-visiveis',
+        titulo: 'Escolher as matrizes do menu',
+        conteudo: (
+          <>
+            <Passos>
+              <PassoItem>Abra <Rotulo>Configurar ambiente</Rotulo> e clique em <Rotulo>Personalizar matrizes</Rotulo>.</PassoItem>
+              <PassoItem>
+                Clique no olho <Icone nome="olho" className="inline h-3.5 w-3.5 align-[-2px]" /> de cada tipo para mostrar ou
+                ocultar a matriz.
+              </PassoItem>
+              <PassoItem>Clique em <Rotulo>Salvar</Rotulo>. O menu de todos da empresa já muda.</PassoItem>
+            </Passos>
+            <p className="mt-4">
+              A matriz oculta sai do menu e da <Rotulo>Matriz de testes</Rotulo> da empresa, mas os dados continuam
+              guardados. O <Rotulo>Painel Mobiltec</Rotulo> segue mostrando todos os dispositivos aprovados.
+            </p>
+          </>
+        ),
+      },
+      {
+        id: 'convidar',
+        titulo: 'Convidar colaboradores',
+        conteudo: (
+          <>
+            <Passos>
+              <PassoItem>Em <Rotulo>Configurar ambiente</Rotulo>, clique em <Rotulo>Convidar colaborador</Rotulo>.</PassoItem>
+              <PassoItem>Informe nome, e-mail e uma senha inicial (mínimo de 6 caracteres).</PassoItem>
+              <PassoItem>Repasse o e-mail e a senha para a pessoa entrar.</PassoItem>
+            </Passos>
+            <ul className="mt-4 space-y-2.5">
+              <Check>O e-mail precisa ser do mesmo domínio da sua empresa.</Check>
+              <Check>
+                O colaborador entra com a visão padrão de parceiro e vê as matrizes que você deixou visíveis.
+              </Check>
+              <Check>
+                Para tirar o acesso de alguém, use <Rotulo>Desativar</Rotulo> na lista; <Rotulo>Reativar</Rotulo> devolve.
+              </Check>
+            </ul>
+          </>
         ),
       },
     ],

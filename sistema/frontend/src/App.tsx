@@ -15,6 +15,7 @@ import { ValidarCertificados } from '@/paginas/ValidarCertificados'
 import { PainelParceiro } from '@/paginas/PainelParceiro'
 import { ConfigurarDispositivos } from '@/paginas/ConfigurarDispositivos'
 import { Guia } from '@/paginas/Guia'
+import { AmbienteParceiro } from '@/paginas/AmbienteParceiro'
 
 const clienteQuery = new QueryClient({
   defaultOptions: {
@@ -88,6 +89,8 @@ export default function App() {
               <Route path="/parceiros/validar-certificados" element={<ValidarCertificados />} />
               <Route path="/ambiente/validar-certificados" element={<Navigate to="/parceiros/validar-certificados" replace />} />
               <Route path="/ambiente" element={<Navigate to="/ambiente/parceiros" replace />} />
+              {/* D500: configuração do ambiente do parceiro (admin do ambiente) */}
+              <Route path="/meu-ambiente" element={<AmbienteParceiro />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

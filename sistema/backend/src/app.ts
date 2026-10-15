@@ -26,6 +26,7 @@ import vitrineRoutes from './routes/vitrine.js'
 import parceirosRoutes from './routes/parceiros.js'
 import anexosRoutes from './routes/anexos.js'
 import notificacoesRoutes from './routes/notificacoes.js'
+import ambienteRoutes from './routes/ambiente.js'
 
 export async function criarApp(): Promise<FastifyInstance> {
   const fastify = Fastify({
@@ -74,6 +75,7 @@ export async function criarApp(): Promise<FastifyInstance> {
   await fastify.register(parceirosRoutes)
   await fastify.register(anexosRoutes)
   await fastify.register(notificacoesRoutes)
+  await fastify.register(ambienteRoutes)
 
   // Health check
   fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))

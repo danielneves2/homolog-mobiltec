@@ -7,6 +7,7 @@ import { FastifyPluginAsync } from 'fastify'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 import { ehDominioOficial } from '../lib/dominios.js'
+import { slugsMatrizParceiro } from '../lib/escopo.js'
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -68,7 +69,10 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         cargo: usuario.cargo,
         papel: usuario.papel,
         empresa: usuario.empresa,
-        categoriasPermitidas: usuario.categoriasPermitidas,
+        categoriasPermitidas: usuario.papel === 'PARCEIRO'
+          ? await slugsMatrizParceiro(fastify.prisma, usuario.empresa)
+          : usuario.categoriasPermitidas,
+        podeConfigurarAmbiente: usuario.papel === 'PARCEIRO' && usuario.podeConfigurarAmbiente,
       },
     }
   })
@@ -79,9 +83,12 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request) => {
     const usuario = await fastify.prisma.usuario.findUnique({
       where: { id: request.user.id },
-      select: { id: true, nome: true, email: true, cargo: true, papel: true, empresa: true, categoriasPermitidas: true },
+      select: { id: true, nome: true, email: true, cargo: true, papel: true, empresa: true, categoriasPermitidas: true, podeConfigurarAmbiente: true },
     })
-    return usuario
+    if (!usuario) return usuario
+    // D499: para o parceiro, as matrizes são calculadas (liberadas − ocultas do ambiente)
+    if (usuario.papel !== 'PARCEIRO') return { ...usuario, podeConfigurarAmbiente: false }
+    return { ...usuario, categoriasPermitidas: await slugsMatrizParceiro(fastify.prisma, usuario.empresa) }
   })
 }
 

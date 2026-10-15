@@ -802,7 +802,7 @@ function salvarVistosArmazenados(ids: string[]) {
 }
 
 export function Layout() {
-  const { usuario, ehParceiro, ehAdmin, sair } = useAuth()
+  const { usuario, ehParceiro, ehAdmin, sair, podeConfigurarAmbiente } = useAuth()
   const { data: categorias } = useCategorias()
   const { data: todasHomologacoes = [] } = useListaHomologacoes()
   const { data: todosParceiros = [] } = useParceiros(ehAdmin)
@@ -995,6 +995,9 @@ export function Layout() {
       const p = todosParceiros.find((x) => x.id === idOuEmpresa || x.empresa.toLowerCase() === idOuEmpresa.toLowerCase())
       return { rotulo: `Painel · ${p?.empresa || idOuEmpresa}`, icone: 'dashboard' as NomeIcone }
     }
+    if (pathname.startsWith('/meu-ambiente')) {
+      return { rotulo: `Ambiente · ${usuario?.empresa || 'Empresa'}`, icone: 'engrenagem' as NomeIcone }
+    }
     if (pathname.startsWith('/configurar-dispositivos') || pathname.startsWith('/dispositivos/gerenciar')) {
       return { rotulo: 'Ambiente · Dispositivos', icone: 'engrenagem' as NomeIcone }
     }
@@ -1093,11 +1096,35 @@ export function Layout() {
                 />
               </div>
             )}
+            {/* D500: admin do ambiente do parceiro configura matrizes e colaboradores */}
+            {podeConfigurarAmbiente && (
+              <div className="!mt-2 pt-2" style={{ borderTop: '1px solid var(--color-border)' }}>
+                <NavLink
+                  to="/meu-ambiente"
+                  title={aberto ? undefined : 'Configurar ambiente'}
+                  data-item-menu="Configurar ambiente"
+                  className={({ isActive }) =>
+                    `btn-menu-lateral relative flex items-center select-none outline-none focus:outline-none focus-visible:outline-none ${
+                      aberto
+                        ? 'w-full gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium leading-tight'
+                        : 'mx-auto h-9 w-9 items-center justify-center rounded-lg'
+                    } ${isActive ? 'ativo' : ''}`
+                  }
+                  style={({ isActive }) => ({
+                    justifyContent: aberto ? 'flex-start' : 'center',
+                    ...(isActive ? { background: 'var(--color-muted)', color: 'var(--color-primary)' } : {}),
+                  })}
+                >
+                  <Icone nome="engrenagem" className="h-[18px] w-[18px] shrink-0" />
+                  {aberto && <span className="flex-1 truncate text-left">Configurar ambiente</span>}
+                </NavLink>
+              </div>
+            )}
             {/* Guia de uso: opção solta, a última do menu. Abre em outra guia
                 para o usuário seguir o passo a passo com o sistema ao lado. */}
             <div
-              className={ehParceiro ? '!mt-2 pt-2' : undefined}
-              style={ehParceiro ? { borderTop: '1px solid var(--color-border)' } : undefined}
+              className={ehParceiro && !podeConfigurarAmbiente ? '!mt-2 pt-2' : undefined}
+              style={ehParceiro && !podeConfigurarAmbiente ? { borderTop: '1px solid var(--color-border)' } : undefined}
             >
               <a
                 href="/guia"

@@ -10,6 +10,8 @@ const parceiroInputSchema = z.object({
   senha: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
   categoriasPermitidas: z.array(z.string()).default([]),
   isAdmin: z.boolean().optional(),
+  /** D500: administrador do ambiente (oculta matrizes e convida colaboradores) */
+  podeConfigurarAmbiente: z.boolean().default(false),
 })
 
 const parceiroUpdateSchema = z.object({
@@ -20,6 +22,7 @@ const parceiroUpdateSchema = z.object({
   categoriasPermitidas: z.array(z.string()).optional(),
   ativo: z.boolean().optional(),
   isAdmin: z.boolean().optional(),
+  podeConfigurarAmbiente: z.boolean().optional(),
 })
 
 const parceirosRoutes: FastifyPluginAsync = async (fastify) => {
@@ -47,6 +50,7 @@ const parceirosRoutes: FastifyPluginAsync = async (fastify) => {
           papel: true,
           empresa: true,
           categoriasPermitidas: true,
+          podeConfigurarAmbiente: true,
           ativo: true,
           criadoEm: true,
         },
@@ -92,6 +96,8 @@ const parceirosRoutes: FastifyPluginAsync = async (fastify) => {
           empresa: body.empresa.trim(),
           dominioCorporativo,
           categoriasPermitidas: body.categoriasPermitidas,
+          // Só parceiro externo administra ambiente; admin Mobiltec já opera tudo
+          podeConfigurarAmbiente: !deveSerAdmin && body.podeConfigurarAmbiente,
           ativo: true,
         },
         select: {
@@ -102,6 +108,7 @@ const parceirosRoutes: FastifyPluginAsync = async (fastify) => {
           papel: true,
           empresa: true,
           categoriasPermitidas: true,
+          podeConfigurarAmbiente: true,
           ativo: true,
           criadoEm: true,
         },
@@ -139,6 +146,9 @@ const parceirosRoutes: FastifyPluginAsync = async (fastify) => {
       if (body.ativo !== undefined) {
         dados.ativo = body.ativo
       }
+      if (body.podeConfigurarAmbiente !== undefined) {
+        dados.podeConfigurarAmbiente = body.podeConfigurarAmbiente
+      }
       if (body.isAdmin !== undefined) {
         const usuarioAtual = await fastify.prisma.usuario.findUnique({
           where: { id },
@@ -148,6 +158,7 @@ const parceirosRoutes: FastifyPluginAsync = async (fastify) => {
         if (empresaAtual === 'mobiltec' && body.isAdmin) {
           dados.papel = 'ADMIN'
           dados.cargo = 'Administrador'
+          dados.podeConfigurarAmbiente = false
         } else if (body.isAdmin === false) {
           dados.papel = 'PARCEIRO'
           dados.cargo = 'Parceiro Homologador'
@@ -166,6 +177,7 @@ const parceirosRoutes: FastifyPluginAsync = async (fastify) => {
             papel: true,
             empresa: true,
             categoriasPermitidas: true,
+            podeConfigurarAmbiente: true,
             ativo: true,
             criadoEm: true,
           },
@@ -263,6 +275,7 @@ const parceirosRoutes: FastifyPluginAsync = async (fastify) => {
           papel: true,
           empresa: true,
           categoriasPermitidas: true,
+          podeConfigurarAmbiente: true,
           ativo: true,
           criadoEm: true,
         },

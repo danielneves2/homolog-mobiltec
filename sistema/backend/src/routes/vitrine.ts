@@ -20,13 +20,16 @@ const EXIGE_JUSTIFICATIVA: StatusResultado[] = [
 
 const vitrineRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/vitrine', { onRequest: [fastify.autenticar] }, async (request) => {
+    const ehParceiro = request.user.papel === 'PARCEIRO'
+    // D498: tipo de "homologação interna" não aparece para parceiros, nem na vitrine.
+    // O que o ambiente da empresa ocultou (D500) continua aqui: o Painel Mobiltec mostra todos os aprovados.
+    const whereCategoria = ehParceiro ? { ativo: true, liberadaParceiros: true } : { ativo: true }
     const categorias = await fastify.prisma.categoria.findMany({
-      where: { ativo: true },
+      where: whereCategoria,
       orderBy: { ordem: 'asc' },
       select: { id: true, nome: true, slug: true, icone: true },
     })
 
-    const ehParceiro = request.user.papel === 'PARCEIRO'
     let empresaParceiro: string | null = null
     if (ehParceiro) {
       const usuarioParceiro = await fastify.prisma.usuario.findUnique({
@@ -60,7 +63,7 @@ const vitrineRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const whereHomologacao: any = {
-      dispositivo: { ativo: true, categoria: { ativo: true } },
+      dispositivo: { ativo: true, categoria: whereCategoria },
       OR: [
         { status: { in: ['APROVADO', 'PUBLICADO'] } },
         condicaoMobiltecAndamento,

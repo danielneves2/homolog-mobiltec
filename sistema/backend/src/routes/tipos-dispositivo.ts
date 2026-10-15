@@ -139,6 +139,7 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
       icone: c.icone,
       ordem: c.ordem,
       ativo: c.ativo,
+      liberadaParceiros: c.liberadaParceiros,
       camposFicha: c.camposFicha,
       gruposOrdem: c.gruposOrdem,
       gruposTitulos: c.gruposTitulos as Record<string, string>,
@@ -158,6 +159,8 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
       icone: z.string().trim().min(1).max(40),
       /** Chaves de LINHAS_FICHA; vazio = a ficha inteira */
       camposFicha: z.array(z.string().min(1).max(40)).default([]),
+      /** D498: true = liberado para parceiros; false = homologação interna */
+      liberadaParceiros: z.boolean().default(true),
       /** Ordem dos tópicos/baterias configurados */
       gruposOrdem: z.array(z.string().min(1).max(100)).default([]),
       /** Títulos amigáveis para as baterias */
@@ -229,6 +232,7 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
           camposFicha: body.camposFicha,
           gruposOrdem: body.gruposOrdem,
           gruposTitulos: body.gruposTitulos,
+          liberadaParceiros: body.liberadaParceiros,
         },
       })
 
@@ -301,6 +305,7 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
       gruposOrdem: z.array(z.string().min(1).max(100)).optional(),
       gruposTitulos: z.record(z.string()).optional(),
       ativo: z.boolean().optional(),
+      liberadaParceiros: z.boolean().optional(),
       itensExistentes: z.array(z.string().uuid()).optional(),
       itensNovos: z
         .array(
@@ -364,6 +369,7 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
           ...(body.gruposOrdem !== undefined ? { gruposOrdem: body.gruposOrdem } : {}),
           ...(body.gruposTitulos !== undefined ? { gruposTitulos: body.gruposTitulos } : {}),
           ...(body.ativo !== undefined ? { ativo: body.ativo } : {}),
+          ...(body.liberadaParceiros !== undefined ? { liberadaParceiros: body.liberadaParceiros } : {}),
         },
       })
 

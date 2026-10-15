@@ -12,8 +12,10 @@ const catalogoRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/categorias', { onRequest: [fastify.autenticar] }, async (request) => {
     // Por padrão só as que estão em operação — é o que monta o menu.
     const { todas } = request.query as { todas?: string }
+    // D498: parceiro nunca recebe tipo de homologação interna
+    const soLiberadas = request.user.papel === 'PARCEIRO' ? { liberadaParceiros: true } : {}
     return fastify.prisma.categoria.findMany({
-      where: todas === 'true' ? {} : { ativo: true },
+      where: todas === 'true' ? soLiberadas : { ativo: true, ...soLiberadas },
       orderBy: { ordem: 'asc' },
       include: {
         _count: { select: { dispositivos: { where: { ativo: true } } } },

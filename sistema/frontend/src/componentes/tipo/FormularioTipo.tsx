@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { ChaveLiberarParceiros } from './ChaveLiberarParceiros'
 import { useNavigate } from 'react-router-dom'
 import { ErroApi } from '@/lib/api'
 import {
@@ -57,6 +58,8 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
 
   const [nome, setNome] = useState(tipo?.nome ?? '')
   const [icone, setIcone] = useState<NomeIcone>((tipo?.icone as NomeIcone) ?? 'credit-card')
+  // D498: liberado para parceiros (padrão) ou homologação interna
+  const [liberadaParceiros, setLiberadaParceiros] = useState<boolean>(tipo?.liberadaParceiros ?? true)
   const [erro, setErro] = useState<string | null>(null)
 
   // Gestão de títulos amigáveis das baterias (padrões e novas)
@@ -399,6 +402,7 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
     const payload = {
       nome: nome.trim(),
       icone,
+      liberadaParceiros,
       camposFicha: todasLinhasRegistro
         .map((l) => l.chave)
         .filter((c) => campos.has(c) || FICHA_FIXA.includes(c as ChaveFicha)),
@@ -818,6 +822,8 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
                 Cancelar
               </button>
             )}
+            {/* D498: liberado para parceiros ou homologação interna, ao lado do botão */}
+            <ChaveLiberarParceiros ligada={liberadaParceiros} aoMudar={setLiberadaParceiros} />
             <button
               type="submit"
               disabled={!podeEnviar}

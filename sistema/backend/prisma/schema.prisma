@@ -83,6 +83,9 @@ model Categoria {
   camposFicha     String[]       @default([]) @map("campos_ficha")
   gruposOrdem     String[]       @default([]) @map("grupos_ordem")
   gruposTitulos   Json           @default("{}") @map("grupos_titulos")
+  /// D498: liberado para parceiros (todos os ambientes veem) ou homologação
+  /// interna (só a Mobiltec). Os tipos que já existiam nascem liberados.
+  liberadaParceiros Boolean      @default(true) @map("liberada_parceiros")
   dispositivos    Dispositivo[]
   baterias        BateriaTeste[]
 
@@ -98,7 +101,11 @@ model Usuario {
   papel                 PapelUsuario    @default(HOMOLOGADOR)
   empresa               String?
   dominioCorporativo    String?         @map("dominio_corporativo")
+  /// Legado (D446): lista gravada no cadastro. Desde o D499 a visibilidade é
+  /// calculada em lib/escopo.ts; a coluna fica só para não perder o histórico.
   categoriasPermitidas  String[]        @default([]) @map("categorias_permitidas")
+  /// D500: admin do ambiente do parceiro — oculta matrizes e convida colaboradores.
+  podeConfigurarAmbiente Boolean        @default(false) @map("pode_configurar_ambiente")
   ativo                 Boolean         @default(true)
   criadoEm              DateTime        @default(now()) @map("criado_em")
   homologacoesResponsavel Homologacao[] @relation("Responsavel")
@@ -109,6 +116,18 @@ model Usuario {
   historicoStatus       HistoricoStatus[]
 
   @@map("usuario")
+}
+
+/// D500: configuração do ambiente de uma empresa parceira. A empresa é texto
+/// no usuário, então a chave é o nome normalizado (trim + minúsculas).
+model AmbienteParceiro {
+  id                String   @id @default(uuid())
+  empresa           String   @unique
+  categoriasOcultas String[] @default([]) @map("categorias_ocultas")
+  atualizadoPorId   String?  @map("atualizado_por_id")
+  atualizadoEm      DateTime @updatedAt @map("atualizado_em")
+
+  @@map("ambiente_parceiro")
 }
 
 model Dispositivo {

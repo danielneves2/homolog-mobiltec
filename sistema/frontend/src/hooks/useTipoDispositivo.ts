@@ -10,6 +10,8 @@ export interface TipoDispositivo {
   icone: string
   ordem: number
   ativo: boolean
+  /** D498: false = homologação interna (só a Mobiltec vê) */
+  liberadaParceiros: boolean
   camposFicha: (ChaveFicha | string)[]
   gruposOrdem?: string[]
   gruposTitulos?: Record<string, string>
@@ -39,6 +41,8 @@ export function useTiposDispositivo() {
 export interface PayloadTipoDispositivo {
   nome: string
   icone: string
+  /** D498: liberado para parceiros (padrão) ou homologação interna */
+  liberadaParceiros?: boolean
   camposFicha: (ChaveFicha | string)[]
   gruposOrdem?: string[]
   gruposTitulos?: Record<string, string>

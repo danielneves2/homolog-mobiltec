@@ -22,6 +22,8 @@ export function GerenciarParceiros() {
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('Mobiltec@2026')
   const [isAdmin, setIsAdmin] = useState(false)
+  // D500: admin do ambiente do parceiro (oculta matrizes e convida colaboradores)
+  const [adminAmbiente, setAdminAmbiente] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [sucesso, setSucesso] = useState<string | null>(null)
 
@@ -92,6 +94,7 @@ export function GerenciarParceiros() {
     setEmail('')
     setSenha('Mobiltec@2026')
     setIsAdmin(false)
+    setAdminAmbiente(false)
     setCriandoEmpresa(false)
     setNovaEmpresaNome('')
     setErroNovaEmpresa(null)
@@ -107,6 +110,7 @@ export function GerenciarParceiros() {
     setEmail(p.email)
     setSenha('')
     setIsAdmin(p.papel === 'ADMIN')
+    setAdminAmbiente(Boolean(p.podeConfigurarAmbiente))
     setCriandoEmpresa(false)
     setNovaEmpresaNome('')
     setErroNovaEmpresa(null)
@@ -149,6 +153,7 @@ export function GerenciarParceiros() {
           ...(senha ? { senha } : {}),
           categoriasPermitidas: categoriasParaSalvar,
           isAdmin: acessoAdmin,
+          podeConfigurarAmbiente: ehMobiltec ? false : adminAmbiente,
         })
         setSucesso('Parceiro atualizado com sucesso!')
       } else {
@@ -163,6 +168,7 @@ export function GerenciarParceiros() {
           senha,
           categoriasPermitidas: categoriasParaSalvar,
           isAdmin: acessoAdmin,
+          podeConfigurarAmbiente: ehMobiltec ? false : adminAmbiente,
         })
         setSucesso('Parceiro cadastrado com sucesso!')
       }
@@ -576,6 +582,35 @@ export function GerenciarParceiros() {
                     type="checkbox"
                     checked={isAdmin}
                     onChange={(e) => setIsAdmin(e.target.checked)}
+                    className="h-4 w-4 rounded cursor-pointer shrink-0"
+                    style={{ accentColor: 'var(--color-primary)' }}
+                  />
+                </div>
+              )}
+
+              {/* D500: administrador do ambiente — só para empresas parceiras */}
+              {empresa.trim() !== '' && empresa.trim().toLowerCase() !== 'mobiltec' && (
+                <div
+                  className="p-3 rounded-lg border flex items-center justify-between gap-3 transition-colors cursor-pointer"
+                  onClick={() => setAdminAmbiente((prev) => !prev)}
+                  style={{
+                    borderColor: adminAmbiente ? 'var(--color-primary)' : 'var(--color-border)',
+                    background: adminAmbiente ? 'var(--color-muted)' : 'var(--color-background)',
+                  }}
+                >
+                  <div className="min-w-0 flex-1 select-none">
+                    <span className="block text-xs font-bold" style={{ color: 'var(--color-foreground)' }}>
+                      Administrador do ambiente
+                    </span>
+                    <p className="text-[11px] mt-0.5" style={{ color: 'var(--color-muted-foreground)' }}>
+                      Pode ocultar matrizes de teste do menu da empresa e convidar colaboradores do mesmo domínio.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={adminAmbiente}
+                    onChange={(e) => setAdminAmbiente(e.target.checked)}
+                    onClick={(e) => e.stopPropagation()}
                     className="h-4 w-4 rounded cursor-pointer shrink-0"
                     style={{ accentColor: 'var(--color-primary)' }}
                   />

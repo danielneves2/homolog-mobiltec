@@ -17,6 +17,7 @@ import {
   whereMatrizMobiltec,
   whereMatrizParceiro,
   usuarioPodeOperar,
+  slugsMatrizParceiro,
 } from '../lib/escopo.js'
 
 const matrizRoutes: FastifyPluginAsync = async (fastify) => {
@@ -43,9 +44,11 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
     if (ehParceiro) {
       const usuarioParceiro = await fastify.prisma.usuario.findUnique({
         where: { id: request.user.id },
-        select: { categoriasPermitidas: true },
+        select: { empresa: true },
       })
-      if (!usuarioParceiro?.categoriasPermitidas.includes(categoriaSlug)) {
+      // D499: matrizes liberadas para parceiros e não ocultadas pelo ambiente da empresa
+      const permitidas = await slugsMatrizParceiro(fastify.prisma, usuarioParceiro?.empresa)
+      if (!permitidas.includes(categoriaSlug)) {
         return reply.status(403).send({ erro: 'Acesso não permitido a esta categoria de dispositivo' })
       }
       // Planilha própria da empresa; a TNS divide a de PoS com a Mobiltec
@@ -279,13 +282,14 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
     if (request.user.papel === 'PARCEIRO') {
       const u = await fastify.prisma.usuario.findUnique({
         where: { id: request.user.id },
-        select: { empresa: true, categoriasPermitidas: true },
+        select: { empresa: true },
       })
       const cat = await fastify.prisma.categoria.findUnique({
         where: { id: categoriaId },
         select: { slug: true },
       })
-      if (!cat || !u?.categoriasPermitidas.includes(cat.slug)) {
+      const permitidas = await slugsMatrizParceiro(fastify.prisma, u?.empresa)
+      if (!cat || !u || !permitidas.includes(cat.slug)) {
         return reply.status(403).send({ erro: 'Acesso não permitido a esta categoria de dispositivo' })
       }
       empresaDispositivo = u.empresa

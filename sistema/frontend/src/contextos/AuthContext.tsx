@@ -18,8 +18,12 @@ interface ValorAuth {
   podeEditar: boolean
   podeEmitirCertificado: boolean
   podeJustificar: boolean
+  /** D500: parceiro com permissão de configurar o ambiente da empresa */
+  podeConfigurarAmbiente: boolean
   entrar: (email: string, senha: string) => Promise<void>
   sair: () => void
+  /** Relê /auth/me — matrizes visíveis e permissões mudam sem novo login (D499/D500) */
+  recarregarUsuario: () => Promise<void>
 }
 
 const AuthContext = createContext<ValorAuth | null>(null)
@@ -39,6 +43,24 @@ export function ProvedorAuth({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(EVENTO_NAO_AUTORIZADO, aoExpirar)
   }, [])
 
+  const recarregarUsuario = useCallback(async () => {
+    const token = sessao.obterToken()
+    if (!token) return
+    try {
+      const atual = await api.get<Usuario>('/auth/me')
+      if (!atual) return
+      sessao.salvar(token, atual)
+      setUsuario(atual)
+    } catch {
+      /* sem rede: segue com o usuário em cache; 401 já desloga pelo evento */
+    }
+  }, [])
+
+  // A sessão em cache pode ter a lista de matrizes antiga: relê uma vez ao abrir
+  useEffect(() => {
+    if (sessao.obterToken()) void recarregarUsuario()
+  }, [recarregarUsuario])
+
   const entrar = useCallback(async (email: string, senha: string) => {
     const resposta = await api.post<RespostaLogin>('/auth/login', { email, senha }, { semAuth: true })
     sessao.salvar(resposta.token, resposta.usuario)
@@ -50,6 +72,7 @@ export function ProvedorAuth({ children }: { children: ReactNode }) {
   const ehAdmin = usuario?.papel === 'ADMIN'
   const ehLeitor = usuario?.papel === 'LEITOR'
   const podeEditar = ehMobiltec || ehParceiro
+  const podeConfigurarAmbiente = ehParceiro && Boolean(usuario?.podeConfigurarAmbiente)
 
   const valor = useMemo<ValorAuth>(
     () => ({
@@ -62,10 +85,12 @@ export function ProvedorAuth({ children }: { children: ReactNode }) {
       podeEditar,
       podeEmitirCertificado: ehMobiltec,
       podeJustificar: ehMobiltec,
+      podeConfigurarAmbiente,
       entrar,
       sair,
+      recarregarUsuario,
     }),
-    [usuario, ehMobiltec, ehParceiro, ehAdmin, ehLeitor, podeEditar, entrar, sair],
+    [usuario, ehMobiltec, ehParceiro, ehAdmin, ehLeitor, podeEditar, podeConfigurarAmbiente, entrar, sair, recarregarUsuario],
   )
 
   return <AuthContext.Provider value={valor}>{children}</AuthContext.Provider>

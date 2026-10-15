@@ -124,3 +124,41 @@ export async function usuarioPodeOperar(
   const n = await prisma.homologacao.count({ where: { id: homologacaoId, ...whereOperaParceiro(u) } })
   return n > 0
 }
+
+// ============================================================
+// D498–D500: tipos de dispositivo visíveis para o parceiro
+// ============================================================
+
+/** Chave do ambiente de uma empresa (a empresa é texto livre no usuário) */
+export function chaveAmbiente(empresa: string | null | undefined): string | null {
+  const k = empresa?.trim().toLowerCase()
+  return k ? k : null
+}
+
+/** Tipos ativos liberados para parceiros (D498) — o que o Painel Mobiltec mostra a eles */
+export async function slugsLiberadosParceiros(prisma: PrismaClient): Promise<string[]> {
+  const cats = await prisma.categoria.findMany({
+    where: { ativo: true, liberadaParceiros: true },
+    select: { slug: true },
+  })
+  return cats.map((c) => c.slug)
+}
+
+/** Tipos que o ambiente da empresa ocultou do menu e da matriz (D500) */
+export async function slugsOcultosAmbiente(prisma: PrismaClient, empresa: string | null | undefined): Promise<string[]> {
+  const chave = chaveAmbiente(empresa)
+  if (!chave) return []
+  const amb = await prisma.ambienteParceiro.findUnique({ where: { empresa: chave }, select: { categoriasOcultas: true } })
+  return amb?.categoriasOcultas ?? []
+}
+
+/**
+ * Matrizes que um usuário parceiro enxerga no menu e pode operar (D499):
+ * tipos ativos, liberados para parceiros e não ocultados pelo ambiente da empresa.
+ * Substitui a lista gravada por usuário (`categoriasPermitidas`).
+ */
+export async function slugsMatrizParceiro(prisma: PrismaClient, empresa: string | null | undefined): Promise<string[]> {
+  const [liberados, ocultos] = await Promise.all([slugsLiberadosParceiros(prisma), slugsOcultosAmbiente(prisma, empresa)])
+  const oc = new Set(ocultos)
+  return liberados.filter((s) => !oc.has(s))
+}
