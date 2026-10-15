@@ -1123,8 +1123,8 @@ function Inicio() {
                 <span style={{ color: 'var(--color-primary)' }}>Cloud4Mobile</span>
               </h1>
               <p className="mt-3 max-w-[36rem] text-[15px] leading-relaxed" style={{ color: 'var(--color-muted-foreground)' }}>
-                Veja quais dispositivos a Mobiltec já aprovou e quais estão em homologação. Teste os
-                seus, guarde o registro de cada etapa e emita seus próprios certificados.
+                Veja quais dispositivos a Mobiltec já aprovou e quais estão em homologação. Registre os
+                testes dos seus dispositivos e emita os certificados de homologação.
               </p>
 
               {/* Busca: o caminho mais rápido numa central de ajuda */}
