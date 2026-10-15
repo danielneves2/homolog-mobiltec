@@ -14,7 +14,7 @@ export function ChaveLiberarParceiros({
 }) {
   return (
     <label
-      className="inline-flex cursor-pointer select-none items-center gap-2 text-xs font-semibold"
+      className="relative inline-flex cursor-pointer select-none items-center gap-2 text-xs font-semibold"
       style={{ color: ligada ? 'var(--color-primary)' : 'var(--color-muted-foreground)', opacity: desabilitada ? 0.6 : 1 }}
       title={
         ligada
