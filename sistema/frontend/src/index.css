@@ -615,19 +615,6 @@
   mask-image: radial-gradient(ellipse 75% 85% at 75% 40%, #000 30%, transparent 78%);
   pointer-events: none;
 }
-/* Mesma grade, em laranja, nascendo no canto superior direito e se dissolvendo na grade cinza */
-.guia-hero-fundo::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(243, 120, 4, 0.4) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(243, 120, 4, 0.4) 1px, transparent 1px);
-  background-size: 26px 26px;
-  -webkit-mask-image: radial-gradient(ellipse 65% 95% at 100% 0%, #000 0%, rgba(0, 0, 0, 0.4) 45%, transparent 88%);
-  mask-image: radial-gradient(ellipse 65% 95% at 100% 0%, #000 0%, rgba(0, 0, 0, 0.4) 45%, transparent 88%);
-  pointer-events: none;
-}
 
 /* Mapa do processo: números ligados por uma linha vertical */
 .guia-mapa-item {
