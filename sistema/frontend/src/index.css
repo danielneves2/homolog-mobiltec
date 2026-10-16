@@ -575,6 +575,8 @@
 /* Abertura do guia: grade que some em direção às bordas */
 .guia-hero {
   background-color: #fdfcfd;
+  /* véu roxo largo descendo do canto superior direito (sem forma de mancha) */
+  background-image: radial-gradient(ellipse 80% 110% at 100% 0%, rgba(126, 32, 101, 0.17), rgba(126, 32, 101, 0.06) 45%, transparent 78%);
 }
 /* Detalhes em laranja de marca, sutis: traço acima do título, sublinhado do link e seta do mapa */
 .guia-hero-traco {
