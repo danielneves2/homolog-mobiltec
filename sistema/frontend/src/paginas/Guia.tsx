@@ -1149,7 +1149,7 @@ function Inicio() {
                         {etapa.texto}
                       </span>
                     </span>
-                    <span className="ml-auto text-sm opacity-0 transition-opacity group-hover:opacity-60" aria-hidden>→</span>
+                    <span className="guia-mapa-seta ml-auto text-sm font-semibold" aria-hidden>→</span>
                   </a>
                 </li>
               ))}

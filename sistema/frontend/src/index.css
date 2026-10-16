@@ -576,7 +576,7 @@
 .guia-hero {
   background-color: #fdfcfd;
 }
-/* Detalhes em laranja de marca, sutis: traço acima do título, sublinhado do link e a última etapa */
+/* Detalhes em laranja de marca, sutis: traço acima do título, sublinhado do link e seta do mapa */
 .guia-hero-traco {
   display: block;
   width: 36px;
@@ -594,13 +594,14 @@
 .guia-link-laranja:hover {
   text-decoration-color: var(--color-brand-orange);
 }
-.guia-mapa li:last-child .guia-mapa-n {
-  background: rgba(243, 120, 4, 0.12);
+.guia-mapa-seta {
+  opacity: 0;
   color: var(--color-brand-orange);
+  transition: opacity 140ms ease, transform 180ms ease;
 }
-.guia-mapa li:last-child .guia-mapa-item:hover .guia-mapa-n {
-  background: var(--color-brand-orange);
-  color: #fff;
+.guia-mapa-item:hover .guia-mapa-seta {
+  opacity: 1;
+  transform: rotate(-45deg);
 }
 .guia-hero-fundo::before {
   content: "";
