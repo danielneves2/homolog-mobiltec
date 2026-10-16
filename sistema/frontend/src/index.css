@@ -576,6 +576,32 @@
 .guia-hero {
   background-color: #fdfcfd;
 }
+/* Detalhes em laranja de marca, sutis: traço acima do título, sublinhado do link e a última etapa */
+.guia-hero-traco {
+  display: block;
+  width: 36px;
+  height: 3px;
+  border-radius: 9999px;
+  background: var(--color-brand-orange);
+}
+.guia-link-laranja {
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  transition: text-decoration-color 140ms ease;
+}
+.guia-link-laranja:hover {
+  text-decoration-color: var(--color-brand-orange);
+}
+.guia-mapa li:last-child .guia-mapa-n {
+  background: rgba(243, 120, 4, 0.12);
+  color: var(--color-brand-orange);
+}
+.guia-mapa li:last-child .guia-mapa-item:hover .guia-mapa-n {
+  background: var(--color-brand-orange);
+  color: #fff;
+}
 .guia-hero-fundo::before {
   content: "";
   position: absolute;

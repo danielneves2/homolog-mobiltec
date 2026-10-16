@@ -1097,78 +1097,27 @@ const MAPA_PROCESSO: { n: string; titulo: string; texto: string; artigo: string 
   { n: '04', titulo: 'Certificar', texto: 'PDF oficial liberado', artigo: 'certificado' },
 ]
 
-/** Página inicial do guia: boas-vindas, busca, mapa do processo e categorias */
+/** Página inicial do guia: boas-vindas, mapa do processo e categorias */
 function Inicio() {
-  const [busca, aoBuscar] = useState('')
-  const resultados = useMemo(() => buscarArtigos(busca), [busca])
-  const totalMin = ARTIGOS.reduce((t, a) => t + a.leitura, 0)
   return (
     <div className="px-5 py-7 sm:px-8 lg:px-10 lg:py-9">
       <div className="mx-auto max-w-[60rem]">
-        {/* Abertura: texto e busca à esquerda, mapa do processo à direita */}
+        {/* Abertura: texto à esquerda, mapa do processo à direita */}
         <section className="guia-hero relative z-10 rounded-2xl border" style={{ borderColor: 'var(--color-border)' }}>
-          {/* Decoração em camada própria: recorta o brilho sem cortar o resultado da busca */}
           <div className="guia-hero-fundo pointer-events-none absolute inset-0 overflow-hidden rounded-2xl" aria-hidden />
-          <div className="relative grid gap-8 p-6 sm:p-9 md:grid-cols-[minmax(0,1fr)_17.5rem] md:items-center">
+          <div className="relative grid gap-6 p-6 sm:px-9 sm:py-7 md:grid-cols-[minmax(0,1fr)_17.5rem] md:items-center">
             <div className="min-w-0">
-              <span
-                className="inline-flex items-center gap-1.5 rounded-full border bg-white/80 px-2.5 py-1 text-[11px] font-semibold"
-                style={{ borderColor: 'rgba(126,32,101,0.18)', color: 'var(--color-primary)' }}
-              >
-                <Icone nome="guia" className="h-3.5 w-3.5" />
-                Guia de uso · {ARTIGOS.length} artigos · ~{totalMin} min
-              </span>
-              <h1 className="mt-4 text-[1.75rem] font-bold leading-[1.15] tracking-tight text-balance sm:text-[2.1rem]">
+              <span className="guia-hero-traco" aria-hidden />
+              <h1 className="mt-3 text-[1.75rem] font-bold leading-[1.15] tracking-tight text-balance sm:text-[2.1rem]">
                 Homologação de dispositivos{' '}
-                <span style={{ color: 'var(--color-primary)' }}>Cloud4Mobile</span>
+                <span style={{ color: 'var(--color-primary)' }}>
+                  Cloud<span style={{ color: 'var(--color-brand-orange)' }}>4</span>Mobile
+                </span>
               </h1>
               <p className="mt-3 max-w-[36rem] text-[15px] leading-relaxed" style={{ color: 'var(--color-muted-foreground)' }}>
                 Veja quais dispositivos a Mobiltec já aprovou e quais estão em homologação. Registre os
                 testes dos seus dispositivos e emita os certificados de homologação.
               </p>
-
-              {/* Busca: o caminho mais rápido numa central de ajuda */}
-              <div className="relative mt-6 max-w-[30rem]">
-                <Icone nome="busca" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
-                <input
-                  value={busca}
-                  onChange={(e) => aoBuscar(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && resultados[0]) window.location.hash = resultados[0].id
-                    if (e.key === 'Escape') aoBuscar('')
-                  }}
-                  placeholder="O que você quer fazer? Ex.: enviar, certificado, foto…"
-                  className="w-full rounded-xl border bg-white py-3 pl-10 pr-4 text-sm shadow-[0_1px_2px_rgba(0,0,0,0.04)] outline-none transition-shadow focus:border-[var(--color-primary)] focus:shadow-[0_0_0_4px_rgba(126,32,101,0.08)]"
-                  style={{ borderColor: 'var(--color-border)' }}
-                  aria-label="Buscar no guia"
-                />
-                {busca.trim() && (
-                  <div
-                    className="absolute left-0 right-0 top-full z-20 mt-1.5 overflow-hidden rounded-xl border bg-white py-1 shadow-lg"
-                    style={{ borderColor: 'var(--color-border)' }}
-                  >
-                    {resultados.length === 0 ? (
-                      <p className="px-4 py-3 text-[13px]" style={{ color: 'var(--color-muted-foreground)' }}>
-                        Nada encontrado para "{busca}".
-                      </p>
-                    ) : (
-                      resultados.map((r) => (
-                        <a
-                          key={r.id}
-                          href={`#${r.id}`}
-                          onClick={() => aoBuscar('')}
-                          className="block px-4 py-2.5 transition-colors hover:bg-[var(--color-muted)]"
-                        >
-                          <span className="block text-sm font-semibold">{r.titulo}</span>
-                          <span className="block truncate text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
-                            {r.resumo}
-                          </span>
-                        </a>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
 
               <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
                 <a
@@ -1177,9 +1126,9 @@ function Inicio() {
                   style={{ background: 'var(--color-primary)' }}
                 >
                   Comece por aqui
-                  <span aria-hidden>→</span>
+                  <span aria-hidden style={{ color: 'var(--color-brand-orange)' }}>→</span>
                 </a>
-                <a href="#duvidas" className="text-sm font-semibold hover:underline" style={{ color: 'var(--color-primary)' }}>
+                <a href="#duvidas" className="guia-link-laranja text-sm font-semibold" style={{ color: 'var(--color-primary)' }}>
                   Dúvidas rápidas
                 </a>
               </div>
