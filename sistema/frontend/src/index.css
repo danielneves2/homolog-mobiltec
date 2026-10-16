@@ -572,7 +572,7 @@
   background-size: 18px 18px;
 }
 
-/* Abertura do guia: grade que some em direção às bordas + brilho roxo discreto */
+/* Abertura do guia: grade que some em direção às bordas */
 .guia-hero {
   background-color: #fdfcfd;
 }
@@ -586,17 +586,6 @@
   background-size: 26px 26px;
   -webkit-mask-image: radial-gradient(ellipse 75% 85% at 75% 40%, #000 30%, transparent 78%);
   mask-image: radial-gradient(ellipse 75% 85% at 75% 40%, #000 30%, transparent 78%);
-  pointer-events: none;
-}
-.guia-hero-fundo::after {
-  content: "";
-  position: absolute;
-  right: -90px;
-  top: -110px;
-  width: 360px;
-  height: 360px;
-  border-radius: 9999px;
-  background: radial-gradient(circle, rgba(126, 32, 101, 0.14), transparent 65%);
   pointer-events: none;
 }
 
