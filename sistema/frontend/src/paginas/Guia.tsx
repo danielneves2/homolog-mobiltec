@@ -1209,22 +1209,24 @@ function Inicio() {
         </section>
 
         <h2 className="mt-10 text-lg font-bold tracking-tight">Categorias</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {CATEGORIAS.map((c) => {
             const doGrupo = ARTIGOS.filter((a) => a.categoria === c.id)
             return (
-              <div key={c.id} className="guia-categoria rounded-xl border p-5" style={{ borderColor: 'var(--color-border)' }}>
-                <span
-                  className="grid h-9 w-9 place-items-center rounded-lg"
-                  style={{ background: 'rgba(126,32,101,0.08)', color: 'var(--color-primary)' }}
-                >
-                  <Icone nome={c.icone} className="h-[18px] w-[18px]" />
-                </span>
-                <h3 className="mt-3 font-semibold">{c.titulo}</h3>
-                <p className="mt-1 text-[13px]" style={{ color: 'var(--color-muted-foreground)' }}>
+              <div key={c.id} className="guia-categoria rounded-xl border p-4" style={{ borderColor: 'var(--color-border)' }}>
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-lg"
+                    style={{ background: 'rgba(126,32,101,0.08)', color: 'var(--color-primary)' }}
+                  >
+                    <Icone nome={c.icone} className="h-4 w-4" />
+                  </span>
+                  <h3 className="font-semibold">{c.titulo}</h3>
+                </div>
+                <p className="mt-2 text-[13px]" style={{ color: 'var(--color-muted-foreground)' }}>
                   {c.descricao}
                 </p>
-                <ul className="mt-3 space-y-1.5">
+                <ul className="mt-2.5 space-y-1">
                   {doGrupo.map((a) => (
                     <li key={a.id}>
                       <a href={`#${a.id}`} className="text-[13px] font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>
