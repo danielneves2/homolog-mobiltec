@@ -347,24 +347,31 @@ export function ModalNovoModelo({
               <div className="grid sm:grid-cols-3 gap-3">
                 <Campo rotulo="Versão do iOS" obrigatorio valor={f.versaoSo} aoMudar={set('versaoSo')} />
                 <div className="sm:col-span-2">
-                  <span className="label-caps mb-1.5 block">
+                  <span className="label-caps mb-1.5 block" style={{ color: 'var(--color-primary)' }}>
                     Gerenciamento <span style={{ color: 'var(--color-destructive)' }}>*</span>
                   </span>
-                  <div className="flex gap-2">
+                  {/* Seletor em pílula: compacto, as opções lado a lado */}
+                  <div
+                    role="radiogroup"
+                    aria-label="Gerenciamento"
+                    className="inline-flex gap-0.5 rounded-lg border p-0.5"
+                    style={{ background: 'var(--color-muted)', borderColor: 'var(--color-border)' }}
+                  >
                     {opcoesGerenciamento('IOS').map((g) => {
                       const ativo = f.gerenciamento === g
                       return (
                         <button
                           key={g}
                           type="button"
+                          role="radio"
+                          aria-checked={ativo}
                           onClick={() => set('gerenciamento')(g)}
-                          className={`flex-1 rounded-md border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
-                            ativo ? 'text-white shadow-xs' : 'bg-white/80 hover:bg-white text-neutral-600'
+                          className={`rounded-md px-3.5 py-1 text-xs font-semibold transition-all duration-150 cursor-pointer ${
+                            ativo
+                              ? 'text-white shadow-xs'
+                              : 'text-[var(--color-muted-foreground)] hover:bg-white hover:text-[var(--color-foreground)]'
                           }`}
-                          style={{
-                            background: ativo ? 'var(--gradient-brand-purple)' : undefined,
-                            borderColor: ativo ? 'var(--color-primary)' : 'var(--color-border)',
-                          }}
+                          style={ativo ? { background: 'var(--gradient-brand-purple)' } : undefined}
                         >
                           {ROTULO_GERENCIAMENTO[g]}
                         </button>
@@ -444,7 +451,7 @@ export function ModalNovoModelo({
                 ) : (
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="label-caps block">
+                      <label className="label-caps block" style={{ color: 'var(--color-primary)' }}>
                         Tipo de agente <span style={{ color: 'var(--color-destructive)' }}>*</span>
                       </label>
                       <button
@@ -555,7 +562,6 @@ export function ModalNovoModelo({
           )}
 
           <section>
-            <p className="label-caps mb-2">Bateria e datas</p>
             <div className="grid sm:grid-cols-3 gap-3">
               <div className="sm:col-span-2">
                 <SeletorDropdown<string>
@@ -572,7 +578,7 @@ export function ModalNovoModelo({
                 />
               </div>
               <div>
-                <label className="label-caps block mb-1.5">Data de início</label>
+                <label className="label-caps block mb-1.5" style={{ color: 'var(--color-primary)' }}>Data de início</label>
                 <input
                   type="date"
                   value={f.dataInicio}
@@ -657,7 +663,7 @@ function Campo({
 }) {
   return (
     <div>
-      <label className="label-caps block mb-1.5">
+      <label className="label-caps block mb-1.5" style={{ color: 'var(--color-primary)' }}>
         {rotulo}
         {obrigatorio && <span style={{ color: 'var(--color-destructive)' }}> *</span>}
       </label>
@@ -725,7 +731,7 @@ function SeletorDropdown<T extends string = string>({
     <div className="relative" ref={ref}>
       {rotulo && (
         <div className="flex items-center justify-between mb-1.5">
-          <label className="label-caps block">
+          <label className="label-caps block" style={{ color: 'var(--color-primary)' }}>
             {rotulo} {obrigatorio && <span style={{ color: 'var(--color-destructive)' }}>*</span>}
           </label>
           {acaoExtra}

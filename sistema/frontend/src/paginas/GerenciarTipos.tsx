@@ -89,7 +89,7 @@ export function GerenciarTipos() {
             }}
           >
             <span className="text-sm font-bold leading-none">+</span>
-            <span>Registrar dispositivo</span>
+            <span>Registrar homologação</span>
           </Link>
         </header>
 
