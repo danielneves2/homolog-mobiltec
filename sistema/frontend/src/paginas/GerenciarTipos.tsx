@@ -72,7 +72,7 @@ export function GerenciarTipos() {
       <div className="mx-auto max-w-5xl space-y-4">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold">Editar / remover dispositivo</h2>
+            <h2 className="text-lg font-semibold">Editar / remover homologação</h2>
             <p className="mt-1 text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
               Os tipos que existem hoje, com a ficha e a bateria de cada um. Tipo com modelo
               cadastrado se desativa — apagar levaria junto as homologações e os certificados
