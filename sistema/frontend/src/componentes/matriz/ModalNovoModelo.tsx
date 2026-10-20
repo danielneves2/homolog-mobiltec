@@ -320,7 +320,7 @@ export function ModalNovoModelo({
 
         <div className="p-5 overflow-y-auto flex-1 space-y-5">
           <section>
-            <p className="label-caps mb-2">Identidade do modelo</p>
+            <p className="label-caps mb-2 font-semibold" style={{ color: 'var(--color-foreground)' }}>Identidade do modelo</p>
             <div className="grid sm:grid-cols-3 gap-3">
               <Campo rotulo="Fabricante" obrigatorio valor={f.fabricante} aoMudar={set('fabricante')} />
               <Campo rotulo="Modelo" obrigatorio valor={f.modelo} aoMudar={set('modelo')} />
@@ -333,7 +333,7 @@ export function ModalNovoModelo({
           </section>
 
           <section>
-            <p className="label-caps mb-2">Unidade testada</p>
+            <p className="label-caps mb-2 font-semibold" style={{ color: 'var(--color-foreground)' }}>Unidade testada</p>
             <div className="grid sm:grid-cols-3 gap-3">
               <Campo rotulo="Número de série" valor={f.numeroSerie} aoMudar={set('numeroSerie')} />
               <Campo rotulo="IMEI 1" valor={f.imei1} aoMudar={set('imei1')} />
@@ -343,7 +343,7 @@ export function ModalNovoModelo({
 
           {ehIos ? (
             <section>
-              <p className="label-caps mb-2">Plataforma e gerenciamento</p>
+              <p className="label-caps mb-2 font-semibold" style={{ color: 'var(--color-foreground)' }}>Plataforma e gerenciamento</p>
               <div className="grid sm:grid-cols-3 gap-3">
                 <Campo rotulo="Versão do iOS" obrigatorio valor={f.versaoSo} aoMudar={set('versaoSo')} />
                 <div className="sm:col-span-2">
@@ -388,7 +388,7 @@ export function ModalNovoModelo({
             </section>
           ) : (
           <section>
-            <p className="label-caps mb-2">Agente e plataforma</p>
+            <p className="label-caps mb-2 font-semibold" style={{ color: 'var(--color-foreground)' }}>Agente e plataforma</p>
             <div className="grid sm:grid-cols-3 gap-3">
               <SeletorDropdown<SistemaOperacional>
                 rotulo="Sistema Operacional"
