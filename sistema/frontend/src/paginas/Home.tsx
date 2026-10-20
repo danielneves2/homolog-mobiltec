@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '@/contextos/AuthContext'
 import { useVitrine } from '@/hooks/useVitrine'
 import { Icone } from '@/componentes/Icone'
 import { CardDispositivo } from '@/componentes/vitrine/CardDispositivo'
@@ -334,11 +335,14 @@ export function Home() {
 }
 
 function Vazio({ children }: { children: React.ReactNode }) {
+  // Parceiro só consulta o Painel Mobiltec: sem atalho para matriz daqui
+  const { ehParceiro } = useAuth()
   return (
     <div className="rounded-xl border p-8 text-center" style={{ background: 'var(--color-card)' }}>
       <p className="text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
         {children}
       </p>
+      {!ehParceiro && (
       <Link
         to="/matriz/pos"
         className="mt-3 inline-block text-sm underline underline-offset-2"
@@ -346,6 +350,7 @@ function Vazio({ children }: { children: React.ReactNode }) {
       >
         Ir para a matriz
       </Link>
+      )}
     </div>
   )
 }
