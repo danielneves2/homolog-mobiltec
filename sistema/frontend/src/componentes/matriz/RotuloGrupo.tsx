@@ -10,12 +10,13 @@ import { ROTULO_GRUPO } from '@/lib/tipos'
 export function RotuloGrupo({ grupo, titulo }: { grupo: string; titulo?: string }) {
   const nomeCompleto = (titulo || (ROTULO_GRUPO as Record<string, string>)[grupo] || grupo).trim()
 
+  // Maior que antes (D505): o título da faixa roxa se lia mal em 10–13px
   const tamanhoFonte =
     nomeCompleto.length > 26
-      ? 'text-[10px]'
+      ? 'text-[12.5px]'
       : nomeCompleto.length > 18
-        ? 'text-[11.5px]'
-        : 'text-[13px]'
+        ? 'text-[13.5px]'
+        : 'text-[15px]'
 
   return (
     <span

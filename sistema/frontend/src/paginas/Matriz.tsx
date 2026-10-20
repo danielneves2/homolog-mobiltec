@@ -899,7 +899,7 @@ export function Matriz() {
               .map(({ grupo, titulo, itens }) => {
                 const nomeGrupo = (titulo || (ROTULO_GRUPO as Record<string, string>)[grupo] || grupo).trim()
                 // Altura mínima para renderizar o título completo na vertical sem corte (8px por caractere + margem)
-                const alturaNecessariaTitulo = Math.max(72, nomeGrupo.length * 8.2 + 24)
+                const alturaNecessariaTitulo = Math.max(84, nomeGrupo.length * 9.8 + 28)
                 // Distribui essa altura entre os itens da bateria para que o layout se adapte naturalmente
                 const alturaLinha = Math.max(38, Math.ceil(alturaNecessariaTitulo / Math.max(1, itens.length)))
 

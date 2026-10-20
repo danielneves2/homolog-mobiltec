@@ -44,9 +44,18 @@ function topico(nome: string, funcs: [string, boolean][]): ItemDef {
   }
 }
 
-/** Funcionalidade solta: o "?" mostra o que testar e se só vale supervisionado */
-function unica(nome: string, descricao: string, byod: boolean): ItemDef {
-  return { nome, descricao, funcionalidades: [{ nome: descricao, byod }], somenteSupervisionado: !byod }
+/**
+ * Funcionalidade solta. O "?" na matriz fica só nos tópicos de restrição e
+ * onde o teste precisa de contexto (`comAjuda`, ex.: Solicitar Localização,
+ * que só funciona dentro do Modo Perdido) — D505.
+ */
+function unica(nome: string, descricao: string, byod: boolean, comAjuda = false): ItemDef {
+  return {
+    nome,
+    descricao,
+    funcionalidades: comAjuda ? [{ nome: descricao, byod }] : [],
+    somenteSupervisionado: !byod,
+  }
 }
 
 const CAMPO_INFO = 'Campo exibido em Informações do dispositivo, na console.'
@@ -86,14 +95,10 @@ const GRUPOS: { chave: string; titulo: string; itens: ItemDef[] }[] = [
     itens: [
       {
         nome: 'Desabilitar / Wipe',
-        descricao: REGRA,
-        funcionalidades: [
-          { nome: 'Desabilitar — remove temporariamente a conexão do dispositivo com a console', byod: S },
-          { nome: 'Wipe — formata o aparelho e restaura os padrões de fábrica', byod: S },
-        ],
+        descricao: 'Desabilitar remove temporariamente a conexão com a console; Wipe formata o aparelho e restaura os padrões de fábrica.',
       },
       unica('Modo Perdido', 'Trava o dispositivo na hora, impedindo o uso até a liberação na console.', S),
-      unica('Solicitar Localização', 'Força o rastreamento e exibe a posição no mapa durante o Modo Perdido.', S),
+      unica('Solicitar Localização (em modo perdido)', 'Força o rastreamento e exibe a posição no mapa durante o Modo Perdido.', S, true),
       unica(
         'Variáveis',
         'Valor próprio de cada aparelho: a variável vai no perfil e cada aparelho mostra o seu valor (ex.: código do funcionário no e-mail).',
@@ -237,6 +242,23 @@ const CAMPOS_FICHA_IOS = ['fotoUrl', 'homologado', 'imei1', 'imei2', 'numeroSeri
 async function main() {
   const gruposOrdem = ['REGISTRO', ...GRUPOS.map((g) => g.chave)]
   const gruposTitulos = Object.fromEntries(GRUPOS.map((g) => [g.chave, g.titulo]))
+
+  // 0. Renomeações já feitas na tela: o item em uso assume o nome novo e a
+  //    cópia solta (sem bateria nem resultado) sai — nada se perde
+  const RENOMEADOS: [string, string, string][] = [
+    ['IOS_COMANDOS', 'Solicitar Localização', 'Solicitar Localização (em modo perdido)'],
+  ]
+  for (const [grupo, antigo, novo] of RENOMEADOS) {
+    const velho = await prisma.itemTeste.findFirst({ where: { grupo, nome: antigo } })
+    if (!velho) continue
+    const copia = await prisma.itemTeste.findFirst({
+      where: { grupo, nome: novo, bateriaItems: { none: {} }, resultados: { none: {} } },
+    })
+    if (copia) await prisma.itemTeste.delete({ where: { id: copia.id } })
+    if (!(await prisma.itemTeste.findFirst({ where: { grupo, nome: novo } }))) {
+      await prisma.itemTeste.update({ where: { id: velho.id }, data: { nome: novo } })
+    }
+  }
 
   // 1. Itens (achados por grupo + nome)
   const idsEmOrdem: string[] = []
