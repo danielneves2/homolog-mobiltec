@@ -97,8 +97,9 @@ const GRUPOS: { chave: string; titulo: string; itens: ItemDef[] }[] = [
         nome: 'Desabilitar / Wipe',
         descricao: 'Desabilitar remove temporariamente a conexão com a console; Wipe formata o aparelho e restaura os padrões de fábrica.',
       },
-      unica('Modo Perdido', 'Trava o dispositivo na hora, impedindo o uso até a liberação na console.', S),
-      unica('Solicitar Localização (em modo perdido)', 'Força o rastreamento e exibe a posição no mapa durante o Modo Perdido.', S, true),
+      // Modo Perdido e a localização dentro dele só existem em iOS supervisionado (D506)
+      unica('Modo Perdido', 'Trava o dispositivo na hora, impedindo o uso até a liberação na console.', N),
+      unica('Solicitar Localização (em modo perdido)', 'Força o rastreamento e exibe a posição no mapa durante o Modo Perdido.', N, true),
       unica(
         'Variáveis',
         'Valor próprio de cada aparelho: a variável vai no perfil e cada aparelho mostra o seu valor (ex.: código do funcionário no e-mail).',

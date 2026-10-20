@@ -400,6 +400,10 @@ export function Matriz() {
 
   // A tabela renderiza as colunas já filtradas por fabricante / versão do agente
   const colunas = colunasVisiveis
+  // Que gerenciamentos estão na tela: o "?" das restrições só fala de BYOD
+  // quando há coluna BYOD (D506)
+  const temByod = colunas.some((c) => c.homologacao.gerenciamento === 'IOS_BYOD')
+  const temSupervisionado = colunas.some((c) => c.homologacao.gerenciamento !== 'IOS_BYOD')
 
   /**
    * O rail roxo dos grupos só aparece com a planilha inteira à vista.
@@ -942,7 +946,7 @@ export function Matriz() {
                             <span className={item.ativo ? '' : 'line-through opacity-60'}>
                               {item.nome}
                             </span>
-                            <AjudaItem item={item} />
+                            <AjudaItem item={item} temByod={temByod} temSupervisionado={temSupervisionado} />
                           </div>
                         </th>
 

@@ -14,8 +14,25 @@ import type { ItemTeste } from '@/lib/tipos'
  * Balão `position: fixed`, pelo mesmo motivo dos menus da matriz: a tabela
  * rola e recortaria um balão posicionado dentro dela.
  */
-export function AjudaItem({ item }: { item: ItemTeste }) {
-  const funcionalidades = item.funcionalidades ?? []
+export function AjudaItem({
+  item,
+  temByod = false,
+  temSupervisionado = true,
+}: {
+  item: ItemTeste
+  /** Há coluna BYOD na matriz: mostra quais funcionalidades valem para ela */
+  temByod?: boolean
+  /** Há coluna supervisionada (ou Android): a lista completa vale */
+  temSupervisionado?: boolean
+}) {
+  const todas = item.funcionalidades ?? []
+  const doByod = todas.filter((f) => f.byod)
+  // Só colunas BYOD na tela: a lista já é a do BYOD. Caso contrário, a lista
+  // completa, sem marcação, e — se houver coluna BYOD e só parte valer para
+  // ela — uma seção à parte com as que funcionam em BYOD.
+  const funcionalidades = temSupervisionado ? todas : doByod
+  const secaoByod = temByod && temSupervisionado && doByod.length > 0 && doByod.length < todas.length
+  const byodSemNada = temByod && !temSupervisionado && doByod.length === 0
   const [aberto, setAberto] = useState(false)
   const [posicao, setPosicao] = useState<{ x: number; y: number } | null>(null)
   const refGatilho = useRef<HTMLButtonElement>(null)
@@ -29,9 +46,9 @@ export function AjudaItem({ item }: { item: ItemTeste }) {
     )
   }, [aberto])
 
-  if (funcionalidades.length === 0) return null
+  if (todas.length === 0) return null
 
-  const agrupa = funcionalidades.length > 1
+  const agrupa = todas.length > 1
 
   function abrir() {
     const r = refGatilho.current?.getBoundingClientRect()
@@ -72,24 +89,26 @@ export function AjudaItem({ item }: { item: ItemTeste }) {
           }}
         >
           <p className="mb-1.5 text-[10.5px] font-bold uppercase tracking-wider" style={{ color: 'var(--color-primary)' }}>
-            {agrupa ? 'Teste as funcionalidades' : 'O que testar'}
+            {agrupa ? (temSupervisionado ? 'Teste as funcionalidades' : 'Teste as funcionalidades (BYOD)') : 'O que testar'}
           </p>
           <ul className="space-y-1">
             {funcionalidades.map((f) => (
-              <li key={f.nome} className="flex items-start justify-between gap-2">
-                <span>{f.nome}</span>
-                {!f.byod && (
-                  <span
-                    className="shrink-0 rounded px-1.5 py-px text-[9.5px] font-semibold"
-                    style={{ background: 'var(--color-muted)', color: 'var(--color-muted-foreground)' }}
-                    title="Não existe em aparelho BYOD"
-                  >
-                    só supervisionado
-                  </span>
-                )}
-              </li>
+              <li key={f.nome}>{f.nome}</li>
             ))}
+            {byodSemNada && <li style={{ color: 'var(--color-muted-foreground)' }}>Nenhuma funcionalidade deste tópico existe em BYOD.</li>}
           </ul>
+          {secaoByod && (
+            <div className="mt-2.5 rounded-md px-2.5 py-2" style={{ background: 'var(--color-muted)' }}>
+              <p className="mb-1 text-[10.5px] font-bold uppercase tracking-wider" style={{ color: 'var(--color-primary)' }}>
+                Funcionalidades para BYOD
+              </p>
+              <ul className="space-y-0.5">
+                {doByod.map((f) => (
+                  <li key={f.nome}>{f.nome}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           {agrupa && (
             <p className="mt-2.5 border-t pt-2" style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted-foreground)' }}>
               Divergência em <strong>todas</strong>: marque <strong>Falha</strong>. Em <strong>uma ou algumas</strong>:
