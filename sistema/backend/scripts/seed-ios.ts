@@ -8,8 +8,8 @@
  * Estrutura da matriz:
  *  - Monitoramento e Informações: bateria, armazenamento e os campos da tela
  *    "Informações do dispositivo" da console.
- *  - Comandos Remotos: ações do menu do dispositivo na console (Desabilitar,
- *    Wipe, Variáveis, Modo Perdido e a localização dentro dele).
+ *  - Comandos Remotos e Variáveis: Desabilitar/Wipe, Modo Perdido, a
+ *    localização dentro dele e as variáveis de dispositivo.
  *  - Configurações de Restrição (Apple): uma linha por tópico do perfil
  *    (Restrições, Aplicativo, Segurança…). As funcionalidades do tópico vão
  *    no "?" da linha. Tópico sem nenhuma funcionalidade BYOD é
@@ -82,17 +82,23 @@ const GRUPOS: { chave: string; titulo: string; itens: ItemDef[] }[] = [
   },
   {
     chave: 'IOS_COMANDOS',
-    titulo: 'Comandos Remotos',
+    titulo: 'Comandos Remotos e Variáveis',
     itens: [
-      unica('Desabilitar', 'Remove temporariamente a conexão do dispositivo com a console.', S),
-      unica('Wipe', 'Formata o aparelho e restaura os padrões de fábrica.', S),
+      {
+        nome: 'Desabilitar / Wipe',
+        descricao: REGRA,
+        funcionalidades: [
+          { nome: 'Desabilitar — remove temporariamente a conexão do dispositivo com a console', byod: S },
+          { nome: 'Wipe — formata o aparelho e restaura os padrões de fábrica', byod: S },
+        ],
+      },
+      unica('Modo Perdido', 'Trava o dispositivo na hora, impedindo o uso até a liberação na console.', S),
+      unica('Solicitar Localização', 'Força o rastreamento e exibe a posição no mapa durante o Modo Perdido.', S),
       unica(
-        'Variáveis de Dispositivo',
+        'Variáveis',
         'Valor próprio de cada aparelho: a variável vai no perfil e cada aparelho mostra o seu valor (ex.: código do funcionário no e-mail).',
         S,
       ),
-      unica('Modo Perdido', 'Trava o dispositivo na hora, impedindo o uso até a liberação na console.', S),
-      unica('Solicitar Localização', 'Força o rastreamento e exibe a posição no mapa durante o Modo Perdido.', S),
     ],
   },
   {
@@ -253,6 +259,22 @@ async function main() {
     }
   }
   console.log(`itens: ${idsEmOrdem.length}`)
+
+  // Itens iOS que saíram da definição (ex.: renomeados) e não estão em
+  // nenhuma bateria nem têm resultado: saem do catálogo
+  const orfaos = await prisma.itemTeste.findMany({
+    where: {
+      grupo: { in: GRUPOS.map((g) => g.chave) },
+      id: { notIn: idsEmOrdem },
+      bateriaItems: { none: {} },
+      resultados: { none: {} },
+    },
+    select: { id: true, nome: true },
+  })
+  if (orfaos.length) {
+    await prisma.itemTeste.deleteMany({ where: { id: { in: orfaos.map((o) => o.id) } } })
+    console.log(`removidos do catálogo: ${orfaos.map((o) => o.nome).join(', ')}`)
+  }
 
   // 2. Tipos: iPad (slug "ios", já existe) e iPhone
   const ipad = await prisma.categoria.findUnique({ where: { slug: 'ios' } })
