@@ -11,7 +11,7 @@ import { slugsMatrizParceiro } from '../lib/escopo.js'
 
 const loginSchema = z.object({
   email: z.string().email(),
-  senha: z.string().min(6),
+  senha: z.string().min(4), // mesmo mínimo do cadastro (D509)
 })
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
@@ -23,7 +23,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         required: ['email', 'senha'],
         properties: {
           email: { type: 'string', format: 'email' },
-          senha: { type: 'string', minLength: 6 },
+          senha: { type: 'string', minLength: 4 },
         },
       },
     },

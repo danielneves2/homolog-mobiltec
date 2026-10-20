@@ -260,7 +260,7 @@ const ARTIGOS: Artigo[] = [
           <>
             <Passos>
               <PassoItem>Em <Rotulo>Configurar ambiente</Rotulo>, clique em <Rotulo>Convidar colaborador</Rotulo>.</PassoItem>
-              <PassoItem>Informe nome, e-mail e uma senha inicial (mínimo de 6 caracteres).</PassoItem>
+              <PassoItem>Informe nome, e-mail e uma senha inicial (mínimo de 4 caracteres).</PassoItem>
               <PassoItem>Repasse o e-mail e a senha para a pessoa entrar.</PassoItem>
             </Passos>
             <ul className="mt-4 space-y-2.5">

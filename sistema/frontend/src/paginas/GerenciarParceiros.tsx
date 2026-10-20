@@ -143,6 +143,12 @@ export function GerenciarParceiros() {
       ? parceiroEdicao.categoriasPermitidas
       : (categorias.length > 0 ? categorias.map((c) => c.slug) : ['pos', 'coletor', 'totem', 'impressora-termica'])
 
+    // Senha: obrigatória só no cadastro; na edição, em branco mantém a atual
+    if ((!parceiroEdicao || senha) && senha.length < 4) {
+      setErro('A senha deve ter no mínimo 4 caracteres.')
+      return
+    }
+
     try {
       if (parceiroEdicao) {
         await atualizarParceiro.mutateAsync({
@@ -157,10 +163,6 @@ export function GerenciarParceiros() {
         })
         setSucesso('Parceiro atualizado com sucesso!')
       } else {
-        if (!senha || senha.length < 6) {
-          setErro('A senha deve ter no mínimo 6 caracteres.')
-          return
-        }
         await criarParceiro.mutateAsync({
           empresa: empresa.trim(),
           nome: nome.trim(),
@@ -177,7 +179,13 @@ export function GerenciarParceiros() {
         setSucesso(null)
       }, 1000)
     } catch (err: any) {
-      setErro(err?.message || 'Erro ao processar requisição.')
+      // "Dados inválidos" sozinho não diz o que corrigir: mostra o motivo de cada campo
+      const campos: { campo: string; mensagem: string }[] = err?.campos ?? []
+      setErro(
+        campos.length > 0
+          ? campos.map((c) => c.mensagem).join(' · ')
+          : err?.message || 'Erro ao processar requisição.',
+      )
     }
   }
 
@@ -657,7 +665,8 @@ export function GerenciarParceiros() {
 
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--color-foreground)' }}>
-                  {parceiroEdicao ? 'Redefinir Senha (opcional)' : 'Senha de Acesso'} <span className="text-red-500">*</span>
+                  {parceiroEdicao ? 'Redefinir Senha (opcional)' : 'Senha de Acesso'}
+                  {!parceiroEdicao && <span className="text-red-500"> *</span>}
                 </label>
                 <input
                   type="text"

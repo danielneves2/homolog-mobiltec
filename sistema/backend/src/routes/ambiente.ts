@@ -136,7 +136,7 @@ const ambienteRoutes: FastifyPluginAsync = async (fastify) => {
       .object({
         nome: z.string().trim().min(2, 'Informe o nome do colaborador').max(120),
         email: z.string().trim().email('E-mail inválido'),
-        senha: z.string().min(6, 'A senha deve ter no mínimo 6 caracteres').max(120),
+        senha: z.string().min(4, 'A senha deve ter no mínimo 4 caracteres').max(120),
       })
       .parse(request.body)
 

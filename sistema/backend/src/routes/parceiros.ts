@@ -7,7 +7,8 @@ const parceiroInputSchema = z.object({
   empresa: z.string().min(1, 'Nome do parceiro/empresa é obrigatório'),
   nome: z.string().min(1, 'Nome do responsável é obrigatório'),
   email: z.string().email('E-mail inválido'),
-  senha: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
+  // Mínimo 4: a senha é definida pelo admin da Mobiltec (D509)
+  senha: z.string().min(4, 'A senha deve ter no mínimo 4 caracteres'),
   categoriasPermitidas: z.array(z.string()).default([]),
   isAdmin: z.boolean().optional(),
   /** D500: administrador do ambiente (oculta matrizes e convida colaboradores) */
@@ -18,7 +19,7 @@ const parceiroUpdateSchema = z.object({
   empresa: z.string().min(1).optional(),
   nome: z.string().min(1).optional(),
   email: z.string().email().optional(),
-  senha: z.string().min(6).optional(),
+  senha: z.string().min(4, 'A senha deve ter no mínimo 4 caracteres').optional(),
   categoriasPermitidas: z.array(z.string()).optional(),
   ativo: z.boolean().optional(),
   isAdmin: z.boolean().optional(),
@@ -137,7 +138,7 @@ const parceirosRoutes: FastifyPluginAsync = async (fastify) => {
         dados.email = body.email.toLowerCase().trim()
         dados.dominioCorporativo = body.email.split('@')[1]?.toLowerCase() ?? null
       }
-      if (body.senha !== undefined && body.senha.length >= 6) {
+      if (body.senha !== undefined && body.senha.length >= 4) {
         dados.senhaHash = await bcrypt.hash(body.senha, 10)
       }
       if (body.categoriasPermitidas !== undefined) {

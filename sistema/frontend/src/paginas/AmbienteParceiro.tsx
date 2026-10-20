@@ -320,8 +320,8 @@ function ModalConvite({ dominio, aoFechar }: { dominio: string; aoFechar: () => 
       setErro(`O e-mail precisa ser do domínio da empresa (@${dominio}).`)
       return
     }
-    if (senha.length < 6) {
-      setErro('A senha deve ter no mínimo 6 caracteres.')
+    if (senha.length < 4) {
+      setErro('A senha deve ter no mínimo 4 caracteres.')
       return
     }
     try {
@@ -384,7 +384,7 @@ function ModalConvite({ dominio, aoFechar }: { dominio: string; aoFechar: () => 
               style={{ borderColor: 'var(--color-input)' }}
             />
             <p className="mt-1.5 text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
-              Mínimo de 6 caracteres. Repasse à pessoa junto com o e-mail.
+              Mínimo de 4 caracteres. Repasse à pessoa junto com o e-mail.
             </p>
           </div>
           {erro && (
