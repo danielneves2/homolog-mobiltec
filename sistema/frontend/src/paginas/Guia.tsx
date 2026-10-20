@@ -154,7 +154,7 @@ const ARTIGOS: Artigo[] = [
             </p>
             <ul className="mt-3 space-y-2.5">
               <Check>
-                As abas <Rotulo>Homologados</Rotulo>, <Rotulo>Em homologação</Rotulo> e <Rotulo>Revalidados</Rotulo>{' '}
+                As abas <Rotulo>Homologados</Rotulo>, <Rotulo>Em homologação</Rotulo> e <Rotulo>Retestados</Rotulo>{' '}
                 separam os modelos; a busca encontra por modelo, versão ou fabricante.
               </Check>
               <Check>
@@ -318,7 +318,7 @@ const ARTIGOS: Artigo[] = [
             <p>
               Quando a matriz cresce, use os filtros <Rotulo>Fabricante</Rotulo>, <Rotulo>Modelo</Rotulo>,{' '}
               <Rotulo>Versão do agente</Rotulo> e <Rotulo>Status</Rotulo>. O contador ◆ mostra quantas divergências
-              (falhas, não suportados e ressalvas) existem, e <Rotulo>Revalidados</Rotulo> mostra só os modelos que
+              (falhas, não suportados e ressalvas) existem, e <Rotulo>Retestados</Rotulo> mostra só os modelos que
               passaram por reteste.
             </p>
             <Dica>A matriz da sua empresa é só sua: outros parceiros não veem os seus modelos.</Dica>

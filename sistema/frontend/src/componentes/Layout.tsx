@@ -807,7 +807,7 @@ export function Layout() {
   const { data: todasHomologacoes = [] } = useListaHomologacoes()
   const { data: todosParceiros = [] } = useParceiros(ehAdmin)
   const { data: notificacoesData } = useNotificacoes()
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
 
   const revisoesPendentes = ehParceiro ? (notificacoesData?.naoLidas ?? 0) : 0
 
@@ -983,6 +983,10 @@ export function Layout() {
    * a barra do topo mantém sempre o nome do grupo principal, enquanto a página
    * exibe no título principal o nome da tela/submenu.
    */
+  /** Mobiltec abrindo a planilha de um parceiro pelo painel dele (D510) */
+  const empresaDaPlanilha =
+    !ehParceiro && pathname.startsWith('/matriz/') ? new URLSearchParams(search).get('empresa')?.trim() || null : null
+
   const secao = (() => {
     if (pathname === '/' || pathname === '/paineis/mobiltec') {
       return { rotulo: 'Painel · Mobiltec', icone: 'dashboard' as NomeIcone }
@@ -1009,7 +1013,10 @@ export function Layout() {
     }
     const cat = itensCategorias.find((i) => (i.fim ? pathname === i.para : pathname.startsWith(i.para)))
     if (cat) {
-      return { rotulo: `Matriz de testes · ${cat.rotulo}`, icone: cat.icone }
+      return {
+        rotulo: `Matriz de testes · ${cat.rotulo}${empresaDaPlanilha ? ` · ${empresaDaPlanilha}` : ''}`,
+        icone: cat.icone,
+      }
     }
     return { rotulo: 'Painel · Mobiltec', icone: 'dashboard' as NomeIcone }
   })()
@@ -1220,7 +1227,7 @@ export function Layout() {
                   className="pointer-events-none absolute left-1/2 -translate-x-1/2 truncate text-sm font-semibold"
                   style={{ letterSpacing: '0.01em' }}
                 >
-                  {NOME_REGISTRO}
+                  {empresaDaPlanilha ? `Registro de Testes · ${empresaDaPlanilha}` : NOME_REGISTRO}
                 </span>
               )}
 

@@ -210,6 +210,7 @@ export function PainelParceiro() {
                   key={disp.dispositivoId}
                   dispositivo={disp}
                   ehAdmin={ehAdmin}
+                  empresa={parceiro.empresa}
                   aoExibirInformacoes={(d) => setModalDispositivo(d)}
                 />
               ))}
@@ -268,14 +269,21 @@ function BotaoFiltroClean({
 function CardDispositivoParceiro({
   dispositivo: d,
   ehAdmin,
+  empresa,
   aoExibirInformacoes,
 }: {
   dispositivo: DispositivoPainelParceiro
   ehAdmin: boolean
+  /** Empresa dona do painel: a Mobiltec abre a planilha dela, não a própria (D510) */
+  empresa: string | null
   aoExibirInformacoes: (disp: DispositivoPainelParceiro) => void
 }) {
   const [expandirObs, setExpandirObs] = useState(false)
   const confirmarNotificacao = useConfirmarNotificacao()
+  const linkMatriz =
+    ehAdmin && empresa
+      ? `/matriz/${d.categoriaSlug}?empresa=${encodeURIComponent(empresa)}`
+      : `/matriz/${d.categoriaSlug}`
   const pctAvaliado = d.resumo.total > 0 ? Math.round((d.resumo.avaliados / d.resumo.total) * 100) : 0
 
   // Processa as observações com segurança para NUNCA exibir JSON cru
@@ -422,7 +430,7 @@ function CardDispositivoParceiro({
               {/* Botão de Ajustar Testes (somente Parceiro) */}
               {!ehAdmin && (
                 <Link
-                  to={`/matriz/${d.categoriaSlug}`}
+                  to={linkMatriz}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 shadow-xs inline-flex items-center gap-1.5 shrink-0"
                   style={{ background: 'var(--gradient-brand-purple)' }}
                 >
@@ -553,9 +561,19 @@ function CardDispositivoParceiro({
               <Icone nome="busca" className="h-3.5 w-3.5" />
               <span>Exibir informações</span>
             </button>
+          ) : null}
+          {/* A Mobiltec abre a mesma planilha que o parceiro vê (D510) */}
+          {ehAdmin ? (
+            <Link
+              to={linkMatriz}
+              className="px-2.5 py-1.5 rounded-lg border text-xs font-semibold text-[var(--color-primary)] hover:bg-purple-50/50 transition-colors inline-flex items-center gap-1"
+            >
+              <span>Matriz</span>
+              <span>→</span>
+            </Link>
           ) : d.status !== 'EM_REVISAO' ? (
             <Link
-              to={`/matriz/${d.categoriaSlug}`}
+              to={linkMatriz}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 shadow-xs inline-flex items-center gap-1.5"
               style={{ background: 'var(--gradient-brand-purple)' }}
             >

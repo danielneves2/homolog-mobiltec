@@ -9,7 +9,9 @@
  * está em homologação vai num bloco separado, sem expor resultado item a item.
  */
 import { FastifyPluginAsync } from 'fastify'
-import { StatusResultado } from '@prisma/client'
+import { StatusHomologacao, StatusResultado } from '@prisma/client'
+import { carregarUsuarioEscopo, escopoPlanilha, whereVeParceiro } from '../lib/escopo.js'
+import { agruparPorDispositivo, itensPorCategoria } from '../lib/planilha.js'
 
 /** Divergência é o que a spec §5 define — NAO_APLICAVEL não entra */
 const EXIGE_JUSTIFICATIVA: StatusResultado[] = [
@@ -30,60 +32,17 @@ const vitrineRoutes: FastifyPluginAsync = async (fastify) => {
       select: { id: true, nome: true, slug: true, icone: true },
     })
 
-    let empresaParceiro: string | null = null
-    if (ehParceiro) {
-      const usuarioParceiro = await fastify.prisma.usuario.findUnique({
-        where: { id: request.user.id },
-        select: { empresa: true },
-      })
-      empresaParceiro = usuarioParceiro?.empresa?.trim() ?? null
-    }
+    // O que entra (D510, mesma regra de escopo da matriz e do painel):
+    //  1. Aprovados/publicados de qualquer empresa — é a vitrine.
+    //  2. O andamento da planilha Mobiltec (com a TNS em PoS, que divide a
+    //     planilha) — a Mobiltec vê tudo; o parceiro vê o andamento interno.
+    //  3. Para o parceiro, o andamento da própria planilha.
+    const escopo = ehParceiro
+      ? whereVeParceiro(await carregarUsuarioEscopo(fastify.prisma, request.user))
+      : { OR: [{ status: { in: [StatusHomologacao.APROVADO, StatusHomologacao.PUBLICADO] } }, escopoPlanilha(null)] }
 
-    // Painel Principal (Vitrine Geral Mobiltec):
-    // 1. Modelos já aprovados ou publicados são visíveis para todos.
-    // 2. Modelos em andamento no ambiente Mobiltec (empresa Mobiltec ou null) são visíveis
-    //    para todos os usuários (incluindo parceiros) como visão geral do que está sendo homologado.
-    // 3. Se for parceiro com empresa externa, visualiza adicionalmente seus próprios dispositivos em teste.
-    const condicaoMobiltecAndamento = {
-      status: { in: ['RASCUNHO', 'AGUARDANDO_ANALISE', 'EM_REVISAO', 'REPROVADO'] },
-      AND: [
-        {
-          OR: [
-            { dispositivo: { empresa: null } },
-            { dispositivo: { empresa: { equals: 'Mobiltec', mode: 'insensitive' } } },
-          ],
-        },
-        {
-          OR: [
-            { responsavel: { empresa: null } },
-            { responsavel: { empresa: { equals: 'Mobiltec', mode: 'insensitive' } } },
-          ],
-        },
-      ],
-    }
-
-    const whereHomologacao: any = {
-      dispositivo: { ativo: true, categoria: whereCategoria },
-      OR: [
-        { status: { in: ['APROVADO', 'PUBLICADO'] } },
-        condicaoMobiltecAndamento,
-        ...(ehParceiro && empresaParceiro && empresaParceiro.toLowerCase() !== 'mobiltec'
-          ? [
-              {
-                status: { in: ['RASCUNHO', 'AGUARDANDO_ANALISE', 'EM_REVISAO', 'REPROVADO'] },
-                dispositivo: { empresa: { equals: empresaParceiro, mode: 'insensitive' } },
-              },
-              {
-                status: { in: ['RASCUNHO', 'AGUARDANDO_ANALISE', 'EM_REVISAO', 'REPROVADO'] },
-                responsavel: { empresa: { equals: empresaParceiro, mode: 'insensitive' } },
-              },
-              {
-                status: { in: ['RASCUNHO', 'AGUARDANDO_ANALISE', 'EM_REVISAO', 'REPROVADO'] },
-                responsavelId: request.user.id,
-              },
-            ]
-          : []),
-      ],
+    const whereHomologacao = {
+      AND: [{ dispositivo: { ativo: true, categoria: whereCategoria } }, escopo],
     }
 
     const homologacoes = await fastify.prisma.homologacao.findMany({
@@ -91,31 +50,33 @@ const vitrineRoutes: FastifyPluginAsync = async (fastify) => {
       include: {
         dispositivo: { include: { categoria: { select: { nome: true, slug: true } } } },
         responsavel: { select: { nome: true } },
-        resultados: { select: { status: true, justificativaId: true, justificativaTexto: true } },
+        resultados: { select: { itemId: true, status: true, justificativaId: true, justificativaTexto: true } },
       },
       orderBy: { criadoEm: 'desc' },
     })
 
     // Uma linha por modelo: a homologação mais recente é a que vale.
     // As anteriores viram só a contagem de retestes.
-    const porDispositivo = new Map<string, typeof homologacoes>()
-    for (const h of homologacoes) {
-      const lista = porDispositivo.get(h.dispositivoId) ?? []
-      lista.push(h)
-      porDispositivo.set(h.dispositivoId, lista)
-    }
+    const grupos = agruparPorDispositivo(homologacoes)
+    // Progresso com os mesmos itens que são linha da matriz do tipo
+    const itensDoTipo = await itensPorCategoria(
+      fastify.prisma,
+      [...new Set(grupos.map(([atual]) => atual.dispositivo.categoriaId))],
+    )
 
-    const dispositivos = [...porDispositivo.values()]
+    const dispositivos = grupos
       .map(([atual, ...anteriores]) => {
+        const naBateria = itensDoTipo.get(atual.dispositivo.categoriaId) ?? new Set<string>()
+        const resultados = atual.resultados.filter(r => naBateria.has(r.itemId))
         const resumo = {
-          total: atual.resultados.length,
+          total: resultados.length,
           ok: 0,
           divergencias: 0,
           semJustificativa: 0,
           naoAplicavel: 0,
           naoTestado: 0,
         }
-        for (const r of atual.resultados) {
+        for (const r of resultados) {
           if (r.status === StatusResultado.OK) resumo.ok++
           else if (r.status === StatusResultado.NAO_APLICAVEL) resumo.naoAplicavel++
           else if (r.status === StatusResultado.NAO_TESTADO) resumo.naoTestado++

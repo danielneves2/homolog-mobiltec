@@ -15,11 +15,13 @@ import { StatusHomologacao, StatusResultado } from '@prisma/client'
 import { itemAplicavel, normalizarGerenciamento } from '../lib/gerenciamento.js'
 import {
   carregarUsuarioEscopo,
-  whereMatrizMobiltec,
-  whereMatrizParceiro,
+  ehEmpresaMobiltec,
+  ehTns,
+  escopoPlanilha,
   usuarioPodeOperar,
   slugsMatrizParceiro,
 } from '../lib/escopo.js'
+import { agruparPorDispositivo, itensPorCategoria } from '../lib/planilha.js'
 
 const matrizRoutes: FastifyPluginAsync = async (fastify) => {
 
@@ -37,38 +39,25 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
     })
     if (!categoria) return reply.status(404).send({ erro: 'Categoria não encontrada' })
 
-    const ehParceiro = request.user.papel === 'PARCEIRO'
-    const whereHomologacao: any = {
-      dispositivo: { categoriaId: categoria.id, ativo: true },
-    }
-
-    if (ehParceiro) {
-      const usuarioParceiro = await fastify.prisma.usuario.findUnique({
-        where: { id: request.user.id },
-        select: { empresa: true },
-      })
+    // De quem é a planilha: o parceiro vê a da própria empresa; a Mobiltec vê
+    // a dela ou, com `?empresa=`, a de um parceiro (aberta pelo painel dele).
+    // A regra é a mesma do painel (`escopoPlanilha`), então o que um mostra o
+    // outro também mostra.
+    let escopo
+    if (request.user.papel === 'PARCEIRO') {
+      const u = await carregarUsuarioEscopo(fastify.prisma, request.user)
       // D499: matrizes liberadas para parceiros e não ocultadas pelo ambiente da empresa
-      const permitidas = await slugsMatrizParceiro(fastify.prisma, usuarioParceiro?.empresa)
-      if (!permitidas.includes(categoriaSlug)) {
+      const permitidas = await slugsMatrizParceiro(fastify.prisma, u.empresa)
+      if (!u.empresa || !permitidas.includes(categoriaSlug)) {
         return reply.status(403).send({ erro: 'Acesso não permitido a esta categoria de dispositivo' })
       }
-      // Planilha própria da empresa; a TNS divide a de PoS com a Mobiltec
-      const escopo = await carregarUsuarioEscopo(fastify.prisma, request.user)
-      whereHomologacao.AND = [whereMatrizParceiro(escopo, categoriaSlug)]
-    } else if (empresaFiltro && empresaFiltro.trim() && empresaFiltro.trim().toLowerCase() !== 'mobiltec') {
-      // ADMIN consultando a planilha de um parceiro
-      const alvo = empresaFiltro.trim()
-      whereHomologacao.OR = [
-        { dispositivo: { empresa: { equals: alvo, mode: 'insensitive' } } },
-        { responsavel: { empresa: { equals: alvo, mode: 'insensitive' } } },
-      ]
+      escopo = escopoPlanilha(u.empresa, ehTns(u))
     } else {
-      // Planilha Mobiltec: só o ambiente Mobiltec (+ TNS em PoS, que divide a planilha)
-      whereHomologacao.AND = [whereMatrizMobiltec(categoriaSlug)]
+      escopo = escopoPlanilha(empresaFiltro)
     }
 
     const homologacoes = await fastify.prisma.homologacao.findMany({
-      where: whereHomologacao,
+      where: { AND: [{ dispositivo: { categoriaId: categoria.id, ativo: true } }, escopo] },
       include: {
         dispositivo: true,
         bateria: { select: { id: true, nome: true } },
@@ -106,14 +95,7 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Agrupa por modelo: a primeira de cada dispositivo é a mais recente
     // (findMany já veio ordenado por criadoEm desc).
-    const porDispositivo = new Map<string, typeof homologacoes>()
-    for (const h of homologacoes) {
-      const lista = porDispositivo.get(h.dispositivoId) ?? []
-      lista.push(h)
-      porDispositivo.set(h.dispositivoId, lista)
-    }
-
-    const colunas = [...porDispositivo.values()]
+    const colunas = agruparPorDispositivo(homologacoes)
       .map(([atual, ...anteriores]) => ({
         homologacao: {
           ...atual,
@@ -163,13 +145,9 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
     // inteira, com o que já estava preenchido, assim que o item é remarcado.
     // Homologação já aprovada guarda o que foi atestado no certificado
     // emitido, que é arquivo e não muda.
-    const daCategoria = await fastify.prisma.bateriaItem.findMany({
-      where: { bateria: { categoriaId: categoria.id } },
-      select: { itemId: true },
-    })
-    const idsDaBateria = [...new Set(daCategoria.map(b => b.itemId))]
+    const naBateria = (await itensPorCategoria(fastify.prisma, [categoria.id])).get(categoria.id)!
     const itens = await fastify.prisma.itemTeste.findMany({
-      where: { id: { in: idsDaBateria } },
+      where: { id: { in: [...naBateria] } },
       orderBy: [{ grupo: 'asc' }, { ordem: 'asc' }],
     })
 
@@ -190,7 +168,6 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
     // Os resultados acompanham as linhas: se sobrasse resultado de item fora
     // da bateria, ele contaria no medidor de divergências e no checklist de
     // finalizar sem ter linha onde ser resolvido.
-    const naBateria = new Set(idsDaBateria)
     for (const c of colunas) {
       c.homologacao.resultados = c.homologacao.resultados.filter(r => naBateria.has(r.itemId))
       c.homologacao.resultadosPorItem = Object.fromEntries(
@@ -212,6 +189,8 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
       modelo: z.string().optional().default('Modelo').transform(s => s?.trim() || 'Modelo'),
       nomeComercial: z.string().optional().nullable().transform(s => s?.trim() || undefined),
       linkFabricante: z.string().optional().nullable().transform(s => s?.trim() || null),
+      /** Mobiltec cadastrando na planilha de um parceiro (aberta pelo painel dele) */
+      empresa: z.string().optional().nullable().transform(s => s?.trim() || null),
       // Homologação inicial
       bateriaId: z.string().optional().nullable(),
       numeroSerie: z.string().optional().default('Sem informação').transform(s => s?.trim() || 'Sem informação'),
@@ -240,6 +219,7 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
       modelo: modeloRaw,
       nomeComercial: nomeComercialRaw,
       linkFabricante,
+      empresa: empresaInformada,
       bateriaId: bateriaIdRaw,
       ...restoHomologacao
     } = body
@@ -248,49 +228,35 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
     const modelo = modeloRaw || 'Modelo'
     const nomeComercial = nomeComercialRaw || `${fabricante} ${modelo}`.trim() || 'Dispositivo'
 
-    let bateria = null
-    if (bateriaIdRaw && typeof bateriaIdRaw === 'string' && bateriaIdRaw.trim()) {
-      bateria = await fastify.prisma.bateriaTeste.findUnique({
-        where: { id: bateriaIdRaw.trim() },
-        include: { itens: { select: { itemId: true, item: { select: { somenteSupervisionado: true } } } } },
-      })
-    }
-    if (!bateria) {
-      bateria = await fastify.prisma.bateriaTeste.findFirst({
-        where: { categoriaId, ativo: true },
-        include: { itens: { select: { itemId: true, item: { select: { somenteSupervisionado: true } } } } },
-      })
-    }
-    if (!bateria) {
-      bateria = await fastify.prisma.bateriaTeste.findFirst({
-        where: { categoriaId },
-        include: { itens: { select: { itemId: true, item: { select: { somenteSupervisionado: true } } } } },
-      })
-    }
-    if (!bateria) {
-      bateria = await fastify.prisma.bateriaTeste.findFirst({
-        include: { itens: { select: { itemId: true, item: { select: { somenteSupervisionado: true } } } } },
-      })
-    }
-    if (!bateria) return reply.status(404).send({ erro: 'Bateria de testes não encontrada' })
+    // A bateria é sempre do próprio tipo: a escolhida, a ativa ou qualquer
+    // uma dele. Bateria de outro tipo poria na coluna itens que a matriz deste
+    // tipo não tem como linha.
+    const incluirItens = { itens: { select: { itemId: true, item: { select: { somenteSupervisionado: true } } } } }
+    const bateria =
+      (bateriaIdRaw?.trim()
+        ? await fastify.prisma.bateriaTeste.findFirst({ where: { id: bateriaIdRaw.trim(), categoriaId }, include: incluirItens })
+        : null) ??
+      (await fastify.prisma.bateriaTeste.findFirst({ where: { categoriaId, ativo: true }, include: incluirItens })) ??
+      (await fastify.prisma.bateriaTeste.findFirst({ where: { categoriaId }, include: incluirItens }))
+    if (!bateria) return reply.status(404).send({ erro: 'Este tipo de dispositivo não tem bateria de testes configurada.' })
 
     const dadosHomologacao = {
       ...restoHomologacao,
       bateriaId: bateria.id,
     }
 
-    let empresaDispositivo: string | null = null
+    // A empresa gravada no dispositivo decide de quem é a planilha (D510).
+    // Parceiro: sempre a dele. Mobiltec: a do parceiro em cuja planilha está
+    // cadastrando, ou nenhuma (ambiente Mobiltec).
+    let empresaDispositivo: string | null = ehEmpresaMobiltec(empresaInformada) ? null : empresaInformada
     if (request.user.papel === 'PARCEIRO') {
-      const u = await fastify.prisma.usuario.findUnique({
-        where: { id: request.user.id },
-        select: { empresa: true },
-      })
+      const u = await carregarUsuarioEscopo(fastify.prisma, request.user)
       const cat = await fastify.prisma.categoria.findUnique({
         where: { id: categoriaId },
         select: { slug: true },
       })
-      const permitidas = await slugsMatrizParceiro(fastify.prisma, u?.empresa)
-      if (!cat || !u || !permitidas.includes(cat.slug)) {
+      const permitidas = await slugsMatrizParceiro(fastify.prisma, u.empresa)
+      if (!cat || !u.empresa || !permitidas.includes(cat.slug)) {
         return reply.status(403).send({ erro: 'Acesso não permitido a esta categoria de dispositivo' })
       }
       empresaDispositivo = u.empresa

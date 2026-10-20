@@ -481,11 +481,30 @@ export interface Dispositivo {
   fotoUrl: string | null
   datasheetUrl?: string | null
   linkFabricante: string | null
+  /** Empresa dona da planilha onde o modelo entrou; vazio = Mobiltec (D510) */
+  empresa?: string | null
   ativo: boolean
   criadoEm: string
   categoria?: Categoria
   homologacoes?: Homologacao[]
   _count?: { homologacoes: number }
+}
+
+/**
+ * O modelo é da planilha da empresa do parceiro? Espelho de
+ * `whereOperaParceiro` no backend (`lib/escopo.ts`, D510): o dono é a empresa
+ * do dispositivo, e a TNS divide o PoS da Mobiltec.
+ */
+export function ehDaPlanilhaDoParceiro(
+  usuario: Pick<Usuario, 'empresa' | 'email'>,
+  dispositivo: Pick<Dispositivo, 'empresa' | 'categoria'>,
+): boolean {
+  const empresa = usuario.empresa?.trim().toLowerCase()
+  if (!empresa) return false
+  const dona = dispositivo.empresa?.trim().toLowerCase() || 'mobiltec'
+  if (dona === empresa) return true
+  const tns = empresa === 'tns' || empresa === 'tnsi' || usuario.email.toLowerCase().endsWith('@tnsi.com')
+  return tns && dona === 'mobiltec' && dispositivo.categoria?.slug === 'pos'
 }
 
 export interface ItemTeste {

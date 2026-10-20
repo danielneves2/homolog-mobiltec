@@ -20,10 +20,12 @@ import {
 import { itemAplicavel, normalizarGerenciamento, GERENCIAMENTOS } from '../lib/gerenciamento.js'
 import {
   carregarUsuarioEscopo,
+  empresaParceiraDa,
   usuarioPodeOperar,
   usuarioPodeVer,
   whereVeParceiro,
 } from '../lib/escopo.js'
+import { removerArquivos } from '../lib/storage.js'
 
 // Status que EXIGEM justificativa (regra central da spec)
 const STATUS_COM_JUSTIFICATIVA_OBRIGATORIA: StatusResultado[] = [
@@ -45,9 +47,13 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
 
   // ============================================================
   // POST /homologacoes — Cria nova homologação
+  // Só a Mobiltec: o parceiro abre homologação pela planilha
+  // (POST /matriz/modelo e /matriz/reteste), que conferem o escopo da
+  // empresa. Aqui não há essa conferência — `dispositivoId` e `responsavelId`
+  // são livres.
   // ============================================================
   fastify.post('/homologacoes', {
-    onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR', 'PARCEIRO'])],
+    onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR'])],
   }, async (request, reply) => {
     const schema = z.object({
       dispositivoId: z.string(),
@@ -85,26 +91,16 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
     })
     if (!dispositivo) return reply.status(404).send({ erro: 'Dispositivo não encontrado' })
 
-    let bateria = null
-    if (body.bateriaId && typeof body.bateriaId === 'string' && body.bateriaId.trim()) {
-      bateria = await fastify.prisma.bateriaTeste.findUnique({
-        where: { id: body.bateriaId.trim() },
-        include: { itens: { include: { item: true }, orderBy: { ordem: 'asc' } } },
-      })
-    }
-    if (!bateria) {
-      bateria = await fastify.prisma.bateriaTeste.findFirst({
-        where: { categoriaId: dispositivo.categoriaId, ativo: true },
-        include: { itens: { include: { item: true }, orderBy: { ordem: 'asc' } } },
-      })
-    }
-    if (!bateria) {
-      bateria = await fastify.prisma.bateriaTeste.findFirst({
-        where: { ativo: true },
-        include: { itens: { include: { item: true }, orderBy: { ordem: 'asc' } } },
-      })
-    }
-    if (!bateria) return reply.status(404).send({ erro: 'Bateria de testes não encontrada' })
+    // Bateria sempre do tipo do dispositivo (mesma regra de POST /matriz/modelo)
+    const incluirItens = { itens: { include: { item: true }, orderBy: { ordem: 'asc' as const } } }
+    const categoriaId = dispositivo.categoriaId
+    const bateria =
+      (body.bateriaId?.trim()
+        ? await fastify.prisma.bateriaTeste.findFirst({ where: { id: body.bateriaId.trim(), categoriaId }, include: incluirItens })
+        : null) ??
+      (await fastify.prisma.bateriaTeste.findFirst({ where: { categoriaId, ativo: true }, include: incluirItens })) ??
+      (await fastify.prisma.bateriaTeste.findFirst({ where: { categoriaId }, include: incluirItens }))
+    if (!bateria) return reply.status(404).send({ erro: 'Este tipo de dispositivo não tem bateria de testes configurada.' })
 
     // Cria homologação e todos os resultados NAO_TESTADO atomicamente
     const homologacao = await fastify.prisma.homologacao.create({
@@ -684,7 +680,7 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
     ])
 
     // Fluxo dinâmico de notificações entre Parceiro e Admin Mobiltec
-    const empresaParceiro = homologacao.responsavel?.empresa || homologacao.dispositivo?.empresa || null
+    const empresaParceiro = empresaParceiraDa(homologacao)
     const nomeDisp = homologacao.dispositivo?.nomeComercial || 'Dispositivo'
 
     try {
@@ -778,11 +774,9 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
       })
     }
 
-    const empresaParceiro = homologacao.responsavel?.empresa || homologacao.dispositivo?.empresa || null
+    const empresaParceiro = empresaParceiraDa(homologacao)
     const nomeDisp = homologacao.dispositivo?.nomeComercial || 'Dispositivo'
-    const ehDeParceiro =
-      homologacao.responsavel?.papel === 'PARCEIRO' ||
-      Boolean(empresaParceiro && empresaParceiro.toLowerCase() !== 'mobiltec')
+    const ehDeParceiro = homologacao.responsavel?.papel === 'PARCEIRO' || empresaParceiro !== null
     const statusNovo = ehDeParceiro ? StatusHomologacao.EM_REVISAO : StatusHomologacao.RASCUNHO
 
     // Executa tudo em transação
@@ -864,14 +858,27 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
       })
     }
 
-    // Regra 2: Para parceiro, apenas o responsável que cadastrou a homologação pode excluí-la da planilha
+    // Regra 2: Para parceiro, apenas o responsável que cadastrou a homologação
+    // pode excluí-la — e só enquanto ela é da planilha da empresa dele (quem
+    // mudou de empresa não apaga o que ficou na anterior)
     if (request.user.papel === 'PARCEIRO') {
-      if (homologacao.responsavelId !== request.user.id) {
+      if (
+        homologacao.responsavelId !== request.user.id ||
+        !(await usuarioPodeOperar(fastify.prisma, request.user, id))
+      ) {
         return reply.status(403).send({
           erro: 'Apenas o usuário responsável pelo registro pode remover este item da planilha.',
         })
       }
     }
+
+    // Arquivos que deixam de ter dono: os certificados emitidos desta
+    // homologação e, se o modelo sair junto, a foto e o datasheet dele
+    const certificados = await fastify.prisma.certificadoEmitido.findMany({
+      where: { homologacaoId: id },
+      select: { arquivoUrl: true },
+    })
+    let dispositivoRemovido = false
 
     // Executa exclusão atômica de todos os relacionamentos
     await fastify.prisma.$transaction(async (tx) => {
@@ -889,8 +896,16 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
       })
       if (restantes === 0) {
         await tx.dispositivo.delete({ where: { id: homologacao.dispositivoId } })
+        dispositivoRemovido = true
       }
     })
+
+    // Fora da transação e sem derrubar a resposta: o registro já saiu do
+    // banco, arquivo que sobrar é só espaço ocupado
+    await removerArquivos([
+      ...certificados.map(c => c.arquivoUrl),
+      ...(dispositivoRemovido ? [homologacao.dispositivo.fotoUrl, homologacao.dispositivo.datasheetUrl] : []),
+    ]).catch(err => fastify.log.warn({ err }, 'Falha ao remover arquivos da homologação excluída'))
 
     return reply.status(200).send({ mensagem: 'Homologação removida com sucesso.' })
   })

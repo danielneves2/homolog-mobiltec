@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { sincronizarPlanilha } from '@/lib/sincronizar'
 import type {
   Dispositivo,
   Homologacao,
@@ -10,13 +11,15 @@ import type {
 } from '@/lib/tipos'
 
 export const chavesMatriz = {
-  matriz: (slug: string) => ['matriz', slug] as const,
+  /** `empresa`: a Mobiltec abrindo a planilha de um parceiro (D510) */
+  matriz: (slug: string, empresa?: string | null) =>
+    ['matriz', slug, empresa?.trim().toLowerCase() || null] as const,
 }
 
-export function useMatriz(categoriaSlug = 'pos') {
+export function useMatriz(categoriaSlug = 'pos', empresa?: string | null) {
   return useQuery({
-    queryKey: chavesMatriz.matriz(categoriaSlug),
-    queryFn: () => api.get<Matriz>('/matriz', { categoriaSlug }),
+    queryKey: chavesMatriz.matriz(categoriaSlug, empresa),
+    queryFn: () => api.get<Matriz>('/matriz', { categoriaSlug, empresa }),
   })
 }
 
@@ -45,12 +48,14 @@ export function useSalvarCelula(categoriaSlug = 'pos') {
         justificativaTexto: p.justificativaTexto ?? null,
       }),
 
+    // Todas as planilhas abertas deste tipo (a da Mobiltec e a de um parceiro
+    // aberta pelo painel dele): só a que tem a coluna muda de fato
     onMutate: async (p) => {
-      const chave = chavesMatriz.matriz(categoriaSlug)
-      await qc.cancelQueries({ queryKey: chave })
-      const anterior = qc.getQueryData<Matriz>(chave)
+      const doTipo = ['matriz', categoriaSlug]
+      await qc.cancelQueries({ queryKey: doTipo })
+      const anteriores = qc.getQueriesData<Matriz>({ queryKey: doTipo })
 
-      qc.setQueryData<Matriz>(chave, (velho) => {
+      qc.setQueriesData<Matriz>({ queryKey: doTipo }, (velho) => {
         if (!velho) return velho
         return {
           ...velho,
@@ -77,51 +82,41 @@ export function useSalvarCelula(categoriaSlug = 'pos') {
         }
       })
 
-      return { anterior }
+      return { anteriores }
     },
 
     onError: (_e, _p, ctx) => {
-      if (ctx?.anterior) qc.setQueryData(chavesMatriz.matriz(categoriaSlug), ctx.anterior)
+      for (const [chave, dados] of ctx?.anteriores ?? []) qc.setQueryData(chave, dados)
     },
 
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: chavesMatriz.matriz(categoriaSlug) })
-      // O certificado é HTML gerado no servidor a partir destes mesmos
-      // resultados: a justificativa escrita aqui vira parágrafo da "Análise
-      // das Divergências" lá. Sem invalidar, a prévia continua servindo o
-      // documento anterior — o que parece que a justificativa não salvou.
-      qc.invalidateQueries({ queryKey: ['certificado'] })
-      qc.invalidateQueries({ queryKey: ['analise-divergencias'] })
-    },
+    // O certificado é HTML gerado no servidor a partir destes mesmos
+    // resultados, e o painel e a vitrine mostram o progresso: todos recarregam.
+    // Sem isso a prévia continua servindo o documento anterior — o que parece
+    // que a justificativa não salvou.
+    onSettled: () => sincronizarPlanilha(qc),
   })
 }
 
 /** Edita um campo da ficha (S/N, IMEI, versão do agente…) direto na matriz */
-export function useSalvarFicha(categoriaSlug = 'pos') {
+export function useSalvarFicha() {
   const qc = useQueryClient()
 
   return useMutation({
     mutationFn: ({ homologacaoId, ...campos }: { homologacaoId: string } & Record<string, unknown>) =>
       api.patch<Homologacao>(`/homologacoes/${homologacaoId}`, campos),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: chavesMatriz.matriz(categoriaSlug) })
-      // A ficha é a "Descrição do dispositivo" do certificado
-      qc.invalidateQueries({ queryKey: ['certificado'] })
-    },
+    // A ficha é a "Descrição do dispositivo" do certificado e o resumo do card
+    onSuccess: () => sincronizarPlanilha(qc),
   })
 }
 
 /** Edita fabricante / modelo / nome comercial do dispositivo */
-export function useSalvarDispositivo(categoriaSlug = 'pos') {
+export function useSalvarDispositivo() {
   const qc = useQueryClient()
 
   return useMutation({
     mutationFn: ({ dispositivoId, ...campos }: { dispositivoId: string } & Record<string, unknown>) =>
       api.patch<Dispositivo>(`/dispositivos/${dispositivoId}`, campos),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: chavesMatriz.matriz(categoriaSlug) })
-      qc.invalidateQueries({ queryKey: ['certificado'] })
-    },
+    onSuccess: () => sincronizarPlanilha(qc),
   })
 }
 
@@ -143,21 +138,21 @@ export interface PayloadNovoModelo {
   assinaturaAgente: boolean
   precisaAssinaturaDev: boolean
   dataInicio: string
+  /** Mobiltec cadastrando na planilha de um parceiro: o modelo nasce dele */
+  empresa?: string | null
 }
 
-export function useCadastrarModelo(categoriaSlug = 'pos') {
+export function useCadastrarModelo() {
   const qc = useQueryClient()
 
   return useMutation({
     mutationFn: (p: PayloadNovoModelo) => api.post<Dispositivo>('/matriz/modelo', p),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: chavesMatriz.matriz(categoriaSlug) })
-    },
+    onSuccess: () => sincronizarPlanilha(qc, { estrutura: true }),
   })
 }
 
 /** Upload da foto do dispositivo — vai para o certificado (spec §8.1) */
-export function useEnviarFoto(categoriaSlug = 'pos') {
+export function useEnviarFoto() {
   const qc = useQueryClient()
 
   return useMutation({
@@ -166,15 +161,12 @@ export function useEnviarFoto(categoriaSlug = 'pos') {
       dados.append('arquivo', arquivo)
       return api.postMultipart<Dispositivo>(`/dispositivos/${dispositivoId}/foto`, dados)
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: chavesMatriz.matriz(categoriaSlug) })
-      // O certificado embute a foto, então o preview precisa ser refeito.
-      qc.invalidateQueries({ queryKey: ['certificado'] })
-    },
+    // O certificado embute a foto, então o preview precisa ser refeito
+    onSuccess: () => sincronizarPlanilha(qc),
   })
 }
 
-export function useAbrirReteste(categoriaSlug = 'pos') {
+export function useAbrirReteste() {
   const qc = useQueryClient()
 
   return useMutation({
@@ -185,8 +177,6 @@ export function useAbrirReteste(categoriaSlug = 'pos') {
       versaoSo?: string
       dataInicio: string
     }) => api.post<Homologacao>('/matriz/reteste', p),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: chavesMatriz.matriz(categoriaSlug) })
-    },
+    onSuccess: () => sincronizarPlanilha(qc, { estrutura: true }),
   })
 }

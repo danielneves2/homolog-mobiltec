@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/contextos/AuthContext'
 import { api, ErroApi } from '@/lib/api'
@@ -112,13 +112,17 @@ export function Matriz() {
   const { slug = 'pos' } = useParams<{ slug: string }>()
   const navegar = useNavigate()
   const { usuario, ehParceiro, ehLeitor } = useAuth()
+  // A Mobiltec abre a planilha de um parceiro pelo painel dele (D510): é a
+  // mesma planilha que o parceiro vê. O parceiro sempre vê a própria.
+  const [parametros] = useSearchParams()
+  const empresaParceiro = ehParceiro ? null : parametros.get('empresa')?.trim() || null
 
-  const { data, isLoading, isError, error } = useMatriz(slug)
+  const { data, isLoading, isError, error } = useMatriz(slug, empresaParceiro)
   const salvarCelula = useSalvarCelula(slug)
-  const salvarFicha = useSalvarFicha(slug)
-  const salvarDispositivo = useSalvarDispositivo(slug)
+  const salvarFicha = useSalvarFicha()
+  const salvarDispositivo = useSalvarDispositivo()
 
-  const enviarFoto = useEnviarFoto(slug)
+  const enviarFoto = useEnviarFoto()
 
   const [novoModelo, setNovoModelo] = useState(false)
   const [reteste, setReteste] = useState<ColunaMatriz | null>(null)
@@ -419,6 +423,27 @@ export function Matriz() {
       {/* Cabeçalho: só os filtros, centralizados. O nome da tela vive na
           barra do card, no Layout — aqui ele só repetiria. */}
       <header className="px-8 pt-4 pb-3 shrink-0">
+          {empresaParceiro && (
+            <div
+              className="mb-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-lg px-4 py-2 text-xs"
+              style={{ background: 'var(--color-info-soft)', color: 'var(--color-foreground)' }}
+            >
+              <span>
+                Planilha do parceiro <strong>{empresaParceiro}</strong> — o que for cadastrado aqui entra no
+                ambiente dele.
+              </span>
+              <Link
+                to={`/paineis/parceiro/${encodeURIComponent(empresaParceiro)}`}
+                className="font-semibold"
+                style={{ color: 'var(--color-primary)' }}
+              >
+                Voltar ao painel
+              </Link>
+              <Link to={`/matriz/${slug}`} className="font-semibold" style={{ color: 'var(--color-primary)' }}>
+                Ver planilha Mobiltec
+              </Link>
+            </div>
+          )}
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
               <SeletorFiltro
                 rotuloCurto="Fabricante"
@@ -537,7 +562,7 @@ export function Matriz() {
                     : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.035]'
                 }`}
               >
-                <span>Revalidados</span>
+                <span>Retestados</span>
                 <span className="ml-1 text-xs opacity-70 font-normal">{totalRetestados}</span>
                 {soRetestados && (
                   <span
@@ -997,6 +1022,7 @@ export function Matriz() {
           categoriaSlug={slug}
           baterias={baterias ?? []}
           plataforma={data.categoria.plataforma}
+          empresa={empresaParceiro}
           aoFechar={() => setNovoModelo(false)}
           aoCriar={() => setNovoModelo(false)}
         />

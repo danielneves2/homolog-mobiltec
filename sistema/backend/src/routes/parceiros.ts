@@ -1,4 +1,6 @@
-import { ehTns, ESCOPO_MOBILTEC } from '../lib/escopo.js'
+import type { PrismaClient } from '@prisma/client'
+import { ehTns, escopoPlanilha, slugsMatrizParceiro } from '../lib/escopo.js'
+import { agruparPorDispositivo, itensPorCategoria } from '../lib/planilha.js'
 import { FastifyPluginAsync } from 'fastify'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
@@ -310,62 +312,28 @@ const parceirosRoutes: FastifyPluginAsync = async (fastify) => {
 /**
  * Monta os dados consolidados do painel de um parceiro:
  * métricas de homologação, progresso de testes e lista de dispositivos do seu ambiente.
+ *
+ * O painel é o resumo da planilha da empresa (D510): um card para cada coluna
+ * que a matriz mostraria — mesma regra de escopo, mesmos tipos liberados, mesma
+ * homologação "atual" e o mesmo progresso. Modelo que saiu da matriz (removido,
+ * tipo oculto ou desativado) sai do painel junto.
  */
 async function montarDadosPainel(fastify: any, parceiro: any) {
-  const empresa = parceiro.empresa?.trim()
+  const empresa: string | null = parceiro.empresa?.trim() || null
+  const prisma: PrismaClient = fastify.prisma
 
-  const ehTNS = ehTns({ empresa, email: parceiro.email })
-
-  // Escopo estrito do parceiro:
-  // Dispositivos cadastrados pela empresa do parceiro, com fabricante igual à empresa,
-  // ou que possuam homologações realizadas pelo parceiro ou por usuários da sua empresa.
-  const filtroDispositivoDoParceiro: any[] = [
-    { homologacoes: { some: { responsavelId: parceiro.id } } },
-  ]
-
-  if (empresa) {
-    filtroDispositivoDoParceiro.push(
-      { empresa: { equals: empresa, mode: 'insensitive' } },
-      { fabricante: { equals: empresa, mode: 'insensitive' } },
-      { homologacoes: { some: { responsavel: { empresa: { equals: empresa, mode: 'insensitive' } } } } },
-    )
-  }
-
-  // TNS ou parceiro de PoS visualiza os dispositivos da categoria PoS
-  // (só a planilha compartilhada com a Mobiltec — nunca a de outros parceiros)
-  if (ehTNS) {
-    filtroDispositivoDoParceiro.push({
-      categoria: { slug: 'pos' },
-      homologacoes: { some: ESCOPO_MOBILTEC },
-    })
-  }
-
-  const filtroHomologacaoDoParceiro: any[] = [
-    { responsavelId: parceiro.id },
-  ]
-  if (empresa) {
-    filtroHomologacaoDoParceiro.push({
-      responsavel: { empresa: { equals: empresa, mode: 'insensitive' } },
-    })
-  }
-
-  if (ehTNS) {
-    filtroHomologacaoDoParceiro.push({
-      AND: [{ dispositivo: { categoria: { slug: 'pos' } } }, ESCOPO_MOBILTEC],
-    })
-  }
-
-  const dispositivos = await fastify.prisma.dispositivo.findMany({
-    where: {
-      ativo: true,
-      OR: filtroDispositivoDoParceiro,
-    },
-    include: {
-      categoria: { select: { id: true, nome: true, slug: true, icone: true } },
-      homologacoes: {
-        where: { OR: filtroHomologacaoDoParceiro },
+  const slugs = await slugsMatrizParceiro(prisma, empresa)
+  const homologacoes = empresa
+    ? await prisma.homologacao.findMany({
+        where: {
+          AND: [
+            { dispositivo: { ativo: true, categoria: { slug: { in: slugs } } } },
+            escopoPlanilha(empresa, ehTns({ empresa, email: parceiro.email })),
+          ],
+        },
         include: {
-          resultados: { select: { status: true, justificativaId: true, justificativaTexto: true } },
+          dispositivo: { include: { categoria: { select: { id: true, nome: true, slug: true, icone: true } } } },
+          resultados: { select: { itemId: true, status: true, justificativaId: true, justificativaTexto: true } },
           responsavel: { select: { id: true, nome: true, email: true, empresa: true } },
           // O último apontamento da Mobiltec, para o card do painel dizer o
           // que precisa ser ajustado (D435)
@@ -379,13 +347,16 @@ async function montarDadosPainel(fastify: any, parceiro: any) {
           },
         },
         orderBy: { criadoEm: 'desc' },
-      },
-    },
-    orderBy: { criadoEm: 'desc' },
-  })
+      })
+    : []
+
+  // Mesma homologação "atual" da coluna da matriz: a mais recente do modelo
+  const atuais = agruparPorDispositivo(homologacoes).map(([atual]) => atual)
+  // Progresso só com os itens que são linha da matriz do tipo
+  const itensDoTipo = await itensPorCategoria(prisma, [...new Set(atuais.map((h) => h.dispositivo.categoriaId))])
 
   const metricas = {
-    totalDispositivos: dispositivos.length,
+    totalDispositivos: atuais.length,
     emHomologacao: 0,
     emValidacao: 0,
     emRevisao: 0,
@@ -406,30 +377,26 @@ async function montarDadosPainel(fastify: any, parceiro: any) {
       })
     : []
 
-  const listaDispositivos = dispositivos.map((d: any) => {
-    // Busca homologação atribuída a este parceiro/empresa; se não houver, utiliza a mais recente
-    const homologacaoDoParceiro = d.homologacoes.find(
-      (h: any) =>
-        h.responsavelId === parceiro.id ||
-        (empresa && h.responsavel?.empresa?.toLowerCase() === empresa.toLowerCase()),
-    )
-    const atual = homologacaoDoParceiro ?? d.homologacoes[0] ?? null
+  const listaDispositivos = atuais.map((atual) => {
+    const d = atual.dispositivo
+    const naBateria = itensDoTipo.get(d.categoriaId) ?? new Set<string>()
+    const resultados = atual.resultados.filter((r) => naBateria.has(r.itemId))
     const notificacaoRevisao = notificacoes.find(
-      (n: any) => n.homologacaoId === atual?.id && n.tipo === 'REVISAO',
+      (n: any) => n.homologacaoId === atual.id && n.tipo === 'REVISAO',
     )
-    const ultimoHistoricoRevisao = atual?.historicoStatus?.[0] ?? null
+    const ultimoHistoricoRevisao = atual.historicoStatus[0] ?? null
     const tecnicoNome =
       ultimoHistoricoRevisao?.usuario?.nome || 'Técnico Mobiltec'
     const mensagemRevisao =
       notificacaoRevisao?.mensagem ||
       ultimoHistoricoRevisao?.motivo ||
-      atual?.observacoes ||
+      atual.observacoes ||
       'A equipe técnica da Mobiltec solicitou ajustes nesta homologação.'
     const dataRevisao =
       ultimoHistoricoRevisao?.criadoEm || notificacaoRevisao?.criadoEm || null
 
     const revisaoInfo =
-      atual?.status === 'EM_REVISAO'
+      atual.status === 'EM_REVISAO'
         ? {
             tecnicoNome,
             mensagem: mensagemRevisao,
@@ -442,7 +409,7 @@ async function montarDadosPainel(fastify: any, parceiro: any) {
         : null
 
     const resumo = {
-      total: atual?.resultados.length ?? 0,
+      total: resultados.length,
       ok: 0,
       divergencias: 0,
       semJustificativa: 0,
@@ -451,38 +418,34 @@ async function montarDadosPainel(fastify: any, parceiro: any) {
       avaliados: 0,
     }
 
-    if (atual) {
-      if (atual.status === 'RASCUNHO') metricas.emHomologacao++
-      else if (atual.status === 'AGUARDANDO_ANALISE') metricas.emValidacao++
-      else if (atual.status === 'EM_REVISAO') metricas.emRevisao++
-      else if (atual.status === 'APROVADO' || atual.status === 'PUBLICADO') metricas.homologados++
-      else if (atual.status === 'REPROVADO') metricas.reprovados++
+    if (atual.status === 'RASCUNHO') metricas.emHomologacao++
+    else if (atual.status === 'AGUARDANDO_ANALISE') metricas.emValidacao++
+    else if (atual.status === 'EM_REVISAO') metricas.emRevisao++
+    else if (atual.status === 'APROVADO' || atual.status === 'PUBLICADO') metricas.homologados++
+    else if (atual.status === 'REPROVADO') metricas.reprovados++
 
-      for (const r of atual.resultados) {
-        metricas.testesTotal++
-        if (r.status === 'NAO_TESTADO') {
-          metricas.testesPendentes++
-          resumo.naoTestado++
-        } else {
-          metricas.testesRealizados++
-        }
-
-        if (r.status === 'OK') resumo.ok++
-        else if (r.status === 'NAO_APLICAVEL') resumo.naoAplicavel++
-
-        if (['FALHA', 'NAO_SUPORTADO', 'COM_RESSALVA'].includes(r.status)) {
-          resumo.divergencias++
-          if (!r.justificativaId && !r.justificativaTexto) resumo.semJustificativa++
-        }
+    for (const r of resultados) {
+      metricas.testesTotal++
+      if (r.status === 'NAO_TESTADO') {
+        metricas.testesPendentes++
+        resumo.naoTestado++
+      } else {
+        metricas.testesRealizados++
       }
-      resumo.avaliados = resumo.total - resumo.naoTestado
-    } else {
-      metricas.emHomologacao++
+
+      if (r.status === 'OK') resumo.ok++
+      else if (r.status === 'NAO_APLICAVEL') resumo.naoAplicavel++
+
+      if (['FALHA', 'NAO_SUPORTADO', 'COM_RESSALVA'].includes(r.status)) {
+        resumo.divergencias++
+        if (!r.justificativaId && !r.justificativaTexto) resumo.semJustificativa++
+      }
     }
+    resumo.avaliados = resumo.total - resumo.naoTestado
 
     return {
       dispositivoId: d.id,
-      homologacaoId: atual?.id ?? null,
+      homologacaoId: atual.id,
       fabricante: d.fabricante,
       modelo: d.modelo,
       nomeComercial: d.nomeComercial,
@@ -492,25 +455,25 @@ async function montarDadosPainel(fastify: any, parceiro: any) {
       categoriaNome: d.categoria.nome,
       categoriaSlug: d.categoria.slug,
       categoriaIcone: d.categoria.icone,
-      versaoSo: atual?.versaoSo ?? '-',
-      versaoAgente: atual?.versaoAgente ?? '-',
-      versaoPos: atual?.versaoPos ?? null,
-      gerenciamento: atual?.gerenciamento ?? 'ANDROID_ENTERPRISE',
-      tipoAgente: atual?.tipoAgente ?? 'PROD',
-      status: atual?.status ?? 'RASCUNHO',
-      homologado: Boolean(atual && (atual.status === 'APROVADO' || atual.status === 'PUBLICADO')),
-      observacoes: atual?.observacoes ?? null,
+      versaoSo: atual.versaoSo,
+      versaoAgente: atual.versaoAgente,
+      versaoPos: atual.versaoPos,
+      gerenciamento: atual.gerenciamento,
+      tipoAgente: atual.tipoAgente,
+      status: atual.status,
+      homologado: atual.status === 'APROVADO' || atual.status === 'PUBLICADO',
+      observacoes: atual.observacoes,
       revisaoPendente:
-        atual?.status === 'EM_REVISAO' && atual.historicoStatus[0]
+        atual.status === 'EM_REVISAO' && atual.historicoStatus[0]
           ? {
               motivo: atual.historicoStatus[0].motivo,
               solicitadoEm: atual.historicoStatus[0].criadoEm,
               solicitadoPor: atual.historicoStatus[0].usuario?.nome ?? null,
             }
           : null,
-      dataInicio: atual?.dataInicio ?? null,
-      dataFim: atual?.dataFim ?? null,
-      responsavelNome: atual?.responsavel?.nome ?? parceiro.nome,
+      dataInicio: atual.dataInicio,
+      dataFim: atual.dataFim,
+      responsavelNome: atual.responsavel?.nome ?? parceiro.nome,
       notificacaoRevisao: notificacaoRevisao ?? null,
       revisaoInfo,
       resumo,

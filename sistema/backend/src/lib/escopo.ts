@@ -1,20 +1,33 @@
 /**
- * Escopo de visibilidade e operação por empresa — FONTE ÚNICA.
+ * Escopo de visibilidade e operação por empresa — FONTE ÚNICA (D483, D510).
+ *
+ * Dono de uma homologação é a EMPRESA DO DISPOSITIVO, gravada quando o modelo
+ * entra na planilha (`dispositivo.empresa`; vazio = Mobiltec). Não é a pessoa
+ * que cadastrou: o colega da mesma empresa vê e opera o mesmo que ela, e quem
+ * muda de empresa não leva os dados da anterior.
  *
  * Regras de hierarquia:
  *  - ADMIN/HOMOLOGADOR (Mobiltec) enxergam e operam tudo.
  *  - Cada parceiro tem a própria planilha/painel: só vê e opera o que é da sua
- *    empresa (dispositivo cadastrado por ela ou homologação de alguém dela).
+ *    empresa.
  *  - Exceção TNS: na categoria PoS a TNS divide a planilha com a Mobiltec —
  *    vê e opera as homologações PoS da Mobiltec e vice-versa.
  *  - Homologações APROVADAS/PUBLICADAS e o andamento interno da Mobiltec são
- *    vitrine: qualquer parceiro pode consultar (nunca editar).
+ *    vitrine: qualquer parceiro pode consultar (nunca editar), nos tipos
+ *    liberados para parceiros (D498).
+ *
+ * Matriz e painel saem da mesma regra (`escopoPlanilha`): o painel mostra um
+ * card para cada coluna que a matriz mostraria, e nada além disso.
  */
 import type { Prisma, PrismaClient } from '@prisma/client'
+import { STATUS_EDITAVEIS_PARCEIRO } from './transicoes.js'
 
 export const SLUG_POS = 'pos'
 
 const STATUS_FINAIS = ['APROVADO', 'PUBLICADO'] as const
+
+/** Casa com nada — parceiro sem empresa não tem planilha */
+const NENHUMA: Prisma.HomologacaoWhereInput = { OR: [] }
 
 export interface UsuarioEscopo {
   id: string
@@ -29,25 +42,59 @@ export function ehTns(u: { empresa?: string | null; email?: string | null }): bo
   return Boolean(u.email?.toLowerCase().endsWith('@tnsi.com'))
 }
 
+/** Empresa vazia ou "Mobiltec" = ambiente da própria Mobiltec */
+export function ehEmpresaMobiltec(empresa: string | null | undefined): boolean {
+  const e = empresa?.trim().toLowerCase()
+  return !e || e === 'mobiltec'
+}
+
+/**
+ * Empresa parceira a quem a homologação responde — destino das notificações
+ * e de quem recebe a devolução. É a dona do dispositivo; num modelo da
+ * Mobiltec (a planilha PoS compartilhada), a do parceiro que executou o teste.
+ * `null` = assunto interno da Mobiltec.
+ */
+export function empresaParceiraDa(h: {
+  dispositivo?: { empresa: string | null } | null
+  responsavel?: { empresa: string | null } | null
+}): string | null {
+  const dona = h.dispositivo?.empresa?.trim()
+  if (!ehEmpresaMobiltec(dona)) return dona!
+  const executou = h.responsavel?.empresa?.trim()
+  return ehEmpresaMobiltec(executou) ? null : executou!
+}
+
 const igual = (empresa: string) => ({ equals: empresa, mode: 'insensitive' as const })
 
-/** Homologação do ambiente Mobiltec: dispositivo e responsável sem empresa externa */
+/** Homologação do ambiente Mobiltec: dispositivo sem empresa externa */
 export const ESCOPO_MOBILTEC: Prisma.HomologacaoWhereInput = {
-  AND: [
-    { OR: [{ dispositivo: { empresa: null } }, { dispositivo: { empresa: igual('Mobiltec') } }] },
-    { OR: [{ responsavel: { empresa: null } }, { responsavel: { empresa: igual('Mobiltec') } }] },
-  ],
+  dispositivo: { OR: [{ empresa: null }, { empresa: igual('Mobiltec') }] },
 }
 
 /** Homologações PoS que pertencem à TNS (a planilha compartilhada com a Mobiltec) */
 export const ESCOPO_TNS_POS: Prisma.HomologacaoWhereInput = {
-  dispositivo: { categoria: { slug: SLUG_POS } },
-  OR: [
-    { dispositivo: { empresa: igual('TNS') } },
-    { dispositivo: { empresa: igual('TNSI') } },
-    { responsavel: { empresa: igual('TNS') } },
-    { responsavel: { empresa: igual('TNSI') } },
-  ],
+  dispositivo: {
+    categoria: { slug: SLUG_POS },
+    OR: [{ empresa: igual('TNS') }, { empresa: igual('TNSI') }],
+  },
+}
+
+/**
+ * A planilha de uma empresa, em todos os tipos de dispositivo.
+ *
+ *  - Mobiltec (ou sem empresa): o ambiente Mobiltec + a TNS em PoS.
+ *  - Parceiro: os dispositivos da empresa; a TNS soma o PoS da Mobiltec.
+ *
+ * É o que a matriz mostra (filtrando o tipo) e o que o painel lista.
+ */
+export function escopoPlanilha(
+  empresa: string | null | undefined,
+  tns = ehTns({ empresa }),
+): Prisma.HomologacaoWhereInput {
+  if (ehEmpresaMobiltec(empresa)) return { OR: [ESCOPO_MOBILTEC, ESCOPO_TNS_POS] }
+  const ou: Prisma.HomologacaoWhereInput[] = [{ dispositivo: { empresa: igual(empresa!.trim()) } }]
+  if (tns) ou.push({ AND: [{ dispositivo: { categoria: { slug: SLUG_POS } } }, ESCOPO_MOBILTEC] })
+  return { OR: ou }
 }
 
 export async function carregarUsuarioEscopo(
@@ -61,44 +108,25 @@ export async function carregarUsuarioEscopo(
   return { id: user.id, email: user.email, empresa: u?.empresa?.trim() || null }
 }
 
-/** O que o parceiro pode OPERAR (editar resultados, ficha, submeter) */
+/** O que o parceiro pode OPERAR (editar resultados, ficha, submeter): a planilha da empresa */
 export function whereOperaParceiro(u: UsuarioEscopo): Prisma.HomologacaoWhereInput {
-  const ou: Prisma.HomologacaoWhereInput[] = [{ responsavelId: u.id }, { apoioId: u.id }]
-  if (u.empresa) {
-    ou.push({ dispositivo: { empresa: igual(u.empresa) } }, { responsavel: { empresa: igual(u.empresa) } })
-  }
-  if (ehTns(u)) {
-    // Planilha PoS compartilhada com a Mobiltec
-    ou.push({ AND: [{ dispositivo: { categoria: { slug: SLUG_POS } } }, ESCOPO_MOBILTEC] })
-  }
-  return { OR: ou }
+  if (!u.empresa) return NENHUMA
+  return escopoPlanilha(u.empresa, ehTns(u))
 }
 
 /** O que o parceiro pode CONSULTAR: o que opera + vitrine (finalizadas e andamento Mobiltec) */
 export function whereVeParceiro(u: UsuarioEscopo): Prisma.HomologacaoWhereInput {
   return {
     OR: [
-      { status: { in: [...STATUS_FINAIS] } },
-      ESCOPO_MOBILTEC,
+      {
+        AND: [
+          { OR: [{ status: { in: [...STATUS_FINAIS] } }, ESCOPO_MOBILTEC] },
+          { dispositivo: { categoria: { ativo: true, liberadaParceiros: true } } },
+        ],
+      },
       whereOperaParceiro(u),
     ],
   }
-}
-
-/** Planilha (matriz) de uma categoria vista por um parceiro */
-export function whereMatrizParceiro(u: UsuarioEscopo, categoriaSlug: string): Prisma.HomologacaoWhereInput {
-  const ou: Prisma.HomologacaoWhereInput[] = [{ responsavelId: u.id }]
-  if (u.empresa) {
-    ou.push({ dispositivo: { empresa: igual(u.empresa) } }, { responsavel: { empresa: igual(u.empresa) } })
-  }
-  if (ehTns(u) && categoriaSlug === SLUG_POS) ou.push(ESCOPO_MOBILTEC)
-  return { OR: ou }
-}
-
-/** Planilha Mobiltec de uma categoria vista pelo admin (inclui a TNS em PoS) */
-export function whereMatrizMobiltec(categoriaSlug: string): Prisma.HomologacaoWhereInput {
-  if (categoriaSlug === SLUG_POS) return { OR: [ESCOPO_MOBILTEC, ESCOPO_TNS_POS] }
-  return ESCOPO_MOBILTEC
 }
 
 /** Parceiro pode consultar esta homologação? (ADMIN/HOMOLOGADOR sempre podem) */
@@ -122,6 +150,24 @@ export async function usuarioPodeOperar(
   if (user.papel !== 'PARCEIRO') return true
   const u = await carregarUsuarioEscopo(prisma, user)
   const n = await prisma.homologacao.count({ where: { id: homologacaoId, ...whereOperaParceiro(u) } })
+  return n > 0
+}
+
+/**
+ * Parceiro pode editar o cadastro do dispositivo (nome, foto…)? Só com uma
+ * homologação dele da empresa ainda na bancada (rascunho ou revisão) — a
+ * mesma janela em que ele edita a ficha e os resultados.
+ */
+export async function usuarioPodeEditarDispositivo(
+  prisma: PrismaClient,
+  user: { id: string; email: string; papel: string },
+  dispositivoId: string,
+): Promise<boolean> {
+  if (user.papel !== 'PARCEIRO') return true
+  const u = await carregarUsuarioEscopo(prisma, user)
+  const n = await prisma.homologacao.count({
+    where: { dispositivoId, status: { in: STATUS_EDITAVEIS_PARCEIRO }, ...whereOperaParceiro(u) },
+  })
   return n > 0
 }
 

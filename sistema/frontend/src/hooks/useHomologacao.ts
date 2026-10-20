@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { sincronizarPlanilha } from '@/lib/sincronizar'
 import type {
   DashboardHomologacao,
   Fonte,
@@ -68,19 +69,10 @@ export function useTransicaoStatus(homologacaoId: string) {
       assinaturaApoio?: string | null
       motivo?: string | null
     }) => api.post<Homologacao>(`/homologacoes/${homologacaoId}/status`, p),
+    // Aprovar congela o certificado e reabrir o descongela; o status muda o
+    // card do painel, a fila de validação e as notificações — tudo recarrega
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: chaves.homologacao(homologacaoId) })
-      qc.invalidateQueries({ queryKey: chaves.dashboard(homologacaoId) })
-      qc.invalidateQueries({ queryKey: ['matriz'] })
-      // Aprovar congela o certificado e reabrir o descongela — os dois mudam
-      // o que a prévia desenha e se o painel aceita edição
-      qc.invalidateQueries({ queryKey: ['certificado'] })
-      qc.invalidateQueries({ queryKey: ['analise-divergencias'] })
-      qc.invalidateQueries({ queryKey: ['homologacoes'] })
-      qc.invalidateQueries({ queryKey: ['notificacoes'] })
-      qc.invalidateQueries({ queryKey: ['painel-parceiro'] })
-      qc.invalidateQueries({ queryKey: ['parceiros'] })
-      qc.invalidateQueries({ queryKey: ['dispositivos'] })
+      sincronizarPlanilha(qc, { estrutura: true })
     },
   })
 }
@@ -95,21 +87,8 @@ export function useReabrir(homologacaoId?: string) {
       if (!targetId) throw new Error('ID da homologação é obrigatório')
       return api.post<{ mensagem: string; logId: string }>(`/homologacoes/${targetId}/reabrir`, { motivo })
     },
-    onSuccess: (_, variables) => {
-      const targetId = typeof variables === 'string' ? homologacaoId : (variables.id || homologacaoId)
-      if (targetId) {
-        qc.invalidateQueries({ queryKey: chaves.homologacao(targetId) })
-        qc.invalidateQueries({ queryKey: chaves.dashboard(targetId) })
-      }
-      qc.invalidateQueries({ queryKey: ['matriz'] })
-      qc.invalidateQueries({ queryKey: ['certificado'] })
-      qc.invalidateQueries({ queryKey: ['analise-divergencias'] })
-      qc.invalidateQueries({ queryKey: ['homologacoes'] })
-      qc.invalidateQueries({ queryKey: ['dispositivos'] })
-      qc.invalidateQueries({ queryKey: ['painel-parceiro'] })
-      qc.invalidateQueries({ queryKey: ['parceiros'] })
-      qc.invalidateQueries({ queryKey: ['homologacoes-finalizadas'] })
-      qc.invalidateQueries({ queryKey: ['notificacoes'] })
+    onSuccess: () => {
+      sincronizarPlanilha(qc, { estrutura: true })
     },
   })
 }
@@ -120,13 +99,9 @@ export function useRemoverHomologacao() {
   return useMutation({
     mutationFn: (homologacaoId: string) =>
       api.delete<{ mensagem: string }>(`/homologacoes/${homologacaoId}`),
+    // O modelo some da matriz, do painel do parceiro e do Painel Mobiltec juntos
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['matriz'] })
-      qc.invalidateQueries({ queryKey: ['homologacoes'] })
-      qc.invalidateQueries({ queryKey: ['dispositivos'] })
-      qc.invalidateQueries({ queryKey: ['painel-parceiro'] })
-      qc.invalidateQueries({ queryKey: ['parceiros'] })
-      qc.invalidateQueries({ queryKey: ['homologacoes-finalizadas'] })
+      sincronizarPlanilha(qc, { estrutura: true })
     },
   })
 }
@@ -294,7 +269,7 @@ export function useListaHomologacoes(filtros?: { status?: string; responsavelId?
 }
 
 /** Upload da foto oficial do dispositivo — atualiza catálogo, matriz e certificados */
-export function useUploadFotoDispositivo(dispositivoId: string, homologacaoId?: string) {
+export function useUploadFotoDispositivo(dispositivoId: string) {
   const qc = useQueryClient()
 
   return useMutation({
@@ -303,15 +278,7 @@ export function useUploadFotoDispositivo(dispositivoId: string, homologacaoId?: 
       dados.append('arquivo', arquivo)
       return api.postMultipart<{ id: string; fotoUrl: string }>(`/dispositivos/${dispositivoId}/foto`, dados)
     },
-    onSuccess: () => {
-      if (homologacaoId) {
-        qc.invalidateQueries({ queryKey: chaves.homologacao(homologacaoId) })
-      }
-      qc.invalidateQueries({ queryKey: ['matriz'] })
-      qc.invalidateQueries({ queryKey: ['vitrine'] })
-      qc.invalidateQueries({ queryKey: ['dispositivo', dispositivoId] })
-      qc.invalidateQueries({ queryKey: ['certificado'] })
-    },
+    onSuccess: () => sincronizarPlanilha(qc),
   })
 }
 

@@ -9,7 +9,7 @@ import { ehSomenteLeitura } from '@/lib/tipos'
 import { ErroApi } from '@/lib/api'
 import type { DispositivoVitrine } from '@/lib/tipos'
 
-type Aba = 'homologados' | 'em-homologacao' | 'revalidados'
+type Aba = 'homologados' | 'em-homologacao' | 'retestados'
 
 /**
  * Modelo usado como exemplo enquanto nenhuma homologação real foi finalizada.
@@ -236,7 +236,7 @@ export function Home() {
               [
                 ['homologados', 'Homologados', cardsHomologados.length],
                 ['em-homologacao', 'Em homologação', emAndamento.length],
-                ['revalidados', 'Revalidados', retestados.length],
+                ['retestados', 'Retestados', retestados.length],
               ] as [Aba, string, number][]
             ).map(([valor, rotulo, n]) => (
               <button
@@ -245,10 +245,11 @@ export function Home() {
                 role="tab"
                 aria-selected={aba === valor}
                 onClick={() => setAba(valor)}
-                className="rounded-[6px] px-4 py-1.5 text-sm font-medium transition-colors"
+                className={`rounded-[6px] px-4 py-1.5 text-sm transition-colors ${aba === valor ? 'font-semibold' : 'font-medium'}`}
                 style={{
                   background: aba === valor ? 'var(--color-card)' : 'transparent',
-                  color: aba === valor ? 'var(--color-foreground)' : 'var(--color-muted-foreground)',
+                  // A aba escolhida fica na cor da marca, como as abas de tipo acima
+                  color: aba === valor ? 'var(--color-primary)' : 'var(--color-muted-foreground)',
                   boxShadow: aba === valor ? '0 1px 2px rgba(0,0,0,.06)' : undefined,
                 }}
               >

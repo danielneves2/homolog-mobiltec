@@ -9,7 +9,7 @@
  *      snapshot JSON. Certificado emitido é imutável (spec §11.3)
  * GET  /homologacoes/:id/certificados        → histórico de emissões
  */
-import { usuarioPodeVer } from '../lib/escopo.js'
+import { usuarioPodeOperar, usuarioPodeVer } from '../lib/escopo.js'
 import { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
@@ -74,6 +74,22 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
     return h
   }
 
+  /**
+   * Certificado com a marca do ambiente do parceiro (D476): só para quem é da
+   * planilha da empresa dona da homologação — a mesma regra que deixa operar
+   * nela (D510) — ou para a Mobiltec, quando pede.
+   */
+  async function ambienteDoCertificado(
+    user: { id: string; email: string; papel: string },
+    homologacaoId: string,
+    pedido: string | undefined,
+  ): Promise<'parceiro' | 'mobiltec'> {
+    if (pedido !== 'parceiro') return 'mobiltec'
+    if (user.papel === 'ADMIN') return 'parceiro'
+    if (user.papel === 'PARCEIRO' && (await usuarioPodeOperar(fastify.prisma, user, homologacaoId))) return 'parceiro'
+    return 'mobiltec'
+  }
+
   /** Renderiza o HTML em PDF A4 com o Playwright (§8.4) */
   async function renderizarPdf(html: string): Promise<Buffer> {
     try {
@@ -118,24 +134,12 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
       if (h.status !== 'APROVADO' && h.status !== 'PUBLICADO') {
         return reply.status(403).send({ erro: 'O certificado só fica disponível para parceiros após aprovação oficial pela Mobiltec.' })
       }
+      if (!(await usuarioPodeVer(fastify.prisma, request.user, id))) {
+        return reply.status(404).send({ erro: 'Homologação não encontrada' })
+      }
     }
 
-    // Regra de segurança/visibilidade por ambiente (D476):
-    let ambienteEfetivo: 'parceiro' | 'mobiltec' = 'mobiltec'
-    if (ambiente === 'parceiro') {
-      let mesmaEmpresa = false
-      if (h.responsavel?.empresa) {
-        const u = await fastify.prisma.usuario.findUnique({
-          where: { id: request.user.id },
-          select: { empresa: true },
-        })
-        mesmaEmpresa = Boolean(u?.empresa && u.empresa === h.responsavel.empresa)
-      }
-      const ehDono = h.responsavelId === request.user.id || h.apoioId === request.user.id || mesmaEmpresa
-      if (request.user.papel === 'ADMIN' || (request.user.papel === 'PARCEIRO' && ehDono)) {
-        ambienteEfetivo = 'parceiro'
-      }
-    }
+    const ambienteEfetivo = await ambienteDoCertificado(request.user, id, ambiente)
 
     const podeEditar = request.user.papel !== 'PARCEIRO' && editavel === '1'
 
@@ -198,6 +202,9 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
     onRequest: [fastify.autenticar],
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
+    if (!(await usuarioPodeVer(fastify.prisma, request.user, id))) {
+      return reply.status(404).send({ erro: 'Homologação não encontrada' })
+    }
     const h = await carregar(id)
     if (!h) return reply.status(404).send({ erro: 'Homologação não encontrada' })
 
@@ -294,24 +301,12 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
       if (h.status !== 'APROVADO' && h.status !== 'PUBLICADO') {
         return reply.status(403).send({ erro: 'O download do certificado só é permitido após aprovação formal pela Mobiltec.' })
       }
+      if (!(await usuarioPodeVer(fastify.prisma, request.user, id))) {
+        return reply.status(404).send({ erro: 'Homologação não encontrada' })
+      }
     }
 
-    // Regra de segurança/visibilidade por ambiente (D476):
-    let ambienteEfetivo: 'parceiro' | 'mobiltec' = 'mobiltec'
-    if (ambiente === 'parceiro') {
-      let mesmaEmpresa = false
-      if (h.responsavel?.empresa) {
-        const u = await fastify.prisma.usuario.findUnique({
-          where: { id: request.user.id },
-          select: { empresa: true },
-        })
-        mesmaEmpresa = Boolean(u?.empresa && u.empresa === h.responsavel.empresa)
-      }
-      const ehDono = h.responsavelId === request.user.id || h.apoioId === request.user.id || mesmaEmpresa
-      if (request.user.papel === 'ADMIN' || (request.user.papel === 'PARCEIRO' && ehDono)) {
-        ambienteEfetivo = 'parceiro'
-      }
-    }
+    const ambienteEfetivo = await ambienteDoCertificado(request.user, id, ambiente)
 
     const modelo = h.dispositivo.modelo?.trim() || ''
     const fabricante = h.dispositivo.fabricante?.trim() || ''

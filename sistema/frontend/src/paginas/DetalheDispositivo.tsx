@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useHomologacao } from '@/hooks/useHomologacao'
 import { api, ErroApi } from '@/lib/api'
 import { useAuth } from '@/contextos/AuthContext'
+import { ehDaPlanilhaDoParceiro } from '@/lib/tipos'
 import { gerarNomeArquivoCertificado } from '@/lib/imprimir'
 import { obterDatasheetDispositivo } from '@/lib/datasheets'
 import { baixarPdfDireto } from '@/lib/gerarPdfClient'
@@ -40,10 +41,12 @@ export function DetalheDispositivo() {
 
   const homologacao = consulta.data
 
+  // Mesma regra do backend: o modelo é da planilha da empresa dele (D510)
   const parceiroAtribuido =
     ehParceiro &&
     usuario !== null &&
-    (homologacao?.responsavelId === usuario.id || homologacao?.apoioId === usuario.id)
+    !!homologacao?.dispositivo &&
+    ehDaPlanilhaDoParceiro(usuario, homologacao.dispositivo)
   const homologacaoEditavelPeloParceiro =
     homologacao?.status === 'RASCUNHO' || homologacao?.status === 'EM_REVISAO'
   const podeEditarFoto =
@@ -262,7 +265,6 @@ export function DetalheDispositivo() {
           aberto={modalFotoAberto}
           aoFechar={() => setModalFotoAberto(false)}
           dispositivoId={homologacao.dispositivo.id}
-          homologacaoId={id}
           nomeDispositivo={`${fabricante} ${modelo}`}
           fotoAtualUrl={homologacao.dispositivo.fotoUrl ?? null}
         />

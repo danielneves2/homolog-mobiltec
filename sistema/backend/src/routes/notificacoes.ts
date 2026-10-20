@@ -105,12 +105,24 @@ export const notificacoesRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       const { id } = request.params as { id: string }
 
-      const atualizada = await fastify.prisma.notificacao.update({
+      const notificacao = await fastify.prisma.notificacao.findUnique({ where: { id } })
+      if (!notificacao) return reply.status(404).send({ erro: 'Notificação não encontrada' })
+
+      // Mesma regra do "Ciente": parceiro só mexe nas da própria empresa
+      if (request.user.papel === 'PARCEIRO' && notificacao.empresaDestino) {
+        const u = await fastify.prisma.usuario.findUnique({
+          where: { id: request.user.id },
+          select: { empresa: true },
+        })
+        if (u?.empresa?.trim().toLowerCase() !== notificacao.empresaDestino.trim().toLowerCase()) {
+          return reply.status(403).send({ erro: 'Acesso negado a esta notificação' })
+        }
+      }
+
+      return fastify.prisma.notificacao.update({
         where: { id },
         data: { lida: true },
       })
-
-      return atualizada
     },
   )
 

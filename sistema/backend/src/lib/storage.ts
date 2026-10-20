@@ -6,7 +6,7 @@
  * Caso contrário, os arquivos são salvos na pasta local `UPLOAD_DIR`.
  */
 import { randomUUID } from 'node:crypto'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 const BUCKET_FOTOS = 'fotos-dispositivos'
@@ -208,3 +208,46 @@ export async function salvarAnexo(
   return `/uploads/anexos/${nomeArquivo}`
 }
 
+
+/**
+ * Apaga arquivos que perderam o registro dono (D510): certificados de uma
+ * homologação excluída, foto e datasheet de um modelo que saiu da base.
+ *
+ * Aceita as URLs como foram gravadas — pública do Supabase ou `/uploads/...`
+ * local — e ignora o resto (link externo, vazio). Só toca nos buckets do
+ * próprio sistema.
+ */
+export async function removerArquivos(urls: (string | null | undefined)[]): Promise<void> {
+  const buckets = [BUCKET_FOTOS, BUCKET_CERTIFICADOS, BUCKET_ANEXOS]
+  const porBucket = new Map<string, string[]>()
+  const locais: string[] = []
+
+  for (const url of urls) {
+    if (!url) continue
+    const local = url.match(/^\/uploads\/(fotos|certificados|anexos|datasheets)\/([^/?#]+)$/)
+    if (local) {
+      locais.push(path.join(obterDiretorioUploads(local[1]), local[2]))
+      continue
+    }
+    const prefixo = `${supabaseUrl}/storage/v1/object/public/`
+    if (!supabaseUrl || !url.startsWith(prefixo)) continue
+    const [bucket, ...resto] = url.slice(prefixo.length).split('/')
+    if (!buckets.includes(bucket) || resto.length === 0) continue
+    porBucket.set(bucket, [...(porBucket.get(bucket) ?? []), decodeURIComponent(resto.join('/'))])
+  }
+
+  await Promise.all(locais.map((arquivo) => rm(arquivo, { force: true })))
+
+  if (!ehSupabaseStorageAtivo) return
+  for (const [bucket, nomes] of porBucket) {
+    const resposta = await fetch(`${supabaseUrl}/storage/v1/object/${bucket}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${supabaseServiceKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prefixes: nomes }),
+    })
+    if (!resposta.ok) {
+      const erroTexto = await resposta.text().catch(() => '')
+      throw new Error(`Falha ao remover arquivos do Supabase Storage (${resposta.status}): ${erroTexto}`)
+    }
+  }
+}

@@ -7,7 +7,6 @@ interface Props {
   aberto: boolean
   aoFechar: () => void
   dispositivoId: string
-  homologacaoId?: string
   nomeDispositivo: string
   fotoAtualUrl?: string | null
 }
@@ -19,11 +18,10 @@ export function ModalUploadFoto({
   aberto,
   aoFechar,
   dispositivoId,
-  homologacaoId,
   nomeDispositivo,
   fotoAtualUrl,
 }: Props) {
-  const upload = useUploadFotoDispositivo(dispositivoId, homologacaoId)
+  const upload = useUploadFotoDispositivo(dispositivoId)
 
   const [arquivo, setArquivo] = useState<File | null>(null)
   const [urlPreview, setUrlPreview] = useState<string | null>(null)

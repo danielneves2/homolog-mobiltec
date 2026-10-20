@@ -18,6 +18,8 @@ interface Props {
    * gerenciamento BYOD/Supervisionado, que decide quais restrições entram.
    */
   plataforma?: Plataforma
+  /** Mobiltec cadastrando na planilha de um parceiro (D510) */
+  empresa?: string | null
   /** Com coluna, o modal edita a homologação existente; sem ela, cadastra uma nova */
   coluna?: ColunaMatriz
   aoFechar: () => void
@@ -86,9 +88,9 @@ function limparPrefixoSo(versaoSo: string, so: SistemaOperacional): string {
  */
 export function ModalNovoModelo({
   categoriaId,
-  categoriaSlug,
   baterias,
   plataforma,
+  empresa,
   coluna,
   aoFechar,
   aoCriar,
@@ -96,8 +98,8 @@ export function ModalNovoModelo({
   aoPedirRemover,
 }: Props) {
   const cadastrar = useCadastrarModelo()
-  const salvarFicha = useSalvarFicha(categoriaSlug)
-  const salvarDispositivo = useSalvarDispositivo(categoriaSlug)
+  const salvarFicha = useSalvarFicha()
+  const salvarDispositivo = useSalvarDispositivo()
   const [erro, setErro] = useState<string | null>(null)
 
   const editando = !!coluna
@@ -278,6 +280,7 @@ export function ModalNovoModelo({
           imei1: f.imei1.trim() || null,
           imei2: f.imei2.trim() || null,
           dataInicio: f.dataInicio || hoje(),
+          empresa: empresa ?? null,
         }
         await cadastrar.mutateAsync(payload)
       }

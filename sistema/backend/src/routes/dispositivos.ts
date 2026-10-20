@@ -8,8 +8,7 @@
  */
 import { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
-import { parceiroPodeAlterarFoto } from '../lib/autorizacao-foto.js'
-import { carregarUsuarioEscopo, whereVeParceiro } from '../lib/escopo.js'
+import { carregarUsuarioEscopo, usuarioPodeEditarDispositivo, whereVeParceiro } from '../lib/escopo.js'
 import { salvarFotoDispositivo, salvarDatasheetDispositivo } from '../lib/storage.js'
 
 /**
@@ -37,12 +36,6 @@ const TIPOS_IMAGEM: Record<string, string> = {
   'image/jpeg': '.jpg',
   'image/webp': '.webp',
 }
-
-const VINCULO_FOTO_SELECT = {
-  status: true,
-  responsavelId: true,
-  apoioId: true,
-} as const
 
 const dispositivoRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /dispositivos
@@ -122,8 +115,14 @@ const dispositivoRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /dispositivos/fabricantes — lista de fabricantes distintos para filtros
   fastify.get('/dispositivos/fabricantes', {
     onRequest: [fastify.autenticar],
-  }, async () => {
+  }, async (request) => {
+    // Parceiro só recebe fabricantes do que ele enxerga — a lista inteira
+    // revelaria modelos de outros parceiros
+    const escopoParceiro = request.user.papel === 'PARCEIRO'
+      ? { homologacoes: { some: whereVeParceiro(await carregarUsuarioEscopo(fastify.prisma, request.user)) } }
+      : {}
     const resultados = await fastify.prisma.dispositivo.findMany({
+      where: { ativo: true, ...escopoParceiro },
       select: { fabricante: true },
       distinct: ['fabricante'],
       orderBy: { fabricante: 'asc' },
@@ -169,21 +168,20 @@ const dispositivoRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = request.params as { id: string }
     const body = criarDispositivoSchema.partial().parse(request.body)
 
-    if (request.user.papel === 'PARCEIRO' && 'fotoUrl' in body) {
-      const dispositivo = await fastify.prisma.dispositivo.findUnique({
-        where: { id },
-        select: { id: true },
-      })
-      if (!dispositivo) return reply.status(404).send({ erro: 'Dispositivo não encontrado' })
+    const existe = await fastify.prisma.dispositivo.findUnique({ where: { id }, select: { id: true } })
+    if (!existe) return reply.status(404).send({ erro: 'Dispositivo não encontrado' })
 
-      const homologacoes = await fastify.prisma.homologacao.findMany({
-        where: { dispositivoId: id },
-        select: VINCULO_FOTO_SELECT,
-      })
-
-      if (!parceiroPodeAlterarFoto(homologacoes, request.user.id)) {
+    // Parceiro edita o cadastro (nome, fabricante, foto…) só de modelo da
+    // planilha da empresa dele, enquanto a homologação está com ele. Mudar o
+    // tipo do dispositivo tira a coluna de uma matriz e põe em outra: só a
+    // Mobiltec faz.
+    if (request.user.papel === 'PARCEIRO') {
+      if (body.categoriaId !== undefined) {
+        return reply.status(403).send({ erro: 'Somente a Mobiltec altera o tipo de um dispositivo.' })
+      }
+      if (!(await usuarioPodeEditarDispositivo(fastify.prisma, request.user, id))) {
         return reply.status(403).send({
-          erro: 'Parceiros só podem alterar a foto de dispositivos com homologação atribuída em rascunho ou revisão.',
+          erro: 'Parceiros só editam dispositivos da própria empresa com homologação em rascunho ou revisão.',
         })
       }
     }
@@ -210,17 +208,10 @@ const dispositivoRoutes: FastifyPluginAsync = async (fastify) => {
     const dispositivo = await fastify.prisma.dispositivo.findUnique({ where: { id } })
     if (!dispositivo) return reply.status(404).send({ erro: 'Dispositivo não encontrado' })
 
-    if (request.user.papel === 'PARCEIRO') {
-      const homologacoes = await fastify.prisma.homologacao.findMany({
-        where: { dispositivoId: id },
-        select: VINCULO_FOTO_SELECT,
+    if (!(await usuarioPodeEditarDispositivo(fastify.prisma, request.user, id))) {
+      return reply.status(403).send({
+        erro: 'Parceiros só alteram a foto de dispositivos da própria empresa com homologação em rascunho ou revisão.',
       })
-
-      if (!parceiroPodeAlterarFoto(homologacoes, request.user.id)) {
-        return reply.status(403).send({
-          erro: 'Parceiros só podem alterar a foto de dispositivos com homologação atribuída em rascunho ou revisão.',
-        })
-      }
     }
 
     let arquivo
