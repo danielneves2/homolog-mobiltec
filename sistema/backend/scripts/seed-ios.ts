@@ -8,6 +8,8 @@
  * Estrutura da matriz:
  *  - Monitoramento e Informações: bateria, armazenamento e os campos da tela
  *    "Informações do dispositivo" da console.
+ *  - Comandos Remotos: ações do menu do dispositivo na console (Desabilitar,
+ *    Wipe, Variáveis, Modo Perdido e a localização dentro dele).
  *  - Configurações de Restrição (Apple): uma linha por tópico do perfil
  *    (Restrições, Aplicativo, Segurança…). As funcionalidades do tópico vão
  *    no "?" da linha. Tópico sem nenhuma funcionalidade BYOD é
@@ -76,6 +78,21 @@ const GRUPOS: { chave: string; titulo: string; itens: ItemDef[] }[] = [
         'Memória de Armazenamento',
         'Status de Gerenciamento',
       ].map((nome) => ({ nome, descricao: CAMPO_INFO })),
+    ],
+  },
+  {
+    chave: 'IOS_COMANDOS',
+    titulo: 'Comandos Remotos',
+    itens: [
+      unica('Desabilitar', 'Remove temporariamente a conexão do dispositivo com a console.', S),
+      unica('Wipe', 'Formata o aparelho e restaura os padrões de fábrica.', S),
+      unica(
+        'Variáveis de Dispositivo',
+        'Valor próprio de cada aparelho: a variável vai no perfil e cada aparelho mostra o seu valor (ex.: código do funcionário no e-mail).',
+        S,
+      ),
+      unica('Modo Perdido', 'Trava o dispositivo na hora, impedindo o uso até a liberação na console.', S),
+      unica('Solicitar Localização', 'Força o rastreamento e exibe a posição no mapa durante o Modo Perdido.', S),
     ],
   },
   {
