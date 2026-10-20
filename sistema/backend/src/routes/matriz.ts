@@ -12,6 +12,7 @@
 import { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { StatusHomologacao, StatusResultado } from '@prisma/client'
+import { itemAplicavel, normalizarGerenciamento } from '../lib/gerenciamento.js'
 import {
   carregarUsuarioEscopo,
   whereMatrizMobiltec,
@@ -217,7 +218,7 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
       imei1: z.string().optional().nullable().transform(s => s?.trim() || null),
       imei2: z.string().optional().nullable().transform(s => s?.trim() || null),
       versaoSo: z.string().optional().default('Android').transform(s => s?.trim() || 'Android'),
-      gerenciamento: z.any().optional().transform(v => v === 'ANDROID_ENTERPRISE' ? 'ANDROID_ENTERPRISE' : 'ANDROID_LEGADO'),
+      gerenciamento: z.any().optional().transform(normalizarGerenciamento),
       tipoAgente: z.string().optional().default('Agente PoS').transform(s => s?.trim() || 'Agente PoS'),
       versaoAgente: z.string().optional().default('Não informada').transform(s => s?.trim() || 'Não informada'),
       versaoPos: z.string().optional().nullable().transform(s => s?.trim() || null),
@@ -251,24 +252,24 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
     if (bateriaIdRaw && typeof bateriaIdRaw === 'string' && bateriaIdRaw.trim()) {
       bateria = await fastify.prisma.bateriaTeste.findUnique({
         where: { id: bateriaIdRaw.trim() },
-        include: { itens: { select: { itemId: true } } },
+        include: { itens: { select: { itemId: true, item: { select: { somenteSupervisionado: true } } } } },
       })
     }
     if (!bateria) {
       bateria = await fastify.prisma.bateriaTeste.findFirst({
         where: { categoriaId, ativo: true },
-        include: { itens: { select: { itemId: true } } },
+        include: { itens: { select: { itemId: true, item: { select: { somenteSupervisionado: true } } } } },
       })
     }
     if (!bateria) {
       bateria = await fastify.prisma.bateriaTeste.findFirst({
         where: { categoriaId },
-        include: { itens: { select: { itemId: true } } },
+        include: { itens: { select: { itemId: true, item: { select: { somenteSupervisionado: true } } } } },
       })
     }
     if (!bateria) {
       bateria = await fastify.prisma.bateriaTeste.findFirst({
-        include: { itens: { select: { itemId: true } } },
+        include: { itens: { select: { itemId: true, item: { select: { somenteSupervisionado: true } } } } },
       })
     }
     if (!bateria) return reply.status(404).send({ erro: 'Bateria de testes não encontrada' })
@@ -312,10 +313,12 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
               responsavelId: request.user.id,
               status: StatusHomologacao.RASCUNHO,
               resultados: {
-                create: bateria.itens.map(bi => ({
-                  itemId: bi.itemId,
-                  status: StatusResultado.NAO_TESTADO,
-                })),
+                create: bateria.itens
+                  .filter(bi => itemAplicavel(bi.item, restoHomologacao.gerenciamento))
+                  .map(bi => ({
+                    itemId: bi.itemId,
+                    status: StatusResultado.NAO_TESTADO,
+                  })),
               },
             },
           },
@@ -359,7 +362,7 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
 
     const base = await fastify.prisma.homologacao.findUnique({
       where: { id: body.baseHomologacaoId },
-      include: { bateria: { include: { itens: { select: { itemId: true } } } } },
+      include: { bateria: { include: { itens: { select: { itemId: true, item: { select: { somenteSupervisionado: true } } } } } } },
     })
     if (!base) return reply.status(404).send({ erro: 'Homologação base não encontrada' })
     if (base.dispositivoId !== body.dispositivoId) {
@@ -390,10 +393,12 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
         localEmissao: base.localEmissao,
         status: StatusHomologacao.RASCUNHO,
         resultados: {
-          create: base.bateria.itens.map(bi => ({
-            itemId: bi.itemId,
-            status: StatusResultado.NAO_TESTADO,
-          })),
+          create: base.bateria.itens
+            .filter(bi => itemAplicavel(bi.item, base.gerenciamento))
+            .map(bi => ({
+              itemId: bi.itemId,
+              status: StatusResultado.NAO_TESTADO,
+            })),
         },
       },
     })

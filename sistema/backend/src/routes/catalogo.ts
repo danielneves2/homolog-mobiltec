@@ -1,6 +1,7 @@
 /**
  * Rotas de categorias, itens de teste, baterias e justificativas
  */
+import { GERENCIAMENTOS } from '../lib/gerenciamento.js'
 import { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { StatusResultado } from '@prisma/client'
@@ -324,7 +325,7 @@ const catalogoRoutes: FastifyPluginAsync = async (fastify) => {
       fontes: z.array(z.object({ label: z.string(), url: z.string() })).default([]),
       itensSugeridos: z.array(z.string().uuid()).default([]),
       androidMin: z.number().int().optional().nullable(),
-      gerenciamento: z.enum(['ANDROID_LEGADO', 'ANDROID_ENTERPRISE']).optional().nullable(),
+      gerenciamento: z.enum(GERENCIAMENTOS).optional().nullable(),
     })
     const body = schema.parse(request.body)
     const j = await fastify.prisma.justificativa.create({ data: body as any })
@@ -339,7 +340,7 @@ const catalogoRoutes: FastifyPluginAsync = async (fastify) => {
       fontes: z.array(z.object({ label: z.string(), url: z.string() })).optional(),
       itensSugeridos: z.array(z.string().uuid()).optional(),
       androidMin: z.number().int().optional().nullable(),
-      gerenciamento: z.enum(['ANDROID_LEGADO', 'ANDROID_ENTERPRISE']).optional().nullable(),
+      gerenciamento: z.enum(GERENCIAMENTOS).optional().nullable(),
       ativo: z.boolean().optional(),
     })
     const body = schema.parse(request.body)

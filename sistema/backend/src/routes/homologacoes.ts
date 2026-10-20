@@ -17,6 +17,7 @@ import {
   TRANSICOES_PERMITIDAS,
   validarTransicao,
 } from '../lib/transicoes.js'
+import { itemAplicavel, normalizarGerenciamento, GERENCIAMENTOS } from '../lib/gerenciamento.js'
 import {
   carregarUsuarioEscopo,
   usuarioPodeOperar,
@@ -55,7 +56,7 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
       imei1: z.string().optional().nullable().transform(s => s?.trim() || null),
       imei2: z.string().optional().nullable().transform(s => s?.trim() || null),
       versaoSo: z.string().optional().default('Android').transform(s => s?.trim() || 'Android'),
-      gerenciamento: z.any().optional().transform(v => v === 'ANDROID_ENTERPRISE' ? 'ANDROID_ENTERPRISE' : 'ANDROID_LEGADO'),
+      gerenciamento: z.any().optional().transform(normalizarGerenciamento),
       tipoAgente: z.string().optional().default('Agente PoS').transform(s => s?.trim() || 'Agente PoS'),
       versaoAgente: z.string().optional().default('Não informada').transform(s => s?.trim() || 'Não informada'),
       versaoPos: z.string().optional().nullable().transform(s => s?.trim() || null),
@@ -113,10 +114,13 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
         responsavelId,
         status: StatusHomologacao.RASCUNHO,
         resultados: {
-          create: bateria.itens.map(bi => ({
-            itemId: bi.itemId,
-            status: StatusResultado.NAO_TESTADO,
-          })),
+          // BYOD não recebe os itens que só existem em iOS supervisionado
+          create: bateria.itens
+            .filter(bi => itemAplicavel(bi.item, body.gerenciamento))
+            .map(bi => ({
+              itemId: bi.itemId,
+              status: StatusResultado.NAO_TESTADO,
+            })),
         },
       },
       include: {
@@ -202,7 +206,7 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
       imei1: z.string().optional().nullable(),
       imei2: z.string().optional().nullable(),
       versaoSo: z.string().min(1).optional(),
-      gerenciamento: z.enum(['ANDROID_LEGADO', 'ANDROID_ENTERPRISE']).optional(),
+      gerenciamento: z.enum(GERENCIAMENTOS).optional(),
       tipoAgente: z.string().min(1).optional(),
       versaoAgente: z.string().min(1).optional(),
       versaoPos: z.string().optional().nullable(),
@@ -228,7 +232,7 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
 
     const atual = await fastify.prisma.homologacao.findUnique({
       where: { id },
-      select: { status: true, responsavelId: true, apoioId: true },
+      select: { status: true, responsavelId: true, apoioId: true, gerenciamento: true, bateriaId: true },
     })
     if (!atual) return reply.status(404).send({ erro: 'Homologação não encontrada' })
 
@@ -255,6 +259,32 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
           erro: `Parceiros não possuem permissão para alterar: ${tentouEditar.join(', ')}. Esses campos são gerenciados exclusivamente pela equipe Mobiltec.`,
         })
       }
+    }
+
+    // iOS: trocar BYOD ↔ Supervisionado muda quais itens existem na
+    // homologação. Supervisionado ganha os itens que faltam (em "não
+    // testado"); BYOD perde os que só existem em supervisionado — esses testes
+    // não se aplicam a um aparelho BYOD.
+    if (body.gerenciamento && body.gerenciamento !== atual.gerenciamento) {
+      const ger = body.gerenciamento
+      const itensBateria = await fastify.prisma.bateriaItem.findMany({
+        where: { bateriaId: atual.bateriaId },
+        select: { itemId: true, item: { select: { somenteSupervisionado: true } } },
+      })
+      const aplicaveis = itensBateria.filter(bi => itemAplicavel(bi.item, ger)).map(bi => bi.itemId)
+      const fora = itensBateria.filter(bi => !itemAplicavel(bi.item, ger)).map(bi => bi.itemId)
+      return fastify.prisma.$transaction(async (tx) => {
+        if (fora.length) {
+          await tx.resultado.deleteMany({ where: { homologacaoId: id, itemId: { in: fora } } })
+        }
+        if (aplicaveis.length) {
+          await tx.resultado.createMany({
+            data: aplicaveis.map(itemId => ({ homologacaoId: id, itemId, status: StatusResultado.NAO_TESTADO })),
+            skipDuplicates: true,
+          })
+        }
+        return tx.homologacao.update({ where: { id }, data: body as any })
+      })
     }
 
     return fastify.prisma.homologacao.update({ where: { id }, data: body as any })
@@ -397,10 +427,19 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
         responsavelId: true,
         apoioId: true,
         analiseDivergencias: true,
+        gerenciamento: true,
         responsavel: { select: { empresa: true } },
       },
     })
     if (!homologacao) return reply.status(404).send({ erro: 'Homologação não encontrada' })
+
+    const itemAlvo = await fastify.prisma.itemTeste.findUnique({
+      where: { id: itemId },
+      select: { somenteSupervisionado: true },
+    })
+    if (itemAlvo && !itemAplicavel(itemAlvo, homologacao.gerenciamento)) {
+      return reply.status(422).send({ erro: 'Este item só existe em iOS supervisionado e não se aplica a um aparelho BYOD.' })
+    }
     if (homologacao.status === StatusHomologacao.APROVADO || homologacao.status === StatusHomologacao.PUBLICADO) {
       return reply.status(403).send({ erro: 'Homologação aprovada é somente leitura. Reabra para editar.' })
     }

@@ -11,6 +11,8 @@ import {
   obterColunasGrupo,
   obterRotuloGrupo,
   somenteVersaoAndroid,
+  somenteVersaoIos,
+  ehGerenciamentoIos,
 } from '@/lib/tipos'
 import type { GrupoItem, Homologacao, StatusResultado } from '@/lib/tipos'
 
@@ -108,12 +110,22 @@ export function FichaUnidadeTestada({
       <div className="min-w-0 flex-1">
         <p className="label-caps mb-3">Unidade testada</p>
         <dl className="grid gap-x-8 gap-y-2.5 text-sm [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
-          <Campo rotulo="Android" valor={somenteVersaoAndroid(ficha.versaoSo)} />
-          <Campo rotulo="Versão do agente" valor={ficha.versaoAgente} />
-          <Campo rotulo="Tipo de agente" valor={ficha.tipoAgente} />
-          <Campo rotulo="Versão PoS" valor={ficha.versaoPos} />
-          <Campo rotulo="Gerenciamento" valor={ROTULO_GERENCIAMENTO[ficha.gerenciamento]} />
-          <Campo rotulo="Método de inscrição" valor={ficha.metodoInscricao} />
+          {ehGerenciamentoIos(ficha.gerenciamento) ? (
+            // iOS não tem agente: a ficha mostra versão e gerenciamento (D502)
+            <>
+              <Campo rotulo="iOS" valor={somenteVersaoIos(ficha.versaoSo)} />
+              <Campo rotulo="Gerenciamento" valor={ROTULO_GERENCIAMENTO[ficha.gerenciamento]} />
+            </>
+          ) : (
+            <>
+              <Campo rotulo="Android" valor={somenteVersaoAndroid(ficha.versaoSo)} />
+              <Campo rotulo="Versão do agente" valor={ficha.versaoAgente} />
+              <Campo rotulo="Tipo de agente" valor={ficha.tipoAgente} />
+              <Campo rotulo="Versão PoS" valor={ficha.versaoPos} />
+              <Campo rotulo="Gerenciamento" valor={ROTULO_GERENCIAMENTO[ficha.gerenciamento]} />
+              <Campo rotulo="Método de inscrição" valor={ficha.metodoInscricao} />
+            </>
+          )}
           <Campo rotulo="Início" valor={formatarData(ficha.dataInicio)} />
           <Campo rotulo="Conclusão" valor={formatarData(ficha.dataFim)} />
           <Campo rotulo="Responsável técnico" valor={ficha.responsavelTecnico} />

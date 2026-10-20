@@ -24,6 +24,7 @@ import { PainelJustificativa } from '@/componentes/matriz/PainelJustificativa'
 import { LoadingTela } from '@/componentes/LoadingTela'
 import { RotuloGrupo } from '@/componentes/matriz/RotuloGrupo'
 import { CelulaFicha } from '@/componentes/matriz/CelulaFicha'
+import { AjudaItem } from '@/componentes/matriz/AjudaItem'
 import {
   GRUPO_ORDEM,
   META_STATUS,
@@ -31,6 +32,7 @@ import {
   ehSomenteLeitura,
   exigeJustificativa,
   linhasDaFicha,
+  itemAplicavel,
   obterRotuloGrupo,
   versaoAndroidNumero,
 } from '@/lib/tipos'
@@ -431,6 +433,8 @@ export function Matriz() {
                 aoMudar={setFiltroModelo}
                 opcoes={opcoes.modelos.map((m) => ({ valor: m, rotulo: m }))}
               />
+              {/* iOS não tem agente: o filtro por versão dele não faz sentido */}
+              {data.categoria.plataforma !== 'IOS' && (
               <SeletorFiltro
                 rotuloCurto="Versão do agente"
                 rotuloTodos={`Todas as versões (${opcoes.versoes.length})`}
@@ -438,6 +442,7 @@ export function Matriz() {
                 aoMudar={setFiltroVersaoAgente}
                 opcoes={opcoes.versoes.map((v) => ({ valor: v, rotulo: v }))}
               />
+              )}
               <SeletorFiltro
                 rotuloCurto="Status"
                 rotuloTodos="Todos os status"
@@ -837,13 +842,15 @@ export function Matriz() {
                     className="sticky left-0 z-10 border px-3 py-1.5 text-left font-medium"
                     style={{ background: 'var(--color-sidebar)' }}
                   >
-                    {linha.rotulo}
+                    {/* No iOS a linha do sistema é a versão do iOS, não "Android" */}
+                    {linha.chave === 'versaoSo' && data.categoria.plataforma === 'IOS' ? 'Versão do iOS' : linha.rotulo}
                   </th>
                   {colunas.map((c) => (
                     <td key={c.homologacao.id} className="border p-0">
                       <CelulaFicha
                         coluna={c}
                         linha={linha}
+                        plataforma={data.categoria.plataforma}
                         somenteLeitura={ehSomenteLeitura(c.homologacao.status, usuario?.papel)}
                         enviandoFoto={
                           enviarFoto.isPending &&
@@ -931,9 +938,12 @@ export function Matriz() {
                           }}
                           title={item.descricaoAcao}
                         >
-                          <span className={item.ativo ? '' : 'line-through opacity-60'}>
-                            {item.nome}
-                          </span>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={item.ativo ? '' : 'line-through opacity-60'}>
+                              {item.nome}
+                            </span>
+                            <AjudaItem item={item} />
+                          </div>
                         </th>
 
                         {colunas.map((c) => (
@@ -942,6 +952,16 @@ export function Matriz() {
                             className="border p-0 align-middle"
                             style={{ height: `${alturaLinha}px` }}
                           >
+                            {!itemAplicavel(item, c.homologacao.gerenciamento) ? (
+                              // Coluna BYOD: a funcionalidade só existe em iOS supervisionado
+                              <div
+                                className="flex h-full items-center justify-center px-2 text-center text-[11px] italic"
+                                style={{ color: 'var(--color-muted-foreground)', background: 'var(--color-muted)' }}
+                                title="Não se aplica a aparelho BYOD — só existe em iOS supervisionado"
+                              >
+                                Só supervisionado
+                              </div>
+                            ) : (
                             <CelulaStatus
                               resultado={c.homologacao.resultadosPorItem[item.id]}
                               somenteLeitura={ehSomenteLeitura(c.homologacao.status, usuario?.papel)}
@@ -955,6 +975,7 @@ export function Matriz() {
                                 })
                               }
                             />
+                            )}
                           </td>
                         ))}
                       </tr>
@@ -971,6 +992,7 @@ export function Matriz() {
           categoriaId={data.categoria.id}
           categoriaSlug={slug}
           baterias={baterias ?? []}
+          plataforma={data.categoria.plataforma}
           aoFechar={() => setNovoModelo(false)}
           aoCriar={() => setNovoModelo(false)}
         />
@@ -981,6 +1003,7 @@ export function Matriz() {
           categoriaId={data.categoria.id}
           categoriaSlug={slug}
           baterias={baterias ?? []}
+          plataforma={data.categoria.plataforma}
           coluna={configurar}
           aoFechar={() => setConfigurar(null)}
           aoCriar={() => setConfigurar(null)}

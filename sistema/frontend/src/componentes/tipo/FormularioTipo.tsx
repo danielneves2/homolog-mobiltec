@@ -60,6 +60,8 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
   const [icone, setIcone] = useState<NomeIcone>((tipo?.icone as NomeIcone) ?? 'credit-card')
   // D498: liberado para parceiros (padrão) ou homologação interna
   const [liberadaParceiros, setLiberadaParceiros] = useState<boolean>(tipo?.liberadaParceiros ?? true)
+  // D502: iOS não tem agente — o modelo pede BYOD/Supervisionado no lugar
+  const [plataforma, setPlataforma] = useState<'ANDROID' | 'IOS'>(tipo?.plataforma ?? 'ANDROID')
   const [erro, setErro] = useState<string | null>(null)
 
   // Gestão de títulos amigáveis das baterias (padrões e novas)
@@ -403,6 +405,7 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
       nome: nome.trim(),
       icone,
       liberadaParceiros,
+      plataforma,
       camposFicha: todasLinhasRegistro
         .map((l) => l.chave)
         .filter((c) => campos.has(c) || FICHA_FIXA.includes(c as ChaveFicha)),
@@ -486,6 +489,30 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
                 />
                 <p className="mt-1.5 text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
                   É o rótulo no menu e o título da planilha.
+                </p>
+
+                <span className="label-caps mb-1.5 mt-4 block">Plataforma</span>
+                <div className="inline-flex gap-1 rounded-lg border p-0.5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-muted)' }}>
+                  {(['ANDROID', 'IOS'] as const).map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPlataforma(p)}
+                      className="rounded-md px-3.5 py-1 text-xs font-semibold transition-all"
+                      style={
+                        plataforma === p
+                          ? { background: 'var(--gradient-brand-purple)', color: '#fff' }
+                          : { color: 'var(--color-muted-foreground)' }
+                      }
+                    >
+                      {p === 'IOS' ? 'iOS' : 'Android'}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
+                  {plataforma === 'IOS'
+                    ? 'Sem agente: cada modelo informa só a versão do iOS e se é BYOD ou Supervisionado.'
+                    : 'Cada modelo informa o agente, a versão e o gerenciamento Android.'}
                 </p>
               </div>
 

@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { ROTULO_GERENCIAMENTO } from '@/lib/tipos'
-import type { ColunaMatriz, LINHAS_FICHA, TipoGerenciamento } from '@/lib/tipos'
+import { ROTULO_GERENCIAMENTO, opcoesGerenciamento } from '@/lib/tipos'
+import type { ColunaMatriz, LINHAS_FICHA, Plataforma, TipoGerenciamento } from '@/lib/tipos'
 
 type Linha = (typeof LINHAS_FICHA)[number]
 
 interface Props {
   coluna: ColunaMatriz
   linha: Linha
+  /** IOS troca as opções de gerenciamento por BYOD/Supervisionado (D502) */
+  plataforma?: Plataforma
   somenteLeitura: boolean
   enviandoFoto: boolean
   aoSalvarFicha: (campos: Record<string, unknown>) => void
@@ -24,6 +26,7 @@ interface Props {
 export function CelulaFicha({
   coluna,
   linha,
+  plataforma,
   somenteLeitura,
   enviandoFoto,
   aoSalvarFicha,
@@ -181,10 +184,23 @@ export function CelulaFicha({
     return (
       <select
         value={valor}
-        onChange={(e) => aoSalvarFicha({ gerenciamento: e.target.value })}
+        onChange={(e) => {
+          // Ir para BYOD tira da coluna os testes que só existem em
+          // supervisionado — inclusive o que já foi marcado neles
+          if (
+            e.target.value === 'IOS_BYOD' &&
+            !window.confirm(
+              'Ao mudar para BYOD, os testes que só existem em aparelho supervisionado saem desta coluna, inclusive os já marcados. Continuar?',
+            )
+          ) {
+            e.target.value = valor
+            return
+          }
+          aoSalvarFicha({ gerenciamento: e.target.value })
+        }}
         className="w-full px-1 py-1 bg-transparent text-center text-xs"
       >
-        {(Object.keys(ROTULO_GERENCIAMENTO) as TipoGerenciamento[]).map((g) => (
+        {opcoesGerenciamento(plataforma).map((g) => (
           <option key={g} value={g}>
             {ROTULO_GERENCIAMENTO[g]}
           </option>

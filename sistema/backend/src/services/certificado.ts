@@ -456,6 +456,8 @@ export interface HomologacaoCertificado {
   imei1: string | null
   imei2: string | null
   versaoSo: string
+  /** IOS_BYOD / IOS_SUPERVISIONADO trocam a parte do agente na ficha (D502) */
+  gerenciamento?: string
   versaoAgente: string
   metodoInscricao: string
   assinaturaAgente: boolean
@@ -587,15 +589,23 @@ export function gerarCertificadoHtml(
   // ali dentro é dado sensível viajando sem necessidade. Os campos continuam
   // no banco e na tela interna do dispositivo, onde servem para rastrear qual
   // unidade foi para a bancada.
+  // iOS não tem agente instalado: no lugar de versão/método/assinatura do
+  // agente, a ficha diz o modo de gerenciamento — é ele que define quais
+  // restrições foram testadas (D502).
+  const ehIos = h.gerenciamento === 'IOS_BYOD' || h.gerenciamento === 'IOS_SUPERVISIONADO'
   const ficha = [
     ['Fabricante', h.dispositivo.fabricante],
     ['Modelo', h.dispositivo.modelo],
     ['Versão do SO', h.versaoSo],
     ['Data de Início', data(h.dataInicio)],
     ['Data de Término', data(h.dataFim)],
-    ['Versão do Agente', h.versaoAgente],
-    ['Método de Inscrição', h.metodoInscricao],
-    ['Assinatura do Agente', h.assinaturaAgente ? 'Sim' : 'Não'],
+    ...(ehIos
+      ? [['Gerenciamento', h.gerenciamento === 'IOS_BYOD' ? 'BYOD' : 'Supervisionado']]
+      : [
+          ['Versão do Agente', h.versaoAgente],
+          ['Método de Inscrição', h.metodoInscricao],
+          ['Assinatura do Agente', h.assinaturaAgente ? 'Sim' : 'Não'],
+        ]),
   ]
     .map(
       ([rotulo, valor]) =>

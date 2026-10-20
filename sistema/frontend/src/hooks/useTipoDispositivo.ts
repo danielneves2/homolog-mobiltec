@@ -12,6 +12,8 @@ export interface TipoDispositivo {
   ativo: boolean
   /** D498: false = homologação interna (só a Mobiltec vê) */
   liberadaParceiros: boolean
+  /** D502 */
+  plataforma?: 'ANDROID' | 'IOS'
   camposFicha: (ChaveFicha | string)[]
   gruposOrdem?: string[]
   gruposTitulos?: Record<string, string>
@@ -43,6 +45,8 @@ export interface PayloadTipoDispositivo {
   icone: string
   /** D498: liberado para parceiros (padrão) ou homologação interna */
   liberadaParceiros?: boolean
+  /** D502: ANDROID ou IOS */
+  plataforma?: 'ANDROID' | 'IOS'
   camposFicha: (ChaveFicha | string)[]
   gruposOrdem?: string[]
   gruposTitulos?: Record<string, string>

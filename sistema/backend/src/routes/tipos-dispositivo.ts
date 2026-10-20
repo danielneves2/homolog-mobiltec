@@ -14,6 +14,7 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { Prisma, StatusResultado } from '@prisma/client'
+import { itemAplicavel } from '../lib/gerenciamento.js'
 
 const GRUPOS = ['TELEMETRIA', 'COLETA', 'COMANDOS', 'PERFIS'] as const
 
@@ -82,6 +83,8 @@ async function editarItemDoTipo(
       descricaoAcao: editado.descricaoAcao ?? original.descricaoAcao,
       ordem: original.ordem,
       ativo: original.ativo,
+      somenteSupervisionado: original.somenteSupervisionado,
+      funcionalidades: original.funcionalidades as Prisma.InputJsonValue,
     },
   })
 
@@ -143,6 +146,7 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
       camposFicha: c.camposFicha,
       gruposOrdem: c.gruposOrdem,
       gruposTitulos: c.gruposTitulos as Record<string, string>,
+      plataforma: c.plataforma,
       dispositivos: c._count.dispositivos,
       // Uma categoria tem uma bateria na prática; a união cobre as antigas,
       // que a semente podia ter deixado com mais de uma.
@@ -161,6 +165,8 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
       camposFicha: z.array(z.string().min(1).max(40)).default([]),
       /** D498: true = liberado para parceiros; false = homologação interna */
       liberadaParceiros: z.boolean().default(true),
+      /** ANDROID ou IOS (D502) */
+      plataforma: z.enum(['ANDROID', 'IOS']).default('ANDROID'),
       /** Ordem dos tópicos/baterias configurados */
       gruposOrdem: z.array(z.string().min(1).max(100)).default([]),
       /** Títulos amigáveis para as baterias */
@@ -233,6 +239,7 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
           gruposOrdem: body.gruposOrdem,
           gruposTitulos: body.gruposTitulos,
           liberadaParceiros: body.liberadaParceiros,
+          plataforma: body.plataforma,
         },
       })
 
@@ -306,6 +313,8 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
       gruposTitulos: z.record(z.string()).optional(),
       ativo: z.boolean().optional(),
       liberadaParceiros: z.boolean().optional(),
+      /** ANDROID ou IOS (D502) */
+      plataforma: z.enum(['ANDROID', 'IOS']).optional(),
       itensExistentes: z.array(z.string().uuid()).optional(),
       itensNovos: z
         .array(
@@ -370,6 +379,7 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
           ...(body.gruposTitulos !== undefined ? { gruposTitulos: body.gruposTitulos } : {}),
           ...(body.ativo !== undefined ? { ativo: body.ativo } : {}),
           ...(body.liberadaParceiros !== undefined ? { liberadaParceiros: body.liberadaParceiros } : {}),
+          ...(body.plataforma !== undefined ? { plataforma: body.plataforma } : {}),
         },
       })
 
@@ -460,15 +470,27 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
       // destruir trabalho de bancada.
       const abertas = await tx.homologacao.findMany({
         where: { dispositivo: { categoriaId: id }, status: { in: [...EDITAVEIS] } },
-        select: { id: true },
+        select: { id: true, gerenciamento: true },
       })
       const idsAbertas = abertas.map((h) => h.id)
       if (!idsAbertas.length) return
 
       if (entrando.length) {
+        // Item só de iOS supervisionado não entra em homologação BYOD (D502)
+        const flags = new Map(
+          (await tx.itemTeste.findMany({
+            where: { id: { in: entrando } },
+            select: { id: true, somenteSupervisionado: true },
+          })).map((i) => [i.id, i]),
+        )
         await tx.resultado.createMany({
-          data: idsAbertas.flatMap((homologacaoId) =>
-            entrando.map((itemId) => ({ homologacaoId, itemId, status: StatusResultado.NAO_TESTADO })),
+          data: abertas.flatMap((h) =>
+            entrando
+              .filter((itemId) => {
+                const it = flags.get(itemId)
+                return !it || itemAplicavel(it, h.gerenciamento)
+              })
+              .map((itemId) => ({ homologacaoId: h.id, itemId, status: StatusResultado.NAO_TESTADO })),
           ),
           skipDuplicates: true,
         })

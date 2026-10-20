@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { somenteVersaoAndroid } from '@/lib/tipos'
+import { ROTULO_GERENCIAMENTO, ehGerenciamentoIos, somenteVersaoAndroid, somenteVersaoIos } from '@/lib/tipos'
 import type { DispositivoVitrine } from '@/lib/tipos'
 import { FotoDispositivo } from './FotoDispositivo'
 import { BadgeHomologado } from '@/componentes/comum/BadgeHomologado'
@@ -68,8 +68,17 @@ export function CardDispositivo({ dispositivo: d }: { dispositivo: DispositivoVi
           {/* Só o que distingue um modelo do outro à primeira vista. O resto
               da ficha está a um clique, na tela de informações. */}
           <dl className="space-y-0.5 text-xs leading-tight">
-            <Linha rotulo="Android" valor={somenteVersaoAndroid(d.versaoSo)} />
-            <Linha rotulo="Agente" valor={d.versaoAgente} />
+            {ehGerenciamentoIos(d.gerenciamento) ? (
+              <>
+                <Linha rotulo="iOS" valor={somenteVersaoIos(d.versaoSo)} />
+                <Linha rotulo="Gerenciamento" valor={ROTULO_GERENCIAMENTO[d.gerenciamento]} />
+              </>
+            ) : (
+              <>
+                <Linha rotulo="Android" valor={somenteVersaoAndroid(d.versaoSo)} />
+                <Linha rotulo="Agente" valor={d.versaoAgente} />
+              </>
+            )}
             {d.numeroHomologacao > 1 && (
               <Linha
                 rotulo="Retestes"

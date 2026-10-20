@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { somenteVersaoAndroid } from '@/lib/tipos'
+import { ROTULO_GERENCIAMENTO, ehGerenciamentoIos, somenteVersaoAndroid, somenteVersaoIos } from '@/lib/tipos'
 import type { DispositivoVitrine } from '@/lib/tipos'
 
 /**
@@ -33,7 +33,9 @@ export function CardEmHomologacao({ dispositivo: d }: { dispositivo: Dispositivo
       </div>
 
       <p className="mt-2 text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
-        Agente {d.versaoAgente} · Android {somenteVersaoAndroid(d.versaoSo)}
+        {ehGerenciamentoIos(d.gerenciamento)
+          ? `iOS ${somenteVersaoIos(d.versaoSo)} · ${ROTULO_GERENCIAMENTO[d.gerenciamento]}`
+          : `Agente ${d.versaoAgente} · Android ${somenteVersaoAndroid(d.versaoSo)}`}
         {d.numeroHomologacao > 1 && ` · ${d.numeroHomologacao}ª homologação`}
       </p>
 

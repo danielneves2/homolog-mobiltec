@@ -40,6 +40,10 @@ enum StatusResultado {
 enum TipoGerenciamento {
   ANDROID_LEGADO
   ANDROID_ENTERPRISE
+  /// iOS: aparelho pessoal com perfil MDM — só parte das restrições vale
+  IOS_BYOD
+  /// iOS supervisionado (ABM/Apple Configurator) — todas as restrições
+  IOS_SUPERVISIONADO
 }
 
 enum StatusHomologacao {
@@ -83,6 +87,9 @@ model Categoria {
   camposFicha     String[]       @default([]) @map("campos_ficha")
   gruposOrdem     String[]       @default([]) @map("grupos_ordem")
   gruposTitulos   Json           @default("{}") @map("grupos_titulos")
+  /// ANDROID ou IOS. No iOS não há agente: a ficha e o cadastro do modelo
+  /// trocam os campos do agente pelo gerenciamento BYOD/Supervisionado.
+  plataforma      String         @default("ANDROID")
   /// D498: liberado para parceiros (todos os ambientes veem) ou homologação
   /// interna (só a Mobiltec). Os tipos que já existiam nascem liberados.
   liberadaParceiros Boolean      @default(true) @map("liberada_parceiros")
@@ -156,6 +163,11 @@ model ItemTeste {
   descricaoAcao String       @map("descricao_acao")
   ordem         Int          @default(0)
   ativo         Boolean      @default(true)
+  /// Só existe em aparelho iOS supervisionado: homologação BYOD não recebe o item
+  somenteSupervisionado Boolean @default(false) @map("somente_supervisionado")
+  /// Funcionalidades que o item agrupa — [{ nome, byod }]. Vira o "?" da
+  /// linha na matriz (ex.: Configuração de Restrições → Câmera, Captura…)
+  funcionalidades Json        @default("[]")
   bateriaItems  BateriaItem[]
   resultados    Resultado[]
 

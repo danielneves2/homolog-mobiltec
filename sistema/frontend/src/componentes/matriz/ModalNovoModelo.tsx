@@ -6,13 +6,18 @@ import {
   type PayloadNovoModelo,
 } from '@/hooks/useMatriz'
 import { ErroApi } from '@/lib/api'
-import { ROTULO_GERENCIAMENTO } from '@/lib/tipos'
-import type { BateriaTeste, ColunaMatriz, TipoGerenciamento } from '@/lib/tipos'
+import { ROTULO_GERENCIAMENTO, opcoesGerenciamento } from '@/lib/tipos'
+import type { BateriaTeste, ColunaMatriz, Plataforma, TipoGerenciamento } from '@/lib/tipos'
 
 interface Props {
   categoriaId: string
   categoriaSlug: string
   baterias: BateriaTeste[]
+  /**
+   * IOS (D502): sem agente para instalar — o modal pede só a versão do iOS e o
+   * gerenciamento BYOD/Supervisionado, que decide quais restrições entram.
+   */
+  plataforma?: Plataforma
   /** Com coluna, o modal edita a homologação existente; sem ela, cadastra uma nova */
   coluna?: ColunaMatriz
   aoFechar: () => void
@@ -73,6 +78,7 @@ export function ModalNovoModelo({
   categoriaId,
   categoriaSlug,
   baterias,
+  plataforma,
   coluna,
   aoFechar,
   aoCriar,
@@ -86,8 +92,12 @@ export function ModalNovoModelo({
 
   const editando = !!coluna
   const h = coluna?.homologacao
+  const ehIos = plataforma === 'IOS'
 
-  const soDetectado = useMemo(() => detectarSo(h?.versaoSo), [h?.versaoSo])
+  const soDetectado = useMemo(
+    () => (ehIos ? 'iOS' : detectarSo(h?.versaoSo)),
+    [ehIos, h?.versaoSo],
+  )
   const [so, setSo] = useState<SistemaOperacional>(soDetectado)
 
   const [tiposAgenteExtras, setTiposAgenteExtras] = useState<string[]>([])
@@ -103,7 +113,7 @@ export function ModalNovoModelo({
     imei1: h?.imei1 ?? '',
     imei2: h?.imei2 ?? '',
     versaoSo: h?.versaoSo ? limparPrefixoSo(h.versaoSo, soDetectado) : '',
-    gerenciamento: (h?.gerenciamento ?? 'ANDROID_LEGADO') as TipoGerenciamento,
+    gerenciamento: (h?.gerenciamento ?? (ehIos ? 'IOS_SUPERVISIONADO' : 'ANDROID_LEGADO')) as TipoGerenciamento,
     tipoAgente: h?.tipoAgente ?? 'Agente POS',
     versaoAgente: h?.versaoAgente ?? '',
     ferramenta: h?.ferramenta ?? '',
@@ -196,6 +206,36 @@ export function ModalNovoModelo({
       }
     }
 
+    // iOS não instala agente: os campos dele saem neutros (D502)
+    const agente = ehIos
+      ? {
+          tipoAgente: 'Não se aplica (iOS)',
+          versaoAgente: 'Não se aplica',
+          metodoInscricao: 'Não se aplica',
+          ferramenta: null,
+          assinaturaAgente: false,
+          precisaAssinaturaDev: false,
+        }
+      : {
+          tipoAgente: f.tipoAgente.trim() || 'Agente PoS',
+          versaoAgente: f.versaoAgente.trim() || 'Não informada',
+          metodoInscricao: f.metodoInscricao.trim() || 'Não informado',
+          ferramenta: f.ferramenta.trim() || null,
+          assinaturaAgente: f.assinaturaAgente,
+          precisaAssinaturaDev: f.precisaAssinaturaDev,
+        }
+
+    if (
+      editando &&
+      f.gerenciamento === 'IOS_BYOD' &&
+      h?.gerenciamento !== 'IOS_BYOD' &&
+      !window.confirm(
+        'Ao mudar para BYOD, os testes que só existem em aparelho supervisionado saem desta coluna, inclusive os já marcados. Continuar?',
+      )
+    ) {
+      return
+    }
+
     try {
       if (editando) {
         await salvarDispositivo.mutateAsync({
@@ -211,12 +251,7 @@ export function ModalNovoModelo({
           imei2: f.imei2.trim() || null,
           versaoSo: versaoSoGravada,
           gerenciamento: f.gerenciamento,
-          tipoAgente: f.tipoAgente.trim() || 'Agente PoS',
-          versaoAgente: f.versaoAgente.trim() || 'Não informada',
-          ferramenta: f.ferramenta.trim() || null,
-          metodoInscricao: f.metodoInscricao.trim() || 'Não informado',
-          assinaturaAgente: f.assinaturaAgente,
-          precisaAssinaturaDev: f.precisaAssinaturaDev,
+          ...agente,
           dataInicio: f.dataInicio || hoje(),
         })
       } else {
@@ -229,12 +264,9 @@ export function ModalNovoModelo({
           nomeComercial,
           numeroSerie: f.numeroSerie.trim() || 'Sem informação',
           versaoSo: versaoSoGravada,
-          tipoAgente: f.tipoAgente.trim() || 'Agente PoS',
-          versaoAgente: f.versaoAgente.trim() || 'Não informada',
-          metodoInscricao: f.metodoInscricao.trim() || 'Não informado',
+          ...agente,
           imei1: f.imei1.trim() || null,
           imei2: f.imei2.trim() || null,
-          ferramenta: f.ferramenta.trim() || null,
           dataInicio: f.dataInicio || hoje(),
         }
         await cadastrar.mutateAsync(payload)
@@ -299,6 +331,45 @@ export function ModalNovoModelo({
             </div>
           </section>
 
+          {ehIos ? (
+            <section>
+              <p className="label-caps mb-2">Plataforma e gerenciamento</p>
+              <div className="grid sm:grid-cols-3 gap-3">
+                <Campo rotulo="Versão do iOS" obrigatorio valor={f.versaoSo} aoMudar={set('versaoSo')} />
+                <div className="sm:col-span-2">
+                  <span className="label-caps mb-1.5 block">
+                    Gerenciamento <span style={{ color: 'var(--color-destructive)' }}>*</span>
+                  </span>
+                  <div className="flex gap-2">
+                    {opcoesGerenciamento('IOS').map((g) => {
+                      const ativo = f.gerenciamento === g
+                      return (
+                        <button
+                          key={g}
+                          type="button"
+                          onClick={() => set('gerenciamento')(g)}
+                          className={`flex-1 rounded-md border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                            ativo ? 'text-white shadow-xs' : 'bg-white/80 hover:bg-white text-neutral-600'
+                          }`}
+                          style={{
+                            background: ativo ? 'var(--gradient-brand-purple)' : undefined,
+                            borderColor: ativo ? 'var(--color-primary)' : 'var(--color-border)',
+                          }}
+                        >
+                          {ROTULO_GERENCIAMENTO[g]}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="mt-1.5 text-[11px]" style={{ color: 'var(--color-muted-foreground)' }}>
+                    {f.gerenciamento === 'IOS_BYOD'
+                      ? 'BYOD: entram só as restrições que o iOS aplica em aparelho pessoal.'
+                      : 'Supervisionado: todas as restrições do perfil entram na bateria.'}
+                  </p>
+                </div>
+              </div>
+            </section>
+          ) : (
           <section>
             <p className="label-caps mb-2">Agente e plataforma</p>
             <div className="grid sm:grid-cols-3 gap-3">
@@ -465,6 +536,7 @@ export function ModalNovoModelo({
               )}
             </div>
           </section>
+          )}
 
           <section>
             <p className="label-caps mb-2">Bateria e datas</p>

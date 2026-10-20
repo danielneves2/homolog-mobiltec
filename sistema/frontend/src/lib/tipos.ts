@@ -19,7 +19,8 @@ export type StatusHomologacao =
   | 'APROVADO'
   | 'REPROVADO'
   | 'PUBLICADO'
-export type TipoGerenciamento = 'ANDROID_LEGADO' | 'ANDROID_ENTERPRISE'
+export type TipoGerenciamento = 'ANDROID_LEGADO' | 'ANDROID_ENTERPRISE' | 'IOS_BYOD' | 'IOS_SUPERVISIONADO'
+export type Plataforma = 'ANDROID' | 'IOS'
 export type GrupoItemPadrao = 'TELEMETRIA' | 'COLETA' | 'COMANDOS' | 'PERFIS'
 export type GrupoItem = GrupoItemPadrao | (string & {})
 export type PapelUsuario = 'ADMIN' | 'HOMOLOGADOR' | 'PARCEIRO' | 'LEITOR'
@@ -221,6 +222,35 @@ export interface ItemObservacaoGeral {
 export const ROTULO_GERENCIAMENTO: Record<TipoGerenciamento, string> = {
   ANDROID_LEGADO: 'Android Legado',
   ANDROID_ENTERPRISE: 'Android Enterprise',
+  IOS_BYOD: 'BYOD',
+  IOS_SUPERVISIONADO: 'Supervisionado',
+}
+
+/**
+ * Gerenciamentos que um tipo oferece (D502). iOS não tem agente: o que muda a
+ * bateria é ser BYOD (perfil num aparelho pessoal) ou Supervisionado.
+ */
+export function opcoesGerenciamento(plataforma: Plataforma | undefined): TipoGerenciamento[] {
+  return plataforma === 'IOS'
+    ? ['IOS_SUPERVISIONADO', 'IOS_BYOD']
+    : ['ANDROID_LEGADO', 'ANDROID_ENTERPRISE']
+}
+
+export function ehGerenciamentoIos(g: TipoGerenciamento | string | null | undefined): boolean {
+  return g === 'IOS_BYOD' || g === 'IOS_SUPERVISIONADO'
+}
+
+/** Versão do iOS sem o prefixo "iOS" — o rótulo ao lado já diz o sistema */
+export function somenteVersaoIos(versaoSo: string | null | undefined): string {
+  return (versaoSo ?? '').replace(/^\s*ios\s*/i, '').trim() || '—'
+}
+
+/** Item que só existe em iOS supervisionado não se aplica a uma coluna BYOD */
+export function itemAplicavel(
+  item: { somenteSupervisionado?: boolean },
+  gerenciamento: TipoGerenciamento | string | null | undefined,
+): boolean {
+  return !(gerenciamento === 'IOS_BYOD' && item.somenteSupervisionado)
 }
 
 // ============================================================
@@ -390,6 +420,8 @@ export interface Categoria {
   ativo?: boolean
   /** D498: false = homologação interna (só a Mobiltec vê) */
   liberadaParceiros?: boolean
+  /** D502: IOS troca o agente pelo gerenciamento BYOD/Supervisionado */
+  plataforma?: Plataforma
   /**
    * Linhas da ficha que este tipo mostra na planilha, pelas chaves de
    * `LINHAS_FICHA`. Vazio = a ficha inteira, que é o estado das categorias
@@ -465,6 +497,10 @@ export interface ItemTeste {
   ativo: boolean
   /** Em quantos tipos de dispositivo o item está (vem de GET /itens-teste) */
   tipos?: number
+  /** D502: só existe em iOS supervisionado (fica fora das colunas BYOD) */
+  somenteSupervisionado?: boolean
+  /** D502: funcionalidades que o item agrupa — o "?" da linha na matriz */
+  funcionalidades?: { nome: string; byod: boolean }[]
 }
 
 export interface BateriaItem {

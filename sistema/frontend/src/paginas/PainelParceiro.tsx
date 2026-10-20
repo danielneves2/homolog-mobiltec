@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { usePainelParceiro } from '@/hooks/useParceiros'
+import { ehGerenciamentoIos } from '@/lib/tipos'
 import { useConfirmarNotificacao, useNotificacoes, useMarcarTodasLidas } from '@/hooks/useNotificacoes'
 import { useAuth } from '@/contextos/AuthContext'
 import { Icone } from '@/componentes/Icone'
@@ -442,17 +443,27 @@ function CardDispositivoParceiro({
 
           <div className="flex-1 min-w-0 space-y-1 text-xs">
             <div className="flex items-center justify-between">
-              <span className="text-[var(--color-muted-foreground)]">Android:</span>
+              <span className="text-[var(--color-muted-foreground)]">
+                {ehGerenciamentoIos(d.gerenciamento) ? 'iOS:' : 'Android:'}
+              </span>
               <span className="font-semibold text-[var(--color-foreground)]">{d.versaoSo}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--color-muted-foreground)]">Agente:</span>
-              <span className="font-semibold text-[var(--color-foreground)]">{d.versaoAgente}</span>
-            </div>
+            {!ehGerenciamentoIos(d.gerenciamento) && (
+              <div className="flex items-center justify-between">
+                <span className="text-[var(--color-muted-foreground)]">Agente:</span>
+                <span className="font-semibold text-[var(--color-foreground)]">{d.versaoAgente}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <span className="text-[var(--color-muted-foreground)]">Gerenciamento:</span>
               <span className="font-medium text-[var(--color-muted-foreground)] truncate max-w-[110px]">
-                {d.gerenciamento === 'ANDROID_ENTERPRISE' ? 'Enterprise' : 'Legado'}
+                {d.gerenciamento === 'ANDROID_ENTERPRISE'
+                  ? 'Enterprise'
+                  : d.gerenciamento === 'IOS_BYOD'
+                    ? 'BYOD'
+                    : d.gerenciamento === 'IOS_SUPERVISIONADO'
+                      ? 'Supervisionado'
+                      : 'Legado'}
               </span>
             </div>
 
