@@ -34,7 +34,17 @@ const TIPOS_AGENTE_PADRAO = [
   'Agente QA',
   'Agente POS',
   'Agente Legado',
+  // iOS não instala agente (D504)
+  'Não possui',
 ]
+
+/** Valores do agente quando o sistema é iOS: não há agente para instalar (D504) */
+const AGENTE_IOS = {
+  tipoAgente: 'Não possui',
+  versaoAgente: 'Não possui',
+  metodoInscricao: 'Supervisionado',
+  ferramenta: 'Apple Configurator',
+}
 
 type SistemaOperacional = 'Android' | 'iOS' | 'Microsoft' | 'Linux'
 
@@ -206,13 +216,13 @@ export function ModalNovoModelo({
       }
     }
 
-    // iOS não instala agente: os campos dele saem neutros (D502)
+    // iOS não instala agente (D502/D504). O método de inscrição acompanha o
+    // gerenciamento; o Apple Configurator é a ferramenta da supervisão.
     const agente = ehIos
       ? {
-          tipoAgente: 'Não se aplica (iOS)',
-          versaoAgente: 'Não se aplica',
-          metodoInscricao: 'Não se aplica',
-          ferramenta: null,
+          ...AGENTE_IOS,
+          metodoInscricao: f.gerenciamento === 'IOS_BYOD' ? 'BYOD' : 'Supervisionado',
+          ferramenta: f.gerenciamento === 'IOS_BYOD' ? null : AGENTE_IOS.ferramenta,
           assinaturaAgente: false,
           precisaAssinaturaDev: false,
         }
@@ -377,7 +387,13 @@ export function ModalNovoModelo({
                 rotulo="Sistema Operacional"
                 obrigatorio
                 valor={so}
-                aoMudar={(novoSo) => setSo(novoSo)}
+                aoMudar={(novoSo) => {
+                  setSo(novoSo)
+                  // iOS: os campos do agente já vêm preenchidos (editáveis)
+                  if (novoSo === 'iOS') {
+                    setF((v) => ({ ...v, ...AGENTE_IOS, assinaturaAgente: false, precisaAssinaturaDev: false }))
+                  }
+                }}
                 opcoes={OPCOES_SO}
               />
 
