@@ -354,7 +354,7 @@ export function ModalNovoModelo({
                   <div
                     role="radiogroup"
                     aria-label="Gerenciamento"
-                    className="inline-flex gap-0.5 rounded-lg border p-0.5"
+                    className="inline-grid grid-cols-2 gap-0.5 rounded-lg border p-0.5"
                     style={{ background: 'var(--color-muted)', borderColor: 'var(--color-border)' }}
                   >
                     {opcoesGerenciamento('IOS').map((g) => {
@@ -366,7 +366,7 @@ export function ModalNovoModelo({
                           role="radio"
                           aria-checked={ativo}
                           onClick={() => set('gerenciamento')(g)}
-                          className={`rounded-md px-3.5 py-1 text-xs font-semibold transition-all duration-150 cursor-pointer ${
+                          className={`w-[7.5rem] rounded-md px-3 py-1 text-center text-xs font-semibold transition-all duration-150 cursor-pointer ${
                             ativo
                               ? 'text-white shadow-xs'
                               : 'text-[var(--color-muted-foreground)] hover:bg-white hover:text-[var(--color-foreground)]'
