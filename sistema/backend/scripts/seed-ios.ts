@@ -167,14 +167,15 @@ const GRUPOS: { chave: string; titulo: string; itens: ItemDef[] }[] = [
         ['Desabilitar Jogos Multiplayer', N],
         ['Desabilitar Serviço de Música', N],
       ]),
-      topico('Restrições de Conteúdo', [['Desabilitar Conteúdo Explícito', S]]),
+      // Tópicos de uma funcionalidade só: o nome já diz o que testar, sem "?" (D507)
+      unica('Restrições de Conteúdo', 'Desabilitar Conteúdo Explícito: bloqueia músicas, vídeos e podcasts com classificação para adultos.', S),
       topico('Atualização de Software', [
         ['Forçar Atualizações de Software Atrasadas', S],
         ['Atraso de atualização de software (dias)', N],
         ['Forçar Data e Hora Automáticas', N],
         ['Forçar Limitação de Rastreamento de Anúncios', N],
       ]),
-      topico('Apps Open In', [['Apps permitidos para Open In', S]]),
+      unica('Apps Open In', 'Apps permitidos para Open In: lista branca de Bundle IDs autorizados a trocar e abrir arquivos corporativos.', S),
     ],
   },
   {
