@@ -298,7 +298,7 @@ export function Home() {
             {emAndamento.length === 0 ? (
               <Vazio>Nenhum modelo em teste com esses filtros.</Vazio>
             ) : (
-              <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+              <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(330px,1fr))]">
                 {emAndamento.map((d) => (
                   <CardEmHomologacao key={d.homologacaoId} dispositivo={d} />
                 ))}

@@ -1,20 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { usePainelParceiro } from '@/hooks/useParceiros'
-import { ehGerenciamentoIos } from '@/lib/tipos'
 import { useConfirmarNotificacao, useNotificacoes, useMarcarTodasLidas } from '@/hooks/useNotificacoes'
 import { useAuth } from '@/contextos/AuthContext'
 import { Icone } from '@/componentes/Icone'
 import { LoadingTela } from '@/componentes/LoadingTela'
-import { BadgeHomologado } from '@/componentes/comum/BadgeHomologado'
-import { FotoDispositivo } from '@/componentes/vitrine/FotoDispositivo'
+import { CabecalhoModelo, DadosModelo } from '@/componentes/vitrine/ResumoModelo'
 import {
   ModalInformacoesHomologacao,
   parseObservacoes,
   type ItemObservacaoProcessada,
 } from '@/componentes/parceiro/ModalInformacoesHomologacao'
 import { ErroApi } from '@/lib/api'
-import type { DispositivoPainelParceiro, StatusHomologacao } from '@/lib/tipos'
+import type { DispositivoPainelParceiro } from '@/lib/tipos'
 
 type FiltroStatus = 'todos' | 'em-homologacao' | 'em-validacao' | 'em-revisao' | 'homologados'
 
@@ -284,7 +282,6 @@ function CardDispositivoParceiro({
     ehAdmin && empresa
       ? `/matriz/${d.categoriaSlug}?empresa=${encodeURIComponent(empresa)}`
       : `/matriz/${d.categoriaSlug}`
-  const pctAvaliado = d.resumo.total > 0 ? Math.round((d.resumo.avaliados / d.resumo.total) * 100) : 0
 
   // Processa as observações com segurança para NUNCA exibir JSON cru
   const observacoesProcessadas = useMemo(() => {
@@ -318,27 +315,12 @@ function CardDispositivoParceiro({
       style={{ background: 'var(--color-card)' }}
     >
       {/* Topo: Fabricante, Modelo e Badge de Status */}
-      <div className="p-4 pb-3 flex items-start justify-between gap-3 border-b">
-        <div className="min-w-0 flex-1">
-          <span
-            className="text-[10px] font-semibold uppercase tracking-wider block truncate"
-            style={{ color: 'var(--color-muted-foreground)' }}
-          >
-            {d.fabricante} · {d.categoriaNome}
-          </span>
-          <h3 className="text-sm font-bold truncate leading-tight text-[var(--color-foreground)]" title={d.nomeComercial}>
-            {d.nomeComercial}
-          </h3>
-        </div>
-
-        <div>
-          {d.status === 'APROVADO' || d.status === 'PUBLICADO' ? (
-            <BadgeHomologado homologado={true} />
-          ) : (
-            <BadgeStatusProcesso status={d.status} />
-          )}
-        </div>
-      </div>
+      <CabecalhoModelo
+        fabricante={d.fabricante}
+        categoriaNome={d.categoriaNome}
+        nomeComercial={d.nomeComercial}
+        status={d.status}
+      />
 
       {/* Meio: Foto e Dados Técnicos OU Card de Aviso da Revisão Técnica */}
       {d.status === 'EM_REVISAO' ? (
@@ -441,58 +423,16 @@ function CardDispositivoParceiro({
           </div>
         </div>
       ) : (
-        <div className="p-4 flex items-center gap-4">
-          <div
-            className="h-20 w-20 rounded-xl border overflow-hidden shrink-0 flex items-center justify-center p-1"
-            style={{ background: 'var(--color-sidebar)' }}
-          >
-            <FotoDispositivo url={d.fotoUrl} nome={d.nomeComercial} altura={76} semBorda />
-          </div>
-
-          <div className="flex-1 min-w-0 space-y-1 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--color-muted-foreground)]">
-                {ehGerenciamentoIos(d.gerenciamento) ? 'iOS:' : 'Android:'}
-              </span>
-              <span className="font-semibold text-[var(--color-foreground)]">{d.versaoSo}</span>
-            </div>
-            {!ehGerenciamentoIos(d.gerenciamento) && (
-              <div className="flex items-center justify-between">
-                <span className="text-[var(--color-muted-foreground)]">Agente:</span>
-                <span className="font-semibold text-[var(--color-foreground)]">{d.versaoAgente}</span>
-              </div>
-            )}
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--color-muted-foreground)]">Gerenciamento:</span>
-              <span className="font-medium text-[var(--color-muted-foreground)] truncate max-w-[110px]">
-                {d.gerenciamento === 'ANDROID_ENTERPRISE'
-                  ? 'Enterprise'
-                  : d.gerenciamento === 'IOS_BYOD'
-                    ? 'BYOD'
-                    : d.gerenciamento === 'IOS_SUPERVISIONADO'
-                      ? 'Supervisionado'
-                      : 'Legado'}
-              </span>
-            </div>
-
-            {/* Barra de Progresso de Testes */}
-            <div className="pt-1.5">
-              <div className="flex items-center justify-between text-[11px] mb-1">
-                <span className="text-[var(--color-muted-foreground)]">Testes executados:</span>
-                <span className="font-semibold text-[var(--color-foreground)]">{pctAvaliado}%</span>
-              </div>
-              <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: 'var(--color-muted)' }}>
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{
-                    width: `${pctAvaliado}%`,
-                    background: d.homologado ? 'var(--color-primary)' : 'var(--gradient-brand-purple)',
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        <DadosModelo
+          fotoUrl={d.fotoUrl}
+          nomeComercial={d.nomeComercial}
+          versaoSo={d.versaoSo}
+          versaoAgente={d.versaoAgente}
+          gerenciamento={d.gerenciamento}
+          avaliados={d.resumo.avaliados}
+          total={d.resumo.total}
+          homologado={d.homologado}
+        />
       )}
 
       {/* Observações do Processo (Formato Clean: 1 linha de resumo no card, lista detalhada ao expandir) */}
@@ -597,25 +537,3 @@ function CardDispositivoParceiro({
   )
 }
 
-function BadgeStatusProcesso({ status }: { status: StatusHomologacao }) {
-  const configs: Record<StatusHomologacao, { rotulo: string; bg: string; fg: string }> = {
-    RASCUNHO: { rotulo: 'Em homologação', bg: '#f1f5f9', fg: '#475569' },
-    // Mesmas cores da tela Validar Certificado: validação em roxo, revisão em âmbar
-    AGUARDANDO_ANALISE: { rotulo: 'Em validação', bg: 'rgba(126,32,101,0.08)', fg: 'var(--color-primary)' },
-    EM_REVISAO: { rotulo: 'Em revisão', bg: '#fef3c7', fg: '#b45309' },
-    APROVADO: { rotulo: 'Homologado', bg: 'rgba(126,32,101,0.08)', fg: 'var(--color-primary)' },
-    PUBLICADO: { rotulo: 'Homologado', bg: 'rgba(126,32,101,0.08)', fg: 'var(--color-primary)' },
-    REPROVADO: { rotulo: 'Reprovado', bg: '#fee2e2', fg: '#b91c1c' },
-  }
-
-  const conf = configs[status] ?? configs.RASCUNHO
-
-  return (
-    <span
-      className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-semibold whitespace-nowrap select-none"
-      style={{ background: conf.bg, color: conf.fg }}
-    >
-      {conf.rotulo}
-    </span>
-  )
-}
