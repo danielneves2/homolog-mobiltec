@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { api, sessao, EVENTO_NAO_AUTORIZADO } from '@/lib/api'
 import type { Usuario } from '@/lib/tipos'
 
@@ -30,18 +31,25 @@ const AuthContext = createContext<ValorAuth | null>(null)
 
 export function ProvedorAuth({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(() => sessao.obterUsuario())
+  // O cache de consultas é da sessão: trocar de conta na mesma aba não pode
+  // mostrar a lista de parceiros, o painel ou a matriz do usuário anterior
+  const qc = useQueryClient()
 
   const sair = useCallback(() => {
     sessao.limpar()
+    qc.clear()
     setUsuario(null)
-  }, [])
+  }, [qc])
 
   // O token expira em 8h; quando o backend devolve 401, o api.ts avisa por evento.
   useEffect(() => {
-    const aoExpirar = () => setUsuario(null)
+    const aoExpirar = () => {
+      qc.clear()
+      setUsuario(null)
+    }
     window.addEventListener(EVENTO_NAO_AUTORIZADO, aoExpirar)
     return () => window.removeEventListener(EVENTO_NAO_AUTORIZADO, aoExpirar)
-  }, [])
+  }, [qc])
 
   const recarregarUsuario = useCallback(async () => {
     const token = sessao.obterToken()
@@ -64,8 +72,9 @@ export function ProvedorAuth({ children }: { children: ReactNode }) {
   const entrar = useCallback(async (email: string, senha: string) => {
     const resposta = await api.post<RespostaLogin>('/auth/login', { email, senha }, { semAuth: true })
     sessao.salvar(resposta.token, resposta.usuario)
+    qc.clear()
     setUsuario(resposta.usuario)
-  }, [])
+  }, [qc])
 
   const ehMobiltec = usuario?.papel === 'ADMIN' || usuario?.papel === 'HOMOLOGADOR'
   const ehParceiro = usuario?.papel === 'PARCEIRO'
