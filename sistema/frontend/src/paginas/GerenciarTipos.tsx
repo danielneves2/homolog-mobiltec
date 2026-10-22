@@ -403,18 +403,15 @@ function Acao({
       disabled={desabilitado}
       title={titulo}
       data-acao={rotulo}
-      className={`rounded-md border px-2.5 py-1.5 text-xs font-semibold shadow-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-        destaque ? 'hover:bg-[var(--color-brand-purple-soft)]' : perigo ? 'hover:bg-[var(--color-destructive-soft)]' : 'hover:bg-[var(--color-muted)]'
+      // Cores em classes (não em style) para o hover poder trocá-las: o botão
+      // ganha fundo e borda roxo-claros e texto roxo — sinal de que é clicável
+      className={`cursor-pointer rounded-md border bg-[var(--color-card)] px-2.5 py-1.5 text-xs font-semibold shadow-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+        perigo
+          ? 'border-[var(--color-destructive-soft)] text-[var(--color-destructive-fg)] enabled:hover:bg-[var(--color-destructive-soft)]'
+          : destaque
+            ? 'border-[var(--color-primary)] text-[var(--color-primary)] enabled:hover:bg-[var(--color-brand-purple-soft)]'
+            : 'border-[var(--color-border)] text-[var(--color-foreground)] enabled:hover:border-[var(--color-brand-purple-border)] enabled:hover:bg-[var(--color-brand-purple-soft)] enabled:hover:text-[var(--color-primary)]'
       }`}
-      style={
-        destaque
-          ? { background: 'var(--color-card)', color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }
-          : {
-              background: 'var(--color-card)',
-              color: perigo ? 'var(--color-destructive-fg)' : 'var(--color-foreground)',
-              borderColor: perigo ? 'var(--color-destructive-soft)' : 'var(--color-border)',
-            }
-      }
     >
       {rotulo}
     </button>
