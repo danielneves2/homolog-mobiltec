@@ -404,11 +404,11 @@ function Acao({
       title={titulo}
       data-acao={rotulo}
       className={`rounded-md border px-2.5 py-1.5 text-xs font-semibold shadow-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-        destaque ? 'text-white hover:opacity-90' : perigo ? 'hover:bg-[var(--color-destructive-soft)]' : 'hover:bg-[var(--color-muted)]'
+        destaque ? 'hover:bg-[var(--color-brand-purple-soft)]' : perigo ? 'hover:bg-[var(--color-destructive-soft)]' : 'hover:bg-[var(--color-muted)]'
       }`}
       style={
         destaque
-          ? { background: 'var(--gradient-brand-purple)', borderColor: 'transparent' }
+          ? { background: 'var(--color-card)', color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }
           : {
               background: 'var(--color-card)',
               color: perigo ? 'var(--color-destructive-fg)' : 'var(--color-foreground)',
