@@ -409,7 +409,7 @@ function Acao({
         perigo
           ? 'border-[var(--color-destructive-soft)] text-[var(--color-destructive-fg)] enabled:hover:bg-[var(--color-destructive-soft)]'
           : destaque
-            ? 'border-[var(--color-primary)] text-[var(--color-primary)] enabled:hover:bg-[var(--color-brand-purple-soft)]'
+            ? 'border-[var(--color-border)] text-[var(--color-primary)] enabled:hover:border-[var(--color-brand-purple-border)] enabled:hover:bg-[var(--color-brand-purple-soft)]'
             : 'border-[var(--color-border)] text-[var(--color-foreground)] enabled:hover:border-[var(--color-brand-purple-border)] enabled:hover:bg-[var(--color-brand-purple-soft)] enabled:hover:text-[var(--color-primary)]'
       }`}
     >
