@@ -124,20 +124,19 @@ export function GerenciarTipos() {
                 key={tipo.id}
                 data-tipo={tipo.slug}
                 className="flex flex-col gap-3 rounded-lg border px-4 py-3"
-                style={{
-                  background: 'var(--color-card)',
-                  opacity: tipo.ativo ? 1 : 0.62,
-                }}
+                style={{ background: 'var(--color-card)' }}
               >
                 <div className="flex flex-wrap items-center gap-3">
+                  {/* Tipo fora de operação: só a identidade e as baterias esmaecem —
+                      os botões seguem nítidos, senão "Reativar" nem parece clicável */}
                   <span
                     className="grid h-9 w-9 shrink-0 place-items-center rounded-md"
-                    style={{ background: 'var(--gradient-brand-purple)', color: '#fff' }}
+                    style={{ background: 'var(--gradient-brand-purple)', color: '#fff', opacity: tipo.ativo ? 1 : 0.55 }}
                   >
                     <Icone nome={iconeDaCategoria(tipo.icone)} className="h-[18px] w-[18px]" />
                   </span>
 
-                  <div className="min-w-40 flex-1">
+                  <div className="min-w-40 flex-1" style={{ opacity: tipo.ativo ? 1 : 0.7 }}>
                     <p className="flex items-center gap-2 text-sm font-semibold">
                       {tipo.nome}
                       {!tipo.ativo && (
@@ -176,6 +175,7 @@ export function GerenciarTipos() {
                     <Acao rotulo="Editar" aoClicar={() => navegar(`/registro/tipos/${tipo.id}`)} />
                     <Acao
                       rotulo={tipo.ativo ? 'Desativar' : 'Reativar'}
+                      destaque={!tipo.ativo}
                       aoClicar={() => alternarAtivo(tipo)}
                     />
                     <Acao
@@ -192,7 +192,7 @@ export function GerenciarTipos() {
                   </div>
                 </div>
 
-                <div className="border-t pt-3 flex flex-col gap-2">
+                <div className="border-t pt-3 flex flex-col gap-2" style={{ opacity: tipo.ativo ? 1 : 0.7 }}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <h4 className="label-caps">Baterias de Teste</h4>
@@ -384,12 +384,15 @@ function Acao({
   rotulo,
   aoClicar,
   perigo,
+  destaque,
   desabilitado,
   titulo,
 }: {
   rotulo: string
   aoClicar: () => void
   perigo?: boolean
+  /** Ação principal do card (ex.: Reativar um tipo fora de operação) */
+  destaque?: boolean
   desabilitado?: boolean
   titulo?: string
 }) {
@@ -400,11 +403,18 @@ function Acao({
       disabled={desabilitado}
       title={titulo}
       data-acao={rotulo}
-      className="rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors hover:opacity-70 disabled:opacity-40"
-      style={{
-        color: perigo ? 'var(--color-destructive-fg)' : 'var(--color-muted-foreground)',
-        borderColor: perigo ? 'var(--color-destructive-soft)' : 'var(--color-border)',
-      }}
+      className={`rounded-md border px-2.5 py-1.5 text-xs font-semibold shadow-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+        destaque ? 'text-white hover:opacity-90' : perigo ? 'hover:bg-[var(--color-destructive-soft)]' : 'hover:bg-[var(--color-muted)]'
+      }`}
+      style={
+        destaque
+          ? { background: 'var(--gradient-brand-purple)', borderColor: 'transparent' }
+          : {
+              background: 'var(--color-card)',
+              color: perigo ? 'var(--color-destructive-fg)' : 'var(--color-foreground)',
+              borderColor: perigo ? 'var(--color-destructive-soft)' : 'var(--color-border)',
+            }
+      }
     >
       {rotulo}
     </button>
