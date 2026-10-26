@@ -16,6 +16,7 @@ import { Prisma } from '@prisma/client'
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { salvarCertificadoPdf } from '../lib/storage.js'
+import { resultadosDaMatriz } from '../lib/planilha.js'
 import {
   analiseComoBlocos,
   gerarCertificadoHtml,
@@ -42,18 +43,44 @@ const INCLUDE_CERTIFICADO = {
   },
 } as const
 
+/**
+ * Tira da análise manual os itens que saíram da matriz. Cada bloco cita os
+ * itens no subtítulo ("Reiniciar - Bloquear"); bloco que só falava de itens
+ * removidos some, e os demais perdem só os nomes removidos.
+ */
+function semItensRemovidos(
+  analise: Prisma.JsonValue,
+  removidos: string[],
+  atuais: { item: { nome: string } }[],
+): Prisma.JsonValue {
+  if (!analise || typeof analise !== 'object' || Array.isArray(analise)) return analise
+  const blocos = (analise as { blocos?: unknown }).blocos
+  if (!Array.isArray(blocos)) return analise
+  const naMatriz = new Set(atuais.map((r) => r.item.nome))
+  const saiu = (nome: string) => removidos.includes(nome) && !naMatriz.has(nome)
+  const filtrados = blocos.flatMap((b: any) => {
+    const nomes = String(b?.subtitulo ?? '').split(' - ').map((n) => n.trim()).filter(Boolean)
+    if (nomes.length === 0 || !nomes.some(saiu)) return [b]
+    const ficam = nomes.filter((n) => !saiu(n))
+    return ficam.length ? [{ ...b, subtitulo: ficam.join(' - ') }] : []
+  })
+  return { ...(analise as object), blocos: filtrados } as Prisma.JsonValue
+}
+
 const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
 
   /**
-   * Carrega a homologação para o certificado.
+   * Carrega a homologação para o certificado (web e PDF).
    *
-   * Enquanto ela está aberta, o documento segue a bateria do tipo — a mesma
-   * regra da planilha: tirar um item da configuração tira a linha das duas,
-   * senão a tela e o documento contariam coisas diferentes.
+   * O documento segue a matriz atual do tipo, aberta ou aprovada (D517): tirar
+   * um item da configuração tira a linha da matriz, da ficha e do certificado;
+   * item novo entra em branco. Antes a aprovada ficava congelada com os itens
+   * da época, e o certificado seguia mostrando testes que já não existem.
+   * (Certificado já emitido e arquivado é arquivo com snapshot próprio, e não
+   * passa por aqui.)
    *
-   * Fechada, não. Homologação aprovada é registro: o que foi atestado ali não
-   * muda porque alguém editou o tipo depois. (Certificado já emitido é arquivo
-   * em disco com snapshot próprio, e não passa por aqui.)
+   * A análise de divergências escrita à mão cita os itens pelo nome: os que
+   * saíram da matriz saem dela também, só na leitura — o texto salvo não muda.
    */
   async function carregar(id: string) {
     const h = await fastify.prisma.homologacao.findUnique({
@@ -62,15 +89,9 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
     })
     if (!h) return h
 
-    const congelada = h.status === 'APROVADO' || h.status === 'PUBLICADO'
-    if (congelada) return h
-
-    const daBateria = await fastify.prisma.bateriaItem.findMany({
-      where: { bateriaId: h.bateriaId },
-      select: { itemId: true },
-    })
-    const naBateria = new Set(daBateria.map((b) => b.itemId))
-    h.resultados = h.resultados.filter((r) => naBateria.has(r.itemId))
+    const { resultados, removidos } = await resultadosDaMatriz(fastify.prisma, h)
+    h.resultados = resultados
+    if (removidos.length) h.analiseDivergencias = semItensRemovidos(h.analiseDivergencias, removidos, resultados)
     return h
   }
 

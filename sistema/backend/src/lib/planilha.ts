@@ -3,7 +3,8 @@
  * parceiro e vitrine. As três contam a mesma história — mesmo modelo, mesma
  * homologação "atual", mesmo progresso — porque saem destas duas funções.
  */
-import type { PrismaClient } from '@prisma/client'
+import type { PrismaClient, TipoGerenciamento } from '@prisma/client'
+import { itemAplicavel } from './gerenciamento.js'
 
 /**
  * Agrupa por modelo. Com a lista em `criadoEm desc`, o primeiro de cada grupo
@@ -38,4 +39,51 @@ export async function itensPorCategoria(
   })
   for (const v of vinculos) mapa.get(v.bateria.categoriaId)?.add(v.itemId)
   return mapa
+}
+
+/**
+ * Resultados de uma homologação do jeito que a matriz do tipo os mostra hoje
+ * (D517) — vale para homologação aberta ou aprovada, na ficha web, no
+ * certificado web e no PDF:
+ *  - item que saiu da matriz sai daqui também (o resultado continua no banco
+ *    e volta se o item for remarcado);
+ *  - item que entrou depois aparece como "não testado" (linha em branco no
+ *    certificado), salvo item só de supervisionado numa homologação BYOD.
+ *
+ * `removidos` são os nomes que saíram — servem para limpar a análise de
+ * divergências escrita à mão, que cita os itens pelo nome.
+ */
+export async function resultadosDaMatriz<R extends { itemId: string; item: { nome: string } }>(
+  prisma: PrismaClient,
+  h: { id: string; gerenciamento: TipoGerenciamento; dispositivo: { categoriaId: string }; resultados: R[] },
+): Promise<{ resultados: R[]; removidos: string[] }> {
+  const naMatriz = (await itensPorCategoria(prisma, [h.dispositivo.categoriaId])).get(h.dispositivo.categoriaId)!
+  const ficam = h.resultados.filter((r) => naMatriz.has(r.itemId))
+  const removidos = h.resultados.filter((r) => !naMatriz.has(r.itemId)).map((r) => r.item.nome)
+
+  const presentes = new Set(ficam.map((r) => r.itemId))
+  const faltando = [...naMatriz].filter((id) => !presentes.has(id))
+  if (faltando.length) {
+    const itens = await prisma.itemTeste.findMany({ where: { id: { in: faltando } } })
+    for (const item of itens) {
+      if (!itemAplicavel(item, h.gerenciamento)) continue
+      // Linha sem registro no banco: só para exibir, nunca gravada daqui
+      ficam.push({
+        id: `pendente-${item.id}`,
+        homologacaoId: h.id,
+        itemId: item.id,
+        status: 'NAO_TESTADO',
+        observacao: null,
+        justificativaId: null,
+        justificativaTexto: null,
+        autorEmail: null,
+        atualizadoEm: null,
+        item,
+        justificativa: null,
+      } as unknown as R)
+    }
+  }
+  // Na ordem da matriz dentro de cada grupo (quem exibe agrupa por grupo)
+  ficam.sort((a, b) => ((a.item as { ordem?: number }).ordem ?? 0) - ((b.item as { ordem?: number }).ordem ?? 0))
+  return { resultados: ficam, removidos }
 }

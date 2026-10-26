@@ -26,6 +26,7 @@ import {
   whereVeParceiro,
 } from '../lib/escopo.js'
 import { removerArquivos } from '../lib/storage.js'
+import { resultadosDaMatriz } from '../lib/planilha.js'
 
 // Status que EXIGEM justificativa (regra central da spec)
 const STATUS_COM_JUSTIFICATIVA_OBRIGATORIA: StatusResultado[] = [
@@ -329,7 +330,10 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
     if (!(await usuarioPodeVer(fastify.prisma, request.user, id))) {
       return reply.status(404).send({ erro: 'Homologação não encontrada' })
     }
-    return homologacao
+    // Ficha web ("Exibir informações", detalhe do dispositivo) com os itens
+    // da matriz atual — os mesmos do certificado (D517)
+    const { resultados } = await resultadosDaMatriz(fastify.prisma, homologacao)
+    return { ...homologacao, resultados }
   })
 
   // ============================================================
