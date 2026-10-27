@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/contextos/AuthContext'
 import { CabecalhoModelo, DadosModelo } from '@/componentes/vitrine/ResumoModelo'
+import { rotuloVersao } from '@/lib/tipos'
 import type { DispositivoVitrine } from '@/lib/tipos'
 
 /**
@@ -25,6 +26,7 @@ export function CardEmHomologacao({ dispositivo: d }: { dispositivo: Dispositivo
         categoriaNome={d.categoriaNome}
         nomeComercial={d.nomeComercial}
         status={d.status}
+        reteste={d.numeroHomologacao > 1}
       />
       <DadosModelo
         fotoUrl={d.fotoUrl}
@@ -36,6 +38,7 @@ export function CardEmHomologacao({ dispositivo: d }: { dispositivo: Dispositivo
         total={d.resumo.total}
         homologado={d.homologado}
         numeroHomologacao={d.numeroHomologacao}
+        versaoVigente={d.vigente && rotuloVersao({ ...d.vigente, gerenciamento: d.gerenciamento })}
       />
     </>
   )

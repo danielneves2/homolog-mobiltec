@@ -3,8 +3,110 @@
  * parceiro e vitrine. As três contam a mesma história — mesmo modelo, mesma
  * homologação "atual", mesmo progresso — porque saem destas duas funções.
  */
-import type { PrismaClient, TipoGerenciamento } from '@prisma/client'
+import type { Prisma, PrismaClient, StatusHomologacao, StatusResultado, TipoGerenciamento } from '@prisma/client'
 import { itemAplicavel } from './gerenciamento.js'
+
+/** Homologação que atesta o modelo: aprovada ou publicada */
+export const ehHomologada = (s: StatusHomologacao) => s === 'APROVADO' || s === 'PUBLICADO'
+
+/** Homologação encerrada — aprovada, publicada ou reprovada. Só daqui sai reteste (D520) */
+export const ehFinalizada = (s: StatusHomologacao) => ehHomologada(s) || s === 'REPROVADO'
+
+/**
+ * As homologações de um modelo lidas como versões (D519). Recebe o grupo de
+ * `agruparPorDispositivo` (mais recente primeiro).
+ *
+ *  - `atual`: a mais recente — é nela que a matriz trabalha.
+ *  - `vigente`: a última aprovada — é ela que diz "homologado" no catálogo.
+ *    Reteste em andamento ou reprovado não tira o selo da versão anterior:
+ *    a reprovação vale para a versão nova, não para a que já foi atestada.
+ *  - `anterior`: a base de comparação da atual — a última finalizada antes
+ *    dela (ou a anterior, em dado legado sem nenhuma finalizada).
+ *  - `emReteste`: o modelo voltou para a bancada e ainda não fechou.
+ */
+export function versoesDoModelo<T extends { status: StatusHomologacao }>(grupo: T[]) {
+  const [atual, ...anteriores] = grupo
+  return {
+    atual,
+    anteriores,
+    vigente: grupo.find((h) => ehHomologada(h.status)) ?? null,
+    anterior: anteriores.find((h) => ehFinalizada(h.status)) ?? anteriores[0] ?? null,
+    emReteste: anteriores.length > 0 && !ehFinalizada(atual.status),
+  }
+}
+
+/**
+ * Versões do modelo e o que mudou da anterior para esta (D522), para a ficha
+ * e a validação. `visivel` recorta as versões que quem pergunta pode ver.
+ *
+ * `mudancas` são os itens da matriz atual cujo resultado difere do da versão
+ * anterior; `antes: null` é item que não existia naquela versão.
+ */
+export async function historicoDoModelo(
+  prisma: PrismaClient,
+  h: {
+    id: string
+    dispositivoId: string
+    criadoEm: Date
+    resultados: { itemId: string; status: StatusResultado; item: { nome: string; grupo: string } }[]
+  },
+  visivel: Prisma.HomologacaoWhereInput = {},
+) {
+  const versoes = await prisma.homologacao.findMany({
+    where: { AND: [{ dispositivoId: h.dispositivoId }, visivel] },
+    select: { id: true, versaoAgente: true, versaoSo: true, gerenciamento: true, status: true, dataInicio: true, dataFim: true, criadoEm: true },
+    orderBy: { criadoEm: 'desc' },
+  })
+  const maisAntigas = versoes.filter((v) => v.criadoEm < h.criadoEm)
+  const anterior = maisAntigas.find((v) => ehFinalizada(v.status)) ?? maisAntigas[0] ?? null
+  if (!anterior) return { versoes, comparacao: null }
+
+  const antes = new Map(
+    (await prisma.resultado.findMany({ where: { homologacaoId: anterior.id }, select: { itemId: true, status: true } }))
+      .map((r) => [r.itemId, r.status]),
+  )
+  const mudancas = h.resultados.flatMap((r) => {
+    const a = antes.get(r.itemId) ?? null
+    return a === r.status ? [] : [{ itemId: r.itemId, nome: r.item.nome, grupo: r.item.grupo, antes: a, agora: r.status }]
+  })
+  return {
+    versoes,
+    comparacao: {
+      homologacaoId: anterior.id,
+      versaoAgente: anterior.versaoAgente,
+      versaoSo: anterior.versaoSo,
+      status: anterior.status,
+      mudancas,
+    },
+  }
+}
+
+/** Divergência é o que a spec §5 define — NAO_APLICAVEL não entra */
+const EXIGE_JUSTIFICATIVA: StatusResultado[] = ['FALHA', 'NAO_SUPORTADO', 'COM_RESSALVA']
+
+/**
+ * Progresso de uma homologação contado só com as linhas da matriz do tipo.
+ * Avaliado = tudo que saiu de NAO_TESTADO. Painel e vitrine usam a mesma conta.
+ */
+export function resumoDoProgresso(
+  resultados: { itemId: string; status: StatusResultado; justificativaId: string | null; justificativaTexto: string | null }[],
+  naMatriz: Set<string>,
+) {
+  const resumo = { total: 0, ok: 0, divergencias: 0, semJustificativa: 0, naoAplicavel: 0, naoTestado: 0, avaliados: 0 }
+  for (const r of resultados) {
+    if (!naMatriz.has(r.itemId)) continue
+    resumo.total++
+    if (r.status === 'OK') resumo.ok++
+    else if (r.status === 'NAO_APLICAVEL') resumo.naoAplicavel++
+    else if (r.status === 'NAO_TESTADO') resumo.naoTestado++
+    if (EXIGE_JUSTIFICATIVA.includes(r.status)) {
+      resumo.divergencias++
+      if (!r.justificativaId && !r.justificativaTexto) resumo.semJustificativa++
+    }
+  }
+  resumo.avaliados = resumo.total - resumo.naoTestado
+  return resumo
+}
 
 /**
  * Agrupa por modelo. Com a lista em `criadoEm desc`, o primeiro de cada grupo

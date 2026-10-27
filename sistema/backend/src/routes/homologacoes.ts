@@ -26,7 +26,7 @@ import {
   whereVeParceiro,
 } from '../lib/escopo.js'
 import { removerArquivos } from '../lib/storage.js'
-import { resultadosDaMatriz } from '../lib/planilha.js'
+import { historicoDoModelo, resultadosDaMatriz } from '../lib/planilha.js'
 import { resolverAssinaturas } from '../services/certificado.js'
 
 // Status que EXIGEM justificativa (regra central da spec)
@@ -342,8 +342,19 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
     // Ficha web ("Exibir informações", detalhe do dispositivo) com os itens
     // da matriz atual — os mesmos do certificado (D517)
     const { resultados } = await resultadosDaMatriz(fastify.prisma, homologacao)
+    // Versões do modelo e o que mudou desde a anterior (D522). O parceiro vê
+    // só as versões que já enxergaria uma a uma.
+    const visivel =
+      request.user.papel === 'PARCEIRO'
+        ? whereVeParceiro(await carregarUsuarioEscopo(fastify.prisma, request.user))
+        : {}
+    const { versoes, comparacao } = await historicoDoModelo(
+      fastify.prisma,
+      { ...homologacao, resultados },
+      visivel,
+    )
     // Quem assina, pela mesma regra do certificado — a ficha só exibe (D518)
-    return { ...homologacao, resultados, assinaturas: resolverAssinaturas(homologacao) }
+    return { ...homologacao, resultados, assinaturas: resolverAssinaturas(homologacao), versoes, comparacao }
   })
 
   // ============================================================

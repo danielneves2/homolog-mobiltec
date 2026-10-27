@@ -12,9 +12,10 @@ import {
   type ItemObservacaoProcessada,
 } from '@/componentes/parceiro/ModalInformacoesHomologacao'
 import { ErroApi } from '@/lib/api'
+import { rotuloVersao } from '@/lib/tipos'
 import type { DispositivoPainelParceiro } from '@/lib/tipos'
 
-type FiltroStatus = 'todos' | 'em-homologacao' | 'em-validacao' | 'em-revisao' | 'homologados'
+type FiltroStatus = 'todos' | 'em-homologacao' | 'em-validacao' | 'em-revisao' | 'homologados' | 'em-reteste'
 
 export function PainelParceiro() {
   const { id } = useParams<{ id?: string }>()
@@ -53,7 +54,9 @@ export function PainelParceiro() {
       if (filtro === 'em-homologacao' && d.status !== 'RASCUNHO') return false
       if (filtro === 'em-validacao' && d.status !== 'AGUARDANDO_ANALISE') return false
       if (filtro === 'em-revisao' && d.status !== 'EM_REVISAO') return false
-      if (filtro === 'homologados' && d.status !== 'APROVADO' && d.status !== 'PUBLICADO') return false
+      // Homologado é quem tem versão vigente, mesmo com reteste aberto (D519)
+      if (filtro === 'homologados' && !d.homologado && !d.vigente) return false
+      if (filtro === 'em-reteste' && !d.emReteste) return false
 
       if (!termo) return true
       return [d.nomeComercial, d.fabricante, d.modelo, d.versaoAgente, d.versaoSo, d.categoriaNome]
@@ -166,6 +169,15 @@ export function PainelParceiro() {
                 rotulo="Homologados"
                 contagem={metricas.homologados}
               />
+              {/* Só aparece quando há reteste aberto: aba vazia é ruído */}
+              {(metricas.emReteste ?? 0) > 0 && (
+                <BotaoFiltroClean
+                  ativo={filtro === 'em-reteste'}
+                  aoClicar={() => setFiltro('em-reteste')}
+                  rotulo="Em reteste"
+                  contagem={metricas.emReteste}
+                />
+              )}
             </div>
 
             <label className="relative block w-full max-w-[22rem]">
@@ -320,6 +332,7 @@ function CardDispositivoParceiro({
         categoriaNome={d.categoriaNome}
         nomeComercial={d.nomeComercial}
         status={d.status}
+        reteste={d.emReteste}
       />
 
       {/* Meio: Foto e Dados Técnicos OU Card de Aviso da Revisão Técnica */}
@@ -432,6 +445,8 @@ function CardDispositivoParceiro({
           avaliados={d.resumo.avaliados}
           total={d.resumo.total}
           homologado={d.homologado}
+          numeroHomologacao={d.numeroHomologacao}
+          versaoVigente={d.vigente ? rotuloVersao({ ...d.vigente, gerenciamento: d.gerenciamento }) : undefined}
         />
       )}
 
@@ -522,9 +537,11 @@ function CardDispositivoParceiro({
             </Link>
           ) : null}
 
-          {d.homologacaoId && (d.status === 'APROVADO' || d.status === 'PUBLICADO') && (
+          {/* Com reteste aberto, o certificado que vale é o da versão vigente (D519) */}
+          {(d.homologado || d.vigente) && (
             <Link
-              to={`/homologacoes/${d.homologacaoId}/certificado?ambiente=parceiro`}
+              to={`/homologacoes/${d.homologado ? d.homologacaoId : d.vigente!.homologacaoId}/certificado?ambiente=parceiro`}
+              title={d.vigente && !d.homologado ? `Certificado da versão homologada (${d.vigente.versaoAgente})` : undefined}
               className="px-2.5 py-1.5 rounded-lg border text-xs font-semibold text-[var(--color-primary)] hover:bg-purple-50/50 transition-colors inline-flex items-center gap-1"
             >
               <Icone nome="certificado" className="h-3.5 w-3.5" />

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ROTULO_GERENCIAMENTO, ehGerenciamentoIos, somenteVersaoAndroid, somenteVersaoIos } from '@/lib/tipos'
+import { ROTULO_GERENCIAMENTO, ehGerenciamentoIos, rotuloVersao, somenteVersaoAndroid, somenteVersaoIos } from '@/lib/tipos'
 import type { DispositivoVitrine } from '@/lib/tipos'
 import { FotoDispositivo } from './FotoDispositivo'
 import { BadgeHomologado } from '@/componentes/comum/BadgeHomologado'
@@ -79,13 +79,26 @@ export function CardDispositivo({ dispositivo: d }: { dispositivo: DispositivoVi
                 <Linha rotulo="Agente" valor={d.versaoAgente} />
               </>
             )}
-            {d.numeroHomologacao > 1 && (
-              <Linha
-                rotulo="Retestes"
-                valor={`${d.numeroHomologacao - 1} (${d.versoesAnteriores.join(', ')})`}
-              />
+            {d.versoesAnteriores.length > 0 && (
+              <Linha rotulo="Outras versões" valor={d.versoesAnteriores.join(', ')} />
             )}
           </dl>
+
+          {/* Reteste aberto: o modelo segue homologado nesta versão e a nova
+              está na bancada (D519). Laranja, como todo andamento. */}
+          {d.reteste && (
+            <p
+              className="mt-1.5 flex items-center justify-between gap-2 rounded-md px-2 py-1 text-[11px]"
+              style={{ background: 'rgba(243,120,4,0.10)', color: '#c2410c' }}
+              title={`Reteste iniciado em ${new Date(d.reteste.dataInicio).toLocaleDateString('pt-BR')} por ${d.reteste.responsavel}`}
+              data-reteste
+            >
+              <span className="truncate font-semibold">Em reteste · {rotuloVersao(d.reteste)}</span>
+              <span className="shrink-0 font-medium">
+                {d.reteste.resumo.total > 0 ? Math.round((d.reteste.resumo.avaliados / d.reteste.resumo.total) * 100) : 0}%
+              </span>
+            </p>
+          )}
 
           <Link
             to={`/dispositivos/${d.homologacaoId}`}

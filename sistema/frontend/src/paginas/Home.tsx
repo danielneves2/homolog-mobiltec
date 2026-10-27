@@ -6,11 +6,11 @@ import { Icone } from '@/componentes/Icone'
 import { CardDispositivo } from '@/componentes/vitrine/CardDispositivo'
 import { CardEmHomologacao } from '@/componentes/vitrine/CardEmHomologacao'
 import { LoadingTela } from '@/componentes/LoadingTela'
-import { ehSomenteLeitura } from '@/lib/tipos'
+import { andamentoNaVitrine, ehSomenteLeitura } from '@/lib/tipos'
 import { ErroApi } from '@/lib/api'
 import type { DispositivoVitrine } from '@/lib/tipos'
 
-type Aba = 'homologados' | 'em-homologacao' | 'retestados'
+type Aba = 'homologados' | 'em-homologacao' | 'em-reteste'
 
 /**
  * Modelo usado como exemplo enquanto nenhuma homologação real foi finalizada.
@@ -77,7 +77,7 @@ export function Home() {
     setTimeout(verificarScroll, 250)
   }
 
-  const { finalizados, exemplos, emAndamento, retestados, contagemPorCategoria } = useMemo(() => {
+  const { finalizados, exemplos, emAndamento, emReteste, contagemPorCategoria } = useMemo(() => {
     const reais = data?.dispositivos ?? []
 
     const contagem = new Map<string, number>()
@@ -89,7 +89,7 @@ export function Home() {
     const passa = (d: DispositivoVitrine) => {
       if (categoria && d.categoriaSlug !== categoria) return false
       if (!termo) return true
-      return [d.nomeComercial, d.fabricante, d.modelo, d.versaoAgente, d.versaoSo]
+      return [d.nomeComercial, d.fabricante, d.modelo, d.versaoAgente, d.versaoSo, d.reteste?.versaoAgente]
         .join(' ')
         .toLowerCase()
         .includes(termo)
@@ -101,14 +101,18 @@ export function Home() {
     // O exemplo só existe enquanto a seção estaria vazia
     const base = prontos.length === 0 ? filtrados.find((d) => MODELO_EXEMPLO.test(d.modelo)) : undefined
 
+    // Tudo que está na bancada agora: modelo novo em teste e reteste de
+    // modelo homologado — este também segue em Homologados, na versão
+    // vigente, porque abrir um reteste não desfaz a homologação (D519)
+    const andamento = filtrados.flatMap((d) => andamentoNaVitrine(d) ?? [])
+
     return {
       finalizados: prontos,
       exemplos: base ? [base] : [],
-      emAndamento: filtrados.filter((d) => !ehSomenteLeitura(d.status)),
-      // Modelos que voltaram para a bancada com outra versão do agente:
-      // aparecem aqui além da sua aba de origem, porque a pergunta é outra
-      // ("o que foi revalidado?"), não um estágio diferente.
-      retestados: filtrados.filter((d) => d.numeroHomologacao > 1),
+      emAndamento: andamento,
+      // Recorte de "Em homologação": os modelos que já tinham sido testados
+      // e voltaram com uma versão nova do agente ou do sistema
+      emReteste: andamento.filter((d) => d.numeroHomologacao > 1),
       contagemPorCategoria: contagem,
     }
   }, [data, busca, categoria])
@@ -237,7 +241,7 @@ export function Home() {
               [
                 ['homologados', 'Homologados', cardsHomologados.length],
                 ['em-homologacao', 'Em homologação', emAndamento.length],
-                ['retestados', 'Retestados', retestados.length],
+                ['em-reteste', 'Em reteste', emReteste.length],
               ] as [Aba, string, number][]
             ).map(([valor, rotulo, n]) => (
               <button
@@ -307,23 +311,17 @@ export function Home() {
           </>
         ) : (
           <>
-            {retestados.length === 0 ? (
+            {emReteste.length === 0 ? (
               <Vazio>
-                Nenhum modelo foi retestado ainda. Um reteste começa pela matriz, no menu
-                da coluna do modelo → "Reteste".
+                Nenhum modelo em reteste agora. Saiu versão nova do agente? O reteste começa
+                pela matriz, no menu da coluna de um modelo finalizado → "Reteste".
               </Vazio>
             ) : (
-              // Cada um com o card do seu estágio: retestado e finalizado é
-              // catálogo; retestado e em teste ainda é andamento.
-              <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,312px)]">
-                {retestados.map((d) =>
-                  ehSomenteLeitura(d.status) ? (
-                    <CardDispositivo key={d.homologacaoId} dispositivo={d} />
-
-                  ) : (
-                    <CardEmHomologacao key={d.homologacaoId} dispositivo={d} />
-                  ),
-                )}
+              // O card mostra a versão nova em teste e a que segue homologada
+              <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(330px,1fr))]">
+                {emReteste.map((d) => (
+                  <CardEmHomologacao key={d.homologacaoId} dispositivo={d} />
+                ))}
               </div>
             )}
           </>

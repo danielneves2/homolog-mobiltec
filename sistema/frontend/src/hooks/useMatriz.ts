@@ -176,6 +176,8 @@ export function useAbrirReteste() {
       versaoAgente: string
       versaoSo?: string
       dataInicio: string
+      /** Começa com os resultados da versão anterior em vez de tudo "não testado" (D520) */
+      copiarResultados?: boolean
     }) => api.post<Homologacao>('/matriz/reteste', p),
     onSuccess: () => sincronizarPlanilha(qc, { estrutura: true }),
   })

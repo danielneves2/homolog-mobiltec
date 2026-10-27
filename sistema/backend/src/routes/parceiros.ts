@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client'
 import { ehTns, escopoPlanilha, slugsMatrizParceiro } from '../lib/escopo.js'
-import { agruparPorDispositivo, itensPorCategoria } from '../lib/planilha.js'
+import { agruparPorDispositivo, itensPorCategoria, resumoDoProgresso, versoesDoModelo } from '../lib/planilha.js'
 import { FastifyPluginAsync } from 'fastify'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
@@ -350,14 +350,17 @@ async function montarDadosPainel(fastify: any, parceiro: any) {
       })
     : []
 
-  // Mesma homologação "atual" da coluna da matriz: a mais recente do modelo
-  const atuais = agruparPorDispositivo(homologacoes).map(([atual]) => atual)
+  // O card é a coluna da matriz: mostra a homologação atual (a mais recente)
+  // e sabe qual é a vigente, para o reteste não esconder o que já foi
+  // homologado (D519)
+  const modelos = agruparPorDispositivo(homologacoes).map((grupo) => versoesDoModelo(grupo))
   // Progresso só com os itens que são linha da matriz do tipo
-  const itensDoTipo = await itensPorCategoria(prisma, [...new Set(atuais.map((h) => h.dispositivo.categoriaId))])
+  const itensDoTipo = await itensPorCategoria(prisma, [...new Set(modelos.map((m) => m.atual.dispositivo.categoriaId))])
 
   const metricas = {
-    totalDispositivos: atuais.length,
+    totalDispositivos: modelos.length,
     emHomologacao: 0,
+    emReteste: 0,
     emValidacao: 0,
     emRevisao: 0,
     homologados: 0,
@@ -377,10 +380,9 @@ async function montarDadosPainel(fastify: any, parceiro: any) {
       })
     : []
 
-  const listaDispositivos = atuais.map((atual) => {
+  const listaDispositivos = modelos.map(({ atual, anteriores, vigente, emReteste }) => {
     const d = atual.dispositivo
     const naBateria = itensDoTipo.get(d.categoriaId) ?? new Set<string>()
-    const resultados = atual.resultados.filter((r) => naBateria.has(r.itemId))
     const notificacaoRevisao = notificacoes.find(
       (n: any) => n.homologacaoId === atual.id && n.tipo === 'REVISAO',
     )
@@ -408,40 +410,19 @@ async function montarDadosPainel(fastify: any, parceiro: any) {
           }
         : null
 
-    const resumo = {
-      total: resultados.length,
-      ok: 0,
-      divergencias: 0,
-      semJustificativa: 0,
-      naoTestado: 0,
-      naoAplicavel: 0,
-      avaliados: 0,
-    }
+    const resumo = resumoDoProgresso(atual.resultados, naBateria)
 
     if (atual.status === 'RASCUNHO') metricas.emHomologacao++
     else if (atual.status === 'AGUARDANDO_ANALISE') metricas.emValidacao++
     else if (atual.status === 'EM_REVISAO') metricas.emRevisao++
-    else if (atual.status === 'APROVADO' || atual.status === 'PUBLICADO') metricas.homologados++
     else if (atual.status === 'REPROVADO') metricas.reprovados++
+    // Homologado é quem tem versão vigente — inclusive com reteste aberto (D519)
+    if (vigente) metricas.homologados++
+    if (emReteste) metricas.emReteste++
 
-    for (const r of resultados) {
-      metricas.testesTotal++
-      if (r.status === 'NAO_TESTADO') {
-        metricas.testesPendentes++
-        resumo.naoTestado++
-      } else {
-        metricas.testesRealizados++
-      }
-
-      if (r.status === 'OK') resumo.ok++
-      else if (r.status === 'NAO_APLICAVEL') resumo.naoAplicavel++
-
-      if (['FALHA', 'NAO_SUPORTADO', 'COM_RESSALVA'].includes(r.status)) {
-        resumo.divergencias++
-        if (!r.justificativaId && !r.justificativaTexto) resumo.semJustificativa++
-      }
-    }
-    resumo.avaliados = resumo.total - resumo.naoTestado
+    metricas.testesTotal += resumo.total
+    metricas.testesRealizados += resumo.avaliados
+    metricas.testesPendentes += resumo.naoTestado
 
     return {
       dispositivoId: d.id,
@@ -477,6 +458,13 @@ async function montarDadosPainel(fastify: any, parceiro: any) {
       notificacaoRevisao: notificacaoRevisao ?? null,
       revisaoInfo,
       resumo,
+      numeroHomologacao: anteriores.length + 1,
+      emReteste,
+      // A versão que segue homologada enquanto a atual não fecha
+      vigente:
+        vigente && vigente !== atual
+          ? { homologacaoId: vigente.id, versaoAgente: vigente.versaoAgente, versaoSo: vigente.versaoSo }
+          : null,
     }
   })
 

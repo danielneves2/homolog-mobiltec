@@ -21,7 +21,7 @@ import {
   usuarioPodeOperar,
   slugsMatrizParceiro,
 } from '../lib/escopo.js'
-import { agruparPorDispositivo, itensPorCategoria } from '../lib/planilha.js'
+import { agruparPorDispositivo, ehFinalizada, itensPorCategoria, versoesDoModelo } from '../lib/planilha.js'
 
 const matrizRoutes: FastifyPluginAsync = async (fastify) => {
 
@@ -96,7 +96,8 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
     // Agrupa por modelo: a primeira de cada dispositivo é a mais recente
     // (findMany já veio ordenado por criadoEm desc).
     const colunas = agruparPorDispositivo(homologacoes)
-      .map(([atual, ...anteriores]) => ({
+      .map((grupo) => versoesDoModelo(grupo))
+      .map(({ atual, anteriores, anterior, emReteste }) => ({
         homologacao: {
           ...atual,
           // O mapa itemId → resultado economiza busca linear no front.
@@ -121,9 +122,23 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
           versaoAgente: h.versaoAgente,
           versaoSo: h.versaoSo,
           dataInicio: h.dataInicio,
+          dataFim: h.dataFim,
           status: h.status,
           homologado: h.homologado,
         })),
+        emReteste,
+        // O resultado de cada item na versão anterior (D521): a célula mostra
+        // quando a versão nova muda o que a anterior tinha dado. Só o status —
+        // o resto da anterior está na ficha dela.
+        comparacao: anterior
+          ? {
+              homologacaoId: anterior.id,
+              versaoAgente: anterior.versaoAgente,
+              versaoSo: anterior.versaoSo,
+              status: anterior.status,
+              resultadosPorItem: Object.fromEntries(anterior.resultados.map(r => [r.itemId, r.status])),
+            }
+          : null,
       }))
       .sort((a, b) =>
         a.homologacao.dispositivo.nomeComercial.localeCompare(
@@ -313,22 +328,38 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
   // ============================================================
   // POST /matriz/reteste — nova homologação para um modelo já cadastrado
   // ============================================================
+  //
+  // Regras do reteste (D520):
+  //  - só a partir da homologação ATUAL do modelo, e só depois que ela fechou
+  //    (aprovada, publicada ou reprovada). Reteste em cima de homologação em
+  //    andamento a deixava órfã — some da matriz e ninguém mais chega nela;
+  //  - com versão nova (agente ou sistema): repetir a mesma não é reteste;
+  //  - as linhas seguem a matriz ATUAL do tipo, não a bateria da época;
+  //  - `copiarResultados` traz os resultados da anterior como ponto de
+  //    partida, para quem só precisa revalidar o que mudou. Sem ele, tudo
+  //    nasce "não testado".
   fastify.post('/matriz/reteste', { onRequest: [fastify.exigirPapeis(['ADMIN', 'HOMOLOGADOR', 'PARCEIRO'])] }, async (request, reply) => {
     const schema = z.object({
       dispositivoId: z.string().uuid(),
       /** Copia a ficha da homologação anterior, mudando só o que veio no corpo */
       baseHomologacaoId: z.string().uuid(),
-      versaoAgente: z.string().min(1),
-      versaoSo: z.string().min(1).optional(),
+      versaoAgente: z.string().trim().min(1),
+      versaoSo: z.string().trim().min(1).optional(),
       numeroSerie: z.string().min(1).optional(),
       dataInicio: z.string().transform(s => new Date(s)),
+      copiarResultados: z.boolean().optional(),
     })
 
     const body = schema.parse(request.body)
 
     const base = await fastify.prisma.homologacao.findUnique({
       where: { id: body.baseHomologacaoId },
-      include: { bateria: { include: { itens: { select: { itemId: true, item: { select: { somenteSupervisionado: true } } } } } } },
+      include: {
+        dispositivo: { select: { categoriaId: true } },
+        resultados: {
+          select: { itemId: true, status: true, observacao: true, justificativaId: true, justificativaTexto: true },
+        },
+      },
     })
     if (!base) return reply.status(404).send({ erro: 'Homologação base não encontrada' })
     if (base.dispositivoId !== body.dispositivoId) {
@@ -338,6 +369,37 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(403).send({ erro: 'Você não tem acesso a este dispositivo.' })
     }
 
+    const atual = await fastify.prisma.homologacao.findFirst({
+      where: { dispositivoId: base.dispositivoId },
+      orderBy: { criadoEm: 'desc' },
+      select: { id: true },
+    })
+    if (atual?.id !== base.id) {
+      return reply.status(409).send({
+        erro: 'Este modelo já tem uma homologação mais recente. Atualize a planilha e abra o reteste a partir dela.',
+      })
+    }
+    if (!ehFinalizada(base.status)) {
+      return reply.status(409).send({
+        erro: 'A homologação atual deste modelo ainda não foi finalizada. Conclua ou remova antes de abrir um reteste, senão ela fica para trás sem ninguém para fechar.',
+      })
+    }
+
+    const versaoSo = body.versaoSo ?? base.versaoSo
+    const igual = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
+    if (igual(body.versaoAgente, base.versaoAgente) && igual(versaoSo, base.versaoSo)) {
+      return reply.status(400).send({
+        erro: `O reteste precisa de uma versão nova. A homologação atual já é agente ${base.versaoAgente} · sistema ${base.versaoSo}.`,
+        campos: { versaoAgente: 'Informe a nova versão do agente ou do sistema' },
+      })
+    }
+
+    // Linhas da matriz atual do tipo, como as de um modelo novo
+    const categoriaId = base.dispositivo.categoriaId
+    const naMatriz = (await itensPorCategoria(fastify.prisma, [categoriaId])).get(categoriaId)!
+    const itens = await fastify.prisma.itemTeste.findMany({ where: { id: { in: [...naMatriz] } } })
+    const daBase = new Map(base.resultados.map(r => [r.itemId, r]))
+
     const nova = await fastify.prisma.homologacao.create({
       data: {
         dispositivoId: body.dispositivoId,
@@ -345,7 +407,7 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
         numeroSerie: body.numeroSerie ?? base.numeroSerie,
         imei1: base.imei1,
         imei2: base.imei2,
-        versaoSo: body.versaoSo ?? base.versaoSo,
+        versaoSo,
         gerenciamento: base.gerenciamento,
         tipoAgente: base.tipoAgente,
         versaoAgente: body.versaoAgente,
@@ -359,12 +421,21 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
         localEmissao: base.localEmissao,
         status: StatusHomologacao.RASCUNHO,
         resultados: {
-          create: base.bateria.itens
-            .filter(bi => itemAplicavel(bi.item, base.gerenciamento))
-            .map(bi => ({
-              itemId: bi.itemId,
-              status: StatusResultado.NAO_TESTADO,
-            })),
+          create: itens
+            .filter(item => itemAplicavel(item, base.gerenciamento))
+            .map(item => {
+              const anterior = body.copiarResultados ? daBase.get(item.id) : undefined
+              return anterior
+                ? {
+                    itemId: item.id,
+                    status: anterior.status,
+                    observacao: anterior.observacao,
+                    justificativaId: anterior.justificativaId,
+                    justificativaTexto: anterior.justificativaTexto,
+                    autorEmail: request.user.email,
+                  }
+                : { itemId: item.id, status: StatusResultado.NAO_TESTADO }
+            }),
         },
       },
     })

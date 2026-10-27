@@ -154,8 +154,9 @@ const ARTIGOS: Artigo[] = [
             </p>
             <ul className="mt-3 space-y-2.5">
               <Check>
-                As abas <Rotulo>Homologados</Rotulo>, <Rotulo>Em homologação</Rotulo> e <Rotulo>Retestados</Rotulo>{' '}
-                separam os modelos; a busca encontra por modelo, versão ou fabricante.
+                As abas <Rotulo>Homologados</Rotulo>, <Rotulo>Em homologação</Rotulo> e <Rotulo>Em reteste</Rotulo>{' '}
+                separam os modelos; a busca encontra por modelo, versão ou fabricante. Modelo em reteste continua em
+                Homologados, na versão já aprovada, até a nova fechar.
               </Check>
               <Check>
                 Em cada homologado, <Botao>Exibir informações</Botao> abre a ficha completa, com o resultado dos testes.
@@ -318,8 +319,8 @@ const ARTIGOS: Artigo[] = [
             <p>
               Quando a matriz cresce, use os filtros <Rotulo>Fabricante</Rotulo>, <Rotulo>Modelo</Rotulo>,{' '}
               <Rotulo>Versão do agente</Rotulo> e <Rotulo>Status</Rotulo>. O contador ◆ mostra quantas divergências
-              (falhas, não suportados e ressalvas) existem, e <Rotulo>Retestados</Rotulo> mostra só os modelos que
-              passaram por reteste.
+              (falhas, não suportados e ressalvas) existem, e <Rotulo>Em reteste</Rotulo> mostra só os modelos que
+              voltaram para teste com uma versão nova.
             </p>
             <Dica>A matriz da sua empresa é só sua: outros parceiros não veem os seus modelos.</Dica>
           </>
@@ -617,7 +618,7 @@ const ARTIGOS: Artigo[] = [
     categoria: 'certificado',
     titulo: 'Abrir um reteste',
     resumo: 'Saiu uma nova versão do agente? Teste de novo sem perder o histórico.',
-    destaque: <>A homologação anterior continua guardada. A coluna passa a mostrar o reteste, do zero.</>,
+    destaque: <>A versão anterior continua guardada e, se estava homologada, segue homologada até o reteste fechar.</>,
     tags: ['reteste', 'versão', 'histórico'],
     chaves: ['nova versão', 'versão do agente', 'histórico', 'retestar'],
     leitura: 1,
@@ -629,15 +630,41 @@ const ARTIGOS: Artigo[] = [
         conteudo: (
           <Passos>
             <PassoItem>
-              No menu ☰ da coluna, clique em <Rotulo>Reteste</Rotulo>.
+              No menu ☰ da coluna, clique em <Rotulo>Reteste</Rotulo>. A opção aparece quando a homologação atual já
+              foi finalizada (homologada ou reprovada).
             </PassoItem>
             <PassoItem>
-              Informe a <strong>Nova versão do agente</strong> (e, se mudou, a versão do SO).
+              Informe a <strong>Nova versão do agente</strong> (no iOS, a nova versão do iOS). Repetir a mesma versão
+              não é reteste.
             </PassoItem>
             <PassoItem>
-              Clique em <Botao destaque>Abrir reteste</Botao>.
+              Escolha o ponto de partida: <strong>do zero</strong> ou com os <strong>resultados da versão atual</strong>,
+              para revisar só o que mudou. Depois clique em <Botao destaque>Abrir reteste</Botao>.
             </PassoItem>
           </Passos>
+        ),
+      },
+      {
+        id: 'comparar-versoes',
+        titulo: 'Comparar com a versão anterior',
+        conteudo: (
+          <>
+            <ul className="space-y-2.5">
+              <Check>
+                Na matriz, a célula avisa quando a versão nova dá um resultado diferente da anterior:{' '}
+                <strong>antes: OK</strong>, por exemplo.
+              </Check>
+              <Check>
+                Abaixo do nome do modelo, <Rotulo>2ª homologação ▾</Rotulo> lista todas as versões testadas. Cada uma
+                abre a própria ficha.
+              </Check>
+              <Check>
+                Na ficha e na validação do certificado, <strong>O que mudou</strong> separa o que piorou, o que
+                melhorou e o que ainda falta testar na versão nova.
+              </Check>
+            </ul>
+            <Dica>Reteste reprovado não tira o selo da versão anterior: a reprovação vale para a versão nova.</Dica>
+          </>
         ),
       },
     ],

@@ -14,6 +14,7 @@ import {
   ResultadoHomologacao,
 } from '@/componentes/homologacao/FichaHomologacao'
 import { AvisoRevisao } from '@/componentes/homologacao/AvisoRevisao'
+import { VersoesHomologacao } from '@/componentes/homologacao/VersoesHomologacao'
 import { Icone } from '@/componentes/Icone'
 import { LoadingTela } from '@/componentes/LoadingTela'
 
@@ -256,6 +257,8 @@ export function DetalheDispositivo() {
             />
           </div>
         </section>
+
+        <VersoesHomologacao homologacao={homologacao} />
 
         <ResultadoHomologacao homologacao={homologacao} />
       </div>

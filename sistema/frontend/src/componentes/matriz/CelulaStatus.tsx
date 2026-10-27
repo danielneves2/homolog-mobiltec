@@ -10,6 +10,11 @@ interface Props {
   aoEscolher: (status: StatusResultado) => void
   aoAbrirObservacao: () => void
   aoAbrirJustificativa: () => void
+  /**
+   * O resultado deste item na versão anterior do modelo (D521). A célula só
+   * fala dele quando a versão nova dá diferente — igual não é notícia.
+   */
+  anterior?: { status: StatusResultado; versao: string }
 }
 
 /**
@@ -26,6 +31,7 @@ export function CelulaStatus({
   aoEscolher,
   aoAbrirObservacao,
   aoAbrirJustificativa,
+  anterior,
 }: Props) {
   const { podeJustificar } = useAuth()
   const [aberto, setAberto] = useState(false)
@@ -78,10 +84,16 @@ export function CelulaStatus({
     setAberto(true)
   }
 
+  // Mudou da versão anterior? "Não testado" na anterior não conta: lá o item
+  // não foi avaliado, então não há o que comparar
+  const mudou = !!anterior && anterior.status !== 'NAO_TESTADO' && anterior.status !== status
+  const metaAnterior = anterior ? META_STATUS[anterior.status] : null
+
   const titulo = [
     meta.rotulo,
     justificativa ? `— ${justificativa}` : null,
     resultado?.observacao ? `\nObs: ${resultado.observacao}` : null,
+    anterior && anterior.status !== 'NAO_TESTADO' ? `\nNa versão anterior (${anterior.versao}): ${META_STATUS[anterior.status].rotulo}` : null,
   ]
     .filter(Boolean)
     .join(' ')
@@ -111,6 +123,17 @@ export function CelulaStatus({
             />
           )}
         </span>
+        {mudou && metaAnterior && (
+          <span
+            className="mt-0.5 flex items-center justify-center gap-1 text-[9.5px] font-medium leading-none opacity-80"
+            data-antes={anterior!.status}
+          >
+            <svg viewBox="0 0 10 10" className="h-2 w-2 shrink-0" aria-hidden>
+              <path d="M8 5H2.5M4.5 3 2.5 5l2 2" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            antes: {metaAnterior.rotulo}
+          </span>
+        )}
       </button>
 
       {aberto && posicao && (
@@ -135,6 +158,11 @@ export function CelulaStatus({
               >
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: m.cor }} />
                 <span className="flex-1">{m.rotulo}</span>
+                {anterior?.status === s && s !== 'NAO_TESTADO' && (
+                  <span className="text-[10px]" style={{ color: 'var(--color-muted-foreground)' }}>
+                    na {anterior.versao}
+                  </span>
+                )}
                 <kbd
                   className="font-mono text-[10px]"
                   style={{ color: 'var(--color-muted-foreground)' }}

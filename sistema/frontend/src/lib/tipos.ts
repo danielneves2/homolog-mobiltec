@@ -332,6 +332,8 @@ export interface AmbienteParceiroDados {
 export interface MetricasPainelParceiro {
   totalDispositivos: number
   emHomologacao: number
+  /** Modelos já testados antes que voltaram para a bancada (D519) */
+  emReteste: number
   emValidacao: number
   emRevisao: number
   homologados: number
@@ -376,6 +378,11 @@ export interface DispositivoPainelParceiro {
     naoAplicavel: number
     avaliados: number
   }
+  numeroHomologacao: number
+  /** A homologação atual é reteste de um modelo já testado e ainda não fechou */
+  emReteste: boolean
+  /** A versão que segue homologada enquanto a atual não fecha (D519) */
+  vigente: { homologacaoId: string; versaoAgente: string; versaoSo: string } | null
 }
 
 export interface Notificacao {
@@ -455,16 +462,94 @@ export interface DispositivoVitrine {
   dataFim: string | null
   responsavel: string
   numeroHomologacao: number
+  /** Versões já fechadas além da mostrada no card (o reteste aberto vem à parte) */
   versoesAnteriores: string[]
-  resumo: {
-    total: number
-    ok: number
-    divergencias: number
-    semJustificativa: number
-    naoAplicavel: number
-    naoTestado: number
-    avaliados: number
+  resumo: ResumoProgresso
+  /**
+   * Reteste em andamento de um modelo homologado (D519). O card do catálogo
+   * segue mostrando a versão vigente; o andamento da nova vem aqui.
+   */
+  reteste: {
+    homologacaoId: string
+    versaoAgente: string
+    versaoSo: string
+    gerenciamento: TipoGerenciamento
+    status: StatusHomologacao
+    dataInicio: string
+    responsavel: string
+    resumo: ResumoProgresso
+  } | null
+  /** Só na visão de andamento de um reteste: a versão que segue homologada */
+  vigente?: { versaoAgente: string; versaoSo: string }
+}
+
+export interface ResumoProgresso {
+  total: number
+  ok: number
+  divergencias: number
+  semJustificativa: number
+  naoAplicavel: number
+  naoTestado: number
+  avaliados: number
+}
+
+/**
+ * O card de andamento de um modelo na vitrine: o reteste, quando há um aberto
+ * sobre a versão homologada; senão o próprio modelo, se ainda está em teste.
+ * Modelo finalizado sem reteste não tem andamento.
+ */
+export function andamentoNaVitrine(d: DispositivoVitrine): DispositivoVitrine | null {
+  if (d.reteste) {
+    const r = d.reteste
+    return {
+      ...d,
+      homologacaoId: r.homologacaoId,
+      versaoAgente: r.versaoAgente,
+      versaoSo: r.versaoSo,
+      gerenciamento: r.gerenciamento,
+      status: r.status,
+      homologado: false,
+      dataInicio: r.dataInicio,
+      dataFim: null,
+      responsavel: r.responsavel,
+      resumo: r.resumo,
+      vigente: { versaoAgente: d.versaoAgente, versaoSo: d.versaoSo },
+    }
   }
+  return ehSomenteLeitura(d.status) ? null : d
+}
+
+/** "Agente 12.2.7" ou, em iOS, "iOS 17.4" — o que identifica a versão testada */
+export function rotuloVersao(h: { versaoAgente: string; versaoSo: string; gerenciamento?: TipoGerenciamento | string | null }): string {
+  return ehGerenciamentoIos(h.gerenciamento) ? `iOS ${h.versaoSo}` : `Agente ${h.versaoAgente}`
+}
+
+/** Uma homologação do modelo, vista como versão (D522) */
+export interface VersaoModelo {
+  id: string
+  versaoAgente: string
+  versaoSo: string
+  gerenciamento: TipoGerenciamento
+  status: StatusHomologacao
+  dataInicio: string
+  dataFim: string | null
+  criadoEm: string
+}
+
+/** O que mudou de uma versão para a outra, item a item (D522) */
+export interface ComparacaoVersao {
+  homologacaoId: string
+  versaoAgente: string
+  versaoSo: string
+  status: StatusHomologacao
+  mudancas: {
+    itemId: string
+    nome: string
+    grupo: string
+    /** null: o item não existia na versão anterior */
+    antes: StatusResultado | null
+    agora: StatusResultado
+  }[]
 }
 
 export interface Vitrine {
@@ -607,6 +692,10 @@ export interface Homologacao {
    * única do backend (`resolverAssinaturas`, D518). Vem só em GET /homologacoes/:id.
    */
   assinaturas?: { responsavelTecnico: string; gerenteValidacao: string; apoio: string | null }
+  /** Todas as versões deste modelo, mais recente primeiro (D522). Só em GET /homologacoes/:id */
+  versoes?: VersaoModelo[]
+  /** O que mudou desde a versão anterior (D522). Só em GET /homologacoes/:id */
+  comparacao?: ComparacaoVersao | null
   /** Rascunho do técnico durante a homologação — vira a pergunta para o dev, não sai no certificado */
   observacoes: string | null
   criadoEm: string
@@ -683,6 +772,7 @@ export interface HomologacaoAnterior {
   versaoAgente: string
   versaoSo: string
   dataInicio: string
+  dataFim: string | null
   status: StatusHomologacao
   homologado: boolean | null
 }
@@ -696,6 +786,21 @@ export interface ColunaMatriz {
   }
   homologacoesAnteriores: HomologacaoAnterior[]
   revisaoPendente: RevisaoPendente | null
+  /** Reteste de um modelo já testado, ainda aberto (D519) */
+  emReteste: boolean
+  /** O resultado de cada item na versão anterior, para a célula mostrar o que mudou (D521) */
+  comparacao: {
+    homologacaoId: string
+    versaoAgente: string
+    versaoSo: string
+    status: StatusHomologacao
+    resultadosPorItem: Record<string, StatusResultado>
+  } | null
+}
+
+/** Status de onde sai reteste: a homologação fechou (D520) */
+export function ehFinalizada(status: StatusHomologacao): boolean {
+  return status === 'APROVADO' || status === 'PUBLICADO' || status === 'REPROVADO'
 }
 
 export interface Matriz {

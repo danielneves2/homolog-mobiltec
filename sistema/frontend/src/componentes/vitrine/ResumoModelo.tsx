@@ -28,8 +28,10 @@ const STATUS_PROCESSO: Record<StatusHomologacao, { rotulo: string; bg: string; f
   REPROVADO: { rotulo: 'Reprovado', bg: '#fee2e2', fg: '#b91c1c' },
 }
 
-export function BadgeStatusProcesso({ status }: { status: StatusHomologacao }) {
-  const conf = STATUS_PROCESSO[status] ?? STATUS_PROCESSO.RASCUNHO
+export function BadgeStatusProcesso({ status, reteste = false }: { status: StatusHomologacao; reteste?: boolean }) {
+  const base = STATUS_PROCESSO[status] ?? STATUS_PROCESSO.RASCUNHO
+  // Reteste ainda na bancada: mesmo laranja, nome que diz que o modelo já foi testado antes (D519)
+  const conf = reteste && status === 'RASCUNHO' ? { ...base, rotulo: 'Em reteste' } : base
   return (
     <span
       className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-semibold whitespace-nowrap select-none"
@@ -46,11 +48,14 @@ export function CabecalhoModelo({
   categoriaNome,
   nomeComercial,
   status,
+  reteste = false,
 }: {
   fabricante: string
   categoriaNome: string
   nomeComercial: string
   status: StatusHomologacao
+  /** A homologação é reteste de um modelo já testado */
+  reteste?: boolean
 }) {
   return (
     <div className="p-4 pb-3 flex items-start justify-between gap-3 border-b">
@@ -70,7 +75,7 @@ export function CabecalhoModelo({
         {status === 'APROVADO' || status === 'PUBLICADO' ? (
           <BadgeHomologado homologado={true} />
         ) : (
-          <BadgeStatusProcesso status={status} />
+          <BadgeStatusProcesso status={status} reteste={reteste} />
         )}
       </div>
     </div>
@@ -88,6 +93,7 @@ export function DadosModelo({
   total,
   homologado,
   numeroHomologacao,
+  versaoVigente,
 }: {
   fotoUrl: string | null
   nomeComercial: string
@@ -99,6 +105,8 @@ export function DadosModelo({
   homologado: boolean
   /** A partir da 2ª, mostra a linha "Homologação" — o modelo já foi retestado */
   numeroHomologacao?: number
+  /** Reteste aberto: a versão que segue homologada ("Agente 12.2.7") — D519 */
+  versaoVigente?: string
 }) {
   const ios = ehGerenciamentoIos(gerenciamento)
   const progresso = total > 0 ? Math.round((avaliados / total) * 100) : 0
@@ -129,11 +137,20 @@ export function DadosModelo({
             {ROTULO_CURTO_GERENCIAMENTO[gerenciamento] ?? 'Legado'}
           </span>
         </div>
-        {numeroHomologacao !== undefined && numeroHomologacao > 1 && (
-          <div className="flex items-center justify-between">
-            <span className="text-[var(--color-muted-foreground)]">Homologação:</span>
-            <span className="font-medium text-[var(--color-muted-foreground)]">{numeroHomologacao}ª (reteste)</span>
+        {versaoVigente ? (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[var(--color-muted-foreground)]">Homologado:</span>
+            <span className="font-semibold truncate" style={{ color: 'var(--color-primary)' }} title="Versão que segue homologada enquanto o reteste não fecha">
+              {versaoVigente}
+            </span>
           </div>
+        ) : (
+          numeroHomologacao !== undefined && numeroHomologacao > 1 && (
+            <div className="flex items-center justify-between">
+              <span className="text-[var(--color-muted-foreground)]">Homologação:</span>
+              <span className="font-medium text-[var(--color-muted-foreground)]">{numeroHomologacao}ª (reteste)</span>
+            </div>
+          )
         )}
 
         <div className="pt-1.5">

@@ -25,15 +25,18 @@ import { LoadingTela } from '@/componentes/LoadingTela'
 import { RotuloGrupo } from '@/componentes/matriz/RotuloGrupo'
 import { CelulaFicha } from '@/componentes/matriz/CelulaFicha'
 import { AjudaItem } from '@/componentes/matriz/AjudaItem'
+import { VersoesColuna } from '@/componentes/matriz/VersoesColuna'
 import {
   GRUPO_ORDEM,
   META_STATUS,
   ROTULO_GRUPO,
+  ehFinalizada,
   ehSomenteLeitura,
   exigeJustificativa,
   linhasDaFicha,
   itemAplicavel,
   obterRotuloGrupo,
+  rotuloVersao,
   versaoAndroidNumero,
 } from '@/lib/tipos'
 import type {
@@ -141,7 +144,7 @@ export function Matriz() {
   const [filtroLinhas, setFiltroLinhas] = useState<FiltroLinhas>('todas')
   /** Seção da planilha em foco — recorta linhas, não colunas */
   const [secao, setSecao] = useState<Secao>('todos')
-  /** Só os modelos que já foram retestados — mais de uma homologação no histórico */
+  /** Só os modelos em reteste: já testados antes e de volta à bancada (D519) */
   const [soRetestados, setSoRetestados] = useState(false)
   const [painelDivergencias, setPainelDivergencias] = useState(false)
   const [finalizar, setFinalizar] = useState<ColunaMatriz | null>(null)
@@ -229,9 +232,9 @@ export function Matriz() {
     return lista
   }, [data])
 
-  /** Quantos modelos já passaram por reteste — rótulo do botão */
+  /** Quantos modelos estão em reteste agora — rótulo do botão */
   const totalRetestados = useMemo(
-    () => (data?.colunas ?? []).filter((c) => c.homologacoesAnteriores.length > 0).length,
+    () => (data?.colunas ?? []).filter((c) => c.emReteste).length,
     [data],
   )
 
@@ -255,7 +258,7 @@ export function Matriz() {
   const colunasVisiveis = useMemo(
     () =>
       (data?.colunas ?? []).filter((c) => {
-        if (soRetestados && c.homologacoesAnteriores.length === 0) return false
+        if (soRetestados && !c.emReteste) return false
         if (filtroFabricante && c.homologacao.dispositivo.fabricante !== filtroFabricante)
           return false
         if (filtroModelo && c.homologacao.dispositivo.modelo !== filtroModelo) return false
@@ -553,8 +556,8 @@ export function Matriz() {
                 disabled={totalRetestados === 0}
                 title={
                   totalRetestados === 0
-                    ? 'Nenhum modelo foi retestado ainda'
-                    : 'Mostrar só os modelos que já foram retestados com outra versão do agente'
+                    ? 'Nenhum modelo em reteste agora'
+                    : 'Mostrar só os modelos que voltaram para teste com uma versão nova do agente ou do sistema'
                 }
                 className={`relative px-2.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors disabled:opacity-45 select-none cursor-pointer rounded-md outline-none focus:outline-none focus-visible:outline-none ${
                   soRetestados
@@ -562,7 +565,7 @@ export function Matriz() {
                     : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.035]'
                 }`}
               >
-                <span>Retestados</span>
+                <span>Em reteste</span>
                 <span className="ml-1 text-xs opacity-70 font-normal">{totalRetestados}</span>
                 {soRetestados && (
                   <span
@@ -679,7 +682,7 @@ export function Matriz() {
                 <p className="mt-1 text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
                   {colunas.length === 0
                     ? soRetestados
-                      ? 'Nenhum modelo retestado casa com os outros filtros.'
+                      ? 'Nenhum modelo em reteste casa com os outros filtros.'
                       : 'Nenhum modelo casa com os filtros escolhidos.'
                     : `Nenhum item se encaixa em "${ROTULO_FILTRO_LINHAS[filtroLinhas]}" nos modelos filtrados.`}
                 </p>
@@ -783,28 +786,16 @@ export function Matriz() {
                           </span>
                         </div>
 
-                        {c.homologacoesAnteriores.length > 0 && (
-                          <div
-                            className="mt-0.5 text-[10px] font-normal text-white/70"
-                            title={c.homologacoesAnteriores
-                              .map((h) => `${h.versaoAgente} · ${h.versaoSo}`)
-                              .join('\n')}
-                          >
-                            {c.homologacoesAnteriores.length + 1}ª homologação
-                          </div>
-                        )}
+                        {c.homologacoesAnteriores.length > 0 && <VersoesColuna coluna={c} />}
                       </div>
 
                       <div className="absolute right-0 top-0">
                       {(() => {
-                        const ehFinalizada =
-                          c.homologacao.status === 'APROVADO' ||
-                          c.homologacao.status === 'PUBLICADO' ||
-                          c.homologacao.status === 'REPROVADO'
+                        const finalizada = ehFinalizada(c.homologacao.status)
                         const podeRemover =
                           !ehLeitor &&
                           (usuario?.papel === 'ADMIN' ||
-                            (!ehFinalizada &&
+                            (!finalizada &&
                               (usuario?.papel === 'HOMOLOGADOR' ||
                                 (ehParceiro && c.homologacao.responsavelId === usuario?.id))))
 
@@ -822,8 +813,12 @@ export function Matriz() {
                                 aoClicar: () =>
                                   navegar(`/homologacoes/${c.homologacao.id}/certificado`),
                               },
-                              // Reteste disponível para parceiro e Mobiltec, inclusive após enviar para validação
-                              !ehLeitor && { rotulo: 'Reteste', aoClicar: () => setReteste(c) },
+                              // Reteste só de homologação fechada (D520): sobre uma em
+                              // andamento, ela ficava para trás sem ninguém para fechar
+                              !ehLeitor && finalizada && {
+                                rotulo: 'Reteste',
+                                aoClicar: () => setReteste(c),
+                              },
                               {
                                 rotulo: 'Observação',
                                 aoClicar: () => setObservacoes(c),
@@ -993,6 +988,14 @@ export function Matriz() {
                             ) : (
                             <CelulaStatus
                               resultado={c.homologacao.resultadosPorItem[item.id]}
+                              anterior={
+                                c.comparacao?.resultadosPorItem[item.id]
+                                  ? {
+                                      status: c.comparacao.resultadosPorItem[item.id],
+                                      versao: rotuloVersao({ ...c.comparacao, gerenciamento: c.homologacao.gerenciamento }),
+                                    }
+                                  : undefined
+                              }
                               somenteLeitura={ehSomenteLeitura(c.homologacao.status, usuario?.papel)}
                               aoEscolher={(s) => aplicarStatus(c, item, s)}
                               aoAbrirObservacao={() => setObservacao({ coluna: c, item })}
@@ -1037,7 +1040,7 @@ export function Matriz() {
           coluna={configurar}
           aoFechar={() => setConfigurar(null)}
           aoCriar={() => setConfigurar(null)}
-          aoPedirReteste={(col) => {
+          aoPedirReteste={!ehFinalizada(configurar.homologacao.status) ? undefined : (col) => {
             setConfigurar(null)
             setReteste(col)
           }}

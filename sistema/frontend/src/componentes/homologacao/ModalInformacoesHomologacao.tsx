@@ -8,6 +8,7 @@ import { META_STATUS } from '@/lib/tipos'
 import { parseObservacaoItem, formatarTamanhoArquivo } from '@/lib/observacoes'
 import { FichaUnidadeTestada, ResultadoHomologacao } from './FichaHomologacao'
 import { AvisoRevisao } from './AvisoRevisao'
+import { VersoesHomologacao } from './VersoesHomologacao'
 
 export interface ItemObservacaoProcessada {
   id: string
@@ -305,10 +306,18 @@ export function ModalInformacoesHomologacao({
 
               {/* Visualização da Matriz de Testes (Limpa e Estritamente Tabular) */}
               {abaAtiva === 'MATRIZ' && (
-                <ResultadoHomologacao
-                  homologacao={homologacao}
-                  semTitulo={true}
-                />
+                <>
+                  {/* Reteste: quem valida vê primeiro o que a versão nova mudou (D522) */}
+                  {homologacao.comparacao && (
+                    <div className="-mt-6 mb-5">
+                      <VersoesHomologacao homologacao={homologacao} semNavegacao />
+                    </div>
+                  )}
+                  <ResultadoHomologacao
+                    homologacao={homologacao}
+                    semTitulo={true}
+                  />
+                </>
               )}
 
               {/* Visualização de Observações Separadas (Funcionalidades + Gerais) */}

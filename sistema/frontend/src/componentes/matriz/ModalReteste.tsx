@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAbrirReteste } from '@/hooks/useMatriz'
 import { ErroApi } from '@/lib/api'
+import { ROTULO_STATUS_HOMOLOGACAO, ehGerenciamentoIos, rotuloVersao } from '@/lib/tipos'
 import type { ColunaMatriz } from '@/lib/tipos'
 
 interface Props {
@@ -13,18 +14,25 @@ interface Props {
  * Abre uma nova homologação para um modelo já cadastrado.
  *
  * Reteste **nunca** sobrescreve (spec §11.2): o histórico por versão de agente
- * é informação de valor. A ficha é copiada da homologação anterior e os
- * resultados nascem todos em "não testado" — a coluna da matriz passa a mostrar
- * a nova, e a antiga vira histórico.
+ * é informação de valor. A ficha é copiada da homologação anterior; a coluna
+ * da matriz passa a mostrar a nova, e a antiga vira histórico — e, se estava
+ * homologada, segue homologada no catálogo até a nova fechar (D519).
+ *
+ * Só sai de homologação finalizada e com versão nova (D520). Os resultados
+ * nascem em "não testado", ou — se o técnico escolher — com os da versão
+ * anterior como ponto de partida; a célula mostra o que a versão nova mudar.
  */
 export function ModalReteste({ coluna, aoFechar, aoCriar }: Props) {
   const reteste = useAbrirReteste()
   const [erro, setErro] = useState<string | null>(null)
 
   const atual = coluna.homologacao
-  const [versaoAgente, setVersaoAgente] = useState('')
-  const [versaoSo, setVersaoSo] = useState(atual.versaoSo)
+  // iOS não tem agente (D502): o que muda de um teste para o outro é o iOS
+  const ios = ehGerenciamentoIos(atual.gerenciamento)
+  const [versaoAgente, setVersaoAgente] = useState(ios ? atual.versaoAgente : '')
+  const [versaoSo, setVersaoSo] = useState(ios ? '' : atual.versaoSo)
   const [dataInicio, setDataInicio] = useState(new Date().toISOString().slice(0, 10))
+  const [copiarResultados, setCopiarResultados] = useState(false)
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault()
@@ -34,8 +42,9 @@ export function ModalReteste({ coluna, aoFechar, aoCriar }: Props) {
         dispositivoId: atual.dispositivoId,
         baseHomologacaoId: atual.id,
         versaoAgente: versaoAgente.trim(),
-        versaoSo: versaoSo.trim(),
+        versaoSo: versaoSo.trim() || atual.versaoSo,
         dataInicio,
+        copiarResultados,
       })
       aoCriar()
     } catch (err) {
@@ -62,7 +71,8 @@ export function ModalReteste({ coluna, aoFechar, aoCriar }: Props) {
         <div className="p-5 border-b">
           <h2 className="text-lg font-semibold">Abrir reteste</h2>
           <p className="text-sm mt-0.5" style={{ color: 'var(--color-muted-foreground)' }}>
-            {atual.dispositivo.nomeComercial} — hoje na versão {atual.versaoAgente}
+            {atual.dispositivo.nomeComercial} — hoje em {rotuloVersao(atual)} (
+            {ROTULO_STATUS_HOMOLOGACAO[atual.status].toLowerCase()})
           </p>
         </div>
 
@@ -71,19 +81,22 @@ export function ModalReteste({ coluna, aoFechar, aoCriar }: Props) {
             className="text-xs px-3 py-2 rounded-md"
             style={{ background: 'var(--color-info-soft)', color: 'var(--color-info-fg)' }}
           >
-            A homologação atual vira histórico e continua acessível — nada é sobrescrito. A
-            coluna passa a mostrar o reteste, com todos os itens em "não testado".
+            A versão atual vira histórico e continua acessível — nada é sobrescrito.
+            {(atual.status === 'APROVADO' || atual.status === 'PUBLICADO') &&
+              ' O modelo segue homologado nela no catálogo até o reteste fechar.'}
           </p>
 
           <div>
             <label className="label-caps block mb-1.5">
-              Nova versão do agente <span style={{ color: 'var(--color-destructive)' }}>*</span>
+              {ios ? 'Nova versão do iOS' : 'Nova versão do agente'}{' '}
+              <span style={{ color: 'var(--color-destructive)' }}>*</span>
             </label>
             <input
               required
               autoFocus
-              value={versaoAgente}
-              onChange={(e) => setVersaoAgente(e.target.value)}
+              value={ios ? versaoSo : versaoAgente}
+              onChange={(e) => (ios ? setVersaoSo(e.target.value) : setVersaoAgente(e.target.value))}
+              placeholder={`Hoje: ${ios ? atual.versaoSo : atual.versaoAgente}`}
               className="w-full px-3 py-2 rounded-md border bg-transparent text-sm"
               style={{ borderColor: 'var(--color-input)' }}
             />
@@ -91,10 +104,10 @@ export function ModalReteste({ coluna, aoFechar, aoCriar }: Props) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label-caps block mb-1.5">Versão do SO</label>
+              <label className="label-caps block mb-1.5">{ios ? 'Versão do agente' : 'Versão do SO'}</label>
               <input
-                value={versaoSo}
-                onChange={(e) => setVersaoSo(e.target.value)}
+                value={ios ? versaoAgente : versaoSo}
+                onChange={(e) => (ios ? setVersaoAgente(e.target.value) : setVersaoSo(e.target.value))}
                 className="w-full px-3 py-2 rounded-md border bg-transparent text-sm"
                 style={{ borderColor: 'var(--color-input)' }}
               />
@@ -110,6 +123,43 @@ export function ModalReteste({ coluna, aoFechar, aoCriar }: Props) {
               />
             </div>
           </div>
+
+          {/* Ponto de partida: do zero é o padrão — o reteste confirma tudo de
+              novo. Partir da anterior serve a quem só vai revalidar o que mudou. */}
+          <fieldset className="space-y-1.5">
+            <legend className="label-caps mb-1.5">Ponto de partida</legend>
+            {[
+              { valor: false, titulo: 'Do zero', texto: 'Todos os itens em "não testado".' },
+              {
+                valor: true,
+                titulo: 'Resultados da versão atual',
+                texto: `Os itens vêm com o resultado e a justificativa da ${rotuloVersao(atual)} — revise o que mudou.`,
+              },
+            ].map((o) => (
+              <label
+                key={String(o.valor)}
+                className="flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2 text-sm transition-colors"
+                style={{
+                  borderColor: copiarResultados === o.valor ? 'var(--color-brand-purple-border)' : 'var(--color-border)',
+                  background: copiarResultados === o.valor ? 'var(--color-brand-purple-soft)' : 'transparent',
+                }}
+              >
+                <input
+                  type="radio"
+                  name="ponto-de-partida"
+                  checked={copiarResultados === o.valor}
+                  onChange={() => setCopiarResultados(o.valor)}
+                  className="mt-0.5 accent-[var(--color-primary)]"
+                />
+                <span>
+                  <span className="block font-medium">{o.titulo}</span>
+                  <span className="block text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
+                    {o.texto}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
 
           {erro && (
             <div

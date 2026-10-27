@@ -9,16 +9,15 @@
  * está em homologação vai num bloco separado, sem expor resultado item a item.
  */
 import { FastifyPluginAsync } from 'fastify'
-import { StatusHomologacao, StatusResultado } from '@prisma/client'
+import { StatusHomologacao } from '@prisma/client'
 import { carregarUsuarioEscopo, escopoPlanilha, whereVeParceiro } from '../lib/escopo.js'
-import { agruparPorDispositivo, itensPorCategoria } from '../lib/planilha.js'
-
-/** Divergência é o que a spec §5 define — NAO_APLICAVEL não entra */
-const EXIGE_JUSTIFICATIVA: StatusResultado[] = [
-  StatusResultado.FALHA,
-  StatusResultado.NAO_SUPORTADO,
-  StatusResultado.COM_RESSALVA,
-]
+import {
+  agruparPorDispositivo,
+  ehFinalizada,
+  itensPorCategoria,
+  resumoDoProgresso,
+  versoesDoModelo,
+} from '../lib/planilha.js'
 
 const vitrineRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/vitrine', { onRequest: [fastify.autenticar] }, async (request) => {
@@ -55,8 +54,10 @@ const vitrineRoutes: FastifyPluginAsync = async (fastify) => {
       orderBy: { criadoEm: 'desc' },
     })
 
-    // Uma linha por modelo: a homologação mais recente é a que vale.
-    // As anteriores viram só a contagem de retestes.
+    // Uma linha por modelo, lida como versões (D519): o card mostra a versão
+    // VIGENTE — a última aprovada —, e não a mais recente. Abrir um reteste
+    // não tira o modelo do catálogo: ele segue homologado na versão anterior
+    // enquanto a nova está na bancada, e o reteste vem à parte.
     const grupos = agruparPorDispositivo(homologacoes)
     // Progresso com os mesmos itens que são linha da matriz do tipo
     const itensDoTipo = await itensPorCategoria(
@@ -65,54 +66,47 @@ const vitrineRoutes: FastifyPluginAsync = async (fastify) => {
     )
 
     const dispositivos = grupos
-      .map(([atual, ...anteriores]) => {
-        const naBateria = itensDoTipo.get(atual.dispositivo.categoriaId) ?? new Set<string>()
-        const resultados = atual.resultados.filter(r => naBateria.has(r.itemId))
-        const resumo = {
-          total: resultados.length,
-          ok: 0,
-          divergencias: 0,
-          semJustificativa: 0,
-          naoAplicavel: 0,
-          naoTestado: 0,
-        }
-        for (const r of resultados) {
-          if (r.status === StatusResultado.OK) resumo.ok++
-          else if (r.status === StatusResultado.NAO_APLICAVEL) resumo.naoAplicavel++
-          else if (r.status === StatusResultado.NAO_TESTADO) resumo.naoTestado++
-          if (EXIGE_JUSTIFICATIVA.includes(r.status)) {
-            resumo.divergencias++
-            if (!r.justificativaId && !r.justificativaTexto) resumo.semJustificativa++
-          }
-        }
+      .map((grupo) => {
+        const { atual, vigente } = versoesDoModelo(grupo)
+        const principal = vigente ?? atual
+        const naMatriz = itensDoTipo.get(atual.dispositivo.categoriaId) ?? new Set<string>()
+        const reteste = vigente && atual !== vigente && !ehFinalizada(atual.status) ? atual : null
 
         return {
-          dispositivoId: atual.dispositivoId,
-          homologacaoId: atual.id,
-          fabricante: atual.dispositivo.fabricante,
-          modelo: atual.dispositivo.modelo,
-          nomeComercial: atual.dispositivo.nomeComercial,
-          fotoUrl: atual.dispositivo.fotoUrl,
-          linkFabricante: atual.dispositivo.linkFabricante,
-          categoriaNome: atual.dispositivo.categoria.nome,
-          categoriaSlug: atual.dispositivo.categoria.slug,
-          versaoSo: atual.versaoSo,
-          versaoAgente: atual.versaoAgente,
-          versaoPos: atual.versaoPos,
-          gerenciamento: atual.gerenciamento,
-          tipoAgente: atual.tipoAgente,
-          status: atual.status,
-          homologado: atual.homologado,
-          dataInicio: atual.dataInicio,
-          dataFim: atual.dataFim,
-          responsavel: atual.responsavel.nome,
-          numeroHomologacao: anteriores.length + 1,
-          versoesAnteriores: anteriores.map(h => h.versaoAgente),
-          resumo: {
-            ...resumo,
-            // Avaliado = tudo que saiu de NAO_TESTADO. É o progresso que a
-            // vitrine mostra para quem ainda está em homologação.
-            avaliados: resumo.total - resumo.naoTestado,
+          dispositivoId: principal.dispositivoId,
+          homologacaoId: principal.id,
+          fabricante: principal.dispositivo.fabricante,
+          modelo: principal.dispositivo.modelo,
+          nomeComercial: principal.dispositivo.nomeComercial,
+          fotoUrl: principal.dispositivo.fotoUrl,
+          linkFabricante: principal.dispositivo.linkFabricante,
+          categoriaNome: principal.dispositivo.categoria.nome,
+          categoriaSlug: principal.dispositivo.categoria.slug,
+          versaoSo: principal.versaoSo,
+          versaoAgente: principal.versaoAgente,
+          versaoPos: principal.versaoPos,
+          gerenciamento: principal.gerenciamento,
+          tipoAgente: principal.tipoAgente,
+          status: principal.status,
+          homologado: principal.homologado,
+          dataInicio: principal.dataInicio,
+          dataFim: principal.dataFim,
+          responsavel: principal.responsavel.nome,
+          numeroHomologacao: grupo.length,
+          // As outras versões já fechadas (o reteste em andamento vem à parte)
+          versoesAnteriores: grupo
+            .filter((h) => h !== principal && h !== reteste)
+            .map((h) => h.versaoAgente),
+          resumo: resumoDoProgresso(principal.resultados, naMatriz),
+          reteste: reteste && {
+            homologacaoId: reteste.id,
+            versaoAgente: reteste.versaoAgente,
+            versaoSo: reteste.versaoSo,
+            gerenciamento: reteste.gerenciamento,
+            status: reteste.status,
+            dataInicio: reteste.dataInicio,
+            responsavel: reteste.responsavel.nome,
+            resumo: resumoDoProgresso(reteste.resultados, naMatriz),
           },
         }
       })
