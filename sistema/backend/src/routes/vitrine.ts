@@ -91,7 +91,8 @@ const vitrineRoutes: FastifyPluginAsync = async (fastify) => {
           homologado: principal.homologado,
           dataInicio: principal.dataInicio,
           dataFim: principal.dataFim,
-          responsavel: principal.responsavel.nome,
+          // Painel oficial: o parceiro não vê quem da Mobiltec está testando
+          responsavel: ehParceiro ? null : principal.responsavel.nome,
           numeroHomologacao: grupo.length,
           // As outras versões já fechadas (o reteste em andamento vem à parte)
           versoesAnteriores: grupo
@@ -105,7 +106,7 @@ const vitrineRoutes: FastifyPluginAsync = async (fastify) => {
             gerenciamento: reteste.gerenciamento,
             status: reteste.status,
             dataInicio: reteste.dataInicio,
-            responsavel: reteste.responsavel.nome,
+            responsavel: ehParceiro ? null : reteste.responsavel.nome,
             resumo: resumoDoProgresso(reteste.resultados, naMatriz),
           },
         }

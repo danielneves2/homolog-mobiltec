@@ -90,7 +90,7 @@ export function CardDispositivo({ dispositivo: d }: { dispositivo: DispositivoVi
             <p
               className="mt-1.5 flex items-center justify-between gap-2 rounded-md px-2 py-1 text-[11px]"
               style={{ background: 'rgba(243,120,4,0.10)', color: '#c2410c' }}
-              title={`Reteste iniciado em ${new Date(d.reteste.dataInicio).toLocaleDateString('pt-BR')} por ${d.reteste.responsavel}`}
+              title={`Reteste iniciado em ${new Date(d.reteste.dataInicio).toLocaleDateString('pt-BR')}`}
               data-reteste
             >
               <span className="truncate font-semibold">Em reteste · {rotuloVersao(d.reteste)}</span>

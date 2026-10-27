@@ -460,7 +460,7 @@ export interface DispositivoVitrine {
   homologado: boolean
   dataInicio: string
   dataFim: string | null
-  responsavel: string
+  responsavel: string | null
   numeroHomologacao: number
   /** Versões já fechadas além da mostrada no card (o reteste aberto vem à parte) */
   versoesAnteriores: string[]
@@ -476,7 +476,7 @@ export interface DispositivoVitrine {
     gerenciamento: TipoGerenciamento
     status: StatusHomologacao
     dataInicio: string
-    responsavel: string
+    responsavel: string | null
     resumo: ResumoProgresso
   } | null
   /** Só na visão de andamento de um reteste: a versão que segue homologada */
