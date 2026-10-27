@@ -7,6 +7,8 @@ import type { Fonte, Homologacao } from '@/lib/tipos'
 interface Props {
   homologacao: Homologacao
   somenteLeitura: boolean
+  /** Nomes que assinam: editáveis também na aprovada, pelo admin (D518) */
+  assinaturasEditaveis?: boolean
 }
 
 /**
@@ -18,7 +20,7 @@ interface Props {
  * um Usuario cadastrado, que a matriz não tem como criar, então o nome digitado
  * aqui é o caminho normal para esses dois nomes aparecerem no documento.
  */
-export function PainelFontesAssinaturas({ homologacao, somenteLeitura }: Props) {
+export function PainelFontesAssinaturas({ homologacao, somenteLeitura, assinaturasEditaveis = !somenteLeitura }: Props) {
   const salvar = useSalvarDadosCertificado(homologacao.id)
   const [erro, setErro] = useState<string | null>(null)
 
@@ -79,27 +81,32 @@ export function PainelFontesAssinaturas({ homologacao, somenteLeitura }: Props) 
       {/* --- Assinaturas --- */}
       <section>
         <p className="label-caps mb-2">Assinaturas</p>
+        <p className="text-xs mb-3" style={{ color: 'var(--color-muted-foreground)' }}>
+          O nome digitado é o que sai no certificado. Em branco, vale o automático mostrado no campo.
+        </p>
         <div className="space-y-3">
           <CampoAssinatura
             rotulo="Responsável Técnico"
             valor={responsavel}
             aoMudar={setResponsavel}
             aoSair={() => salvarAssinaturaSeMudou('assinaturaResponsavel', responsavel)}
-            somenteLeitura={somenteLeitura}
+            placeholder={homologacao.assinaturas?.responsavelTecnico}
+            somenteLeitura={!assinaturasEditaveis}
           />
           <CampoAssinatura
             rotulo="Gerente de Validação"
             valor={gerente}
             aoMudar={setGerente}
             aoSair={() => salvarAssinaturaSeMudou('assinaturaGerente', gerente)}
-            somenteLeitura={somenteLeitura}
+            placeholder={homologacao.assinaturas?.gerenteValidacao}
+            somenteLeitura={!assinaturasEditaveis}
           />
           <CampoAssinatura
-            rotulo="Apoio Adicional"
+            rotulo="Apoio Adicional (só no certificado do parceiro)"
             valor={apoio}
             aoMudar={setApoio}
             aoSair={() => salvarAssinaturaSeMudou('assinaturaApoio', apoio)}
-            somenteLeitura={somenteLeitura}
+            somenteLeitura={!assinaturasEditaveis}
           />
         </div>
       </section>
@@ -189,12 +196,14 @@ function CampoAssinatura({
   valor,
   aoMudar,
   aoSair,
+  placeholder,
   somenteLeitura,
 }: {
   rotulo: string
   valor: string
   aoMudar: (v: string) => void
   aoSair: () => void
+  /** O nome automático, que vale enquanto o campo estiver vazio */
   placeholder?: string
   somenteLeitura: boolean
 }) {
@@ -205,6 +214,7 @@ function CampoAssinatura({
       </label>
       <input
         value={valor}
+        placeholder={placeholder ? `Automático: ${placeholder}` : undefined}
         disabled={somenteLeitura}
         onChange={(e) => aoMudar(e.target.value)}
         onBlur={aoSair}

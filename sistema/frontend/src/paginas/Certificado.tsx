@@ -36,7 +36,7 @@ interface CertificadoEmitido {
 export function Certificado() {
   const { id = '' } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { usuario, ehParceiro } = useAuth()
+  const { usuario, ehParceiro, ehAdmin } = useAuth()
   const { data: homologacao } = useHomologacao(id)
   const { data: dashboard } = useDashboard(id)
   const [baixando, setBaixando] = useState(false)
@@ -53,14 +53,16 @@ export function Certificado() {
   const estaAprovado = homologacao?.status === 'APROVADO' || homologacao?.status === 'PUBLICADO'
   const podeVerCertificado = !ehParceiro || estaAprovado
   const somenteLeitura = ehParceiro || (homologacao ? ehSomenteLeitura(homologacao.status, usuario?.papel) : false)
+  // Aprovada é somente leitura, mas o admin ainda corrige quem assina (D518)
+  const assinaturasEditaveis = !somenteLeitura || (ehAdmin && estaAprovado)
 
   const { data: html, isLoading, isError, error } = useQuery({
-    queryKey: ['certificado', id, 'preview', somenteLeitura, podeVerCertificado, ambiente],
+    queryKey: ['certificado', id, 'preview', somenteLeitura, assinaturasEditaveis, podeVerCertificado, ambiente],
     enabled: podeVerCertificado,
     queryFn: () =>
       api.getTexto(
         // Os lápis só entram no preview editável — o PDF nunca os recebe.
-        `/homologacoes/${id}/certificado/preview?ambiente=${ambiente}${somenteLeitura ? '' : '&editavel=1'}`,
+        `/homologacoes/${id}/certificado/preview?ambiente=${ambiente}${assinaturasEditaveis ? '&editavel=1' : ''}`,
       ),
   })
 
@@ -298,7 +300,11 @@ export function Certificado() {
             style={{ background: 'var(--color-card)' }}
           >
             {homologacao ? (
-              <PainelFontesAssinaturas homologacao={homologacao} somenteLeitura={somenteLeitura} />
+              <PainelFontesAssinaturas
+                homologacao={homologacao}
+                somenteLeitura={somenteLeitura}
+                assinaturasEditaveis={assinaturasEditaveis}
+              />
             ) : (
               <p className="text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
                 Carregando…
@@ -332,7 +338,7 @@ export function Certificado() {
             )}
             {html && (
               <>
-                {!somenteLeitura && (
+                {assinaturasEditaveis && (
                   <p
                     className="text-xs text-center mb-3 mx-auto"
                     style={{ color: 'var(--color-muted-foreground)', maxWidth: 900 }}

@@ -49,19 +49,9 @@ export function FichaUnidadeTestada({
       tipoAgente: h.tipoAgente,
       gerenciamento: h.gerenciamento,
       metodoInscricao: h.metodoInscricao,
-      responsavelTecnico: (() => {
-        const aprovacao = h.historicoStatus?.find((hist) => hist.statusNovo === 'APROVADO')
-        const adminAprovador = aprovacao?.usuario?.nome
-        if (adminAprovador) return adminAprovador
-        if (h.responsavel?.nome && !h.responsavel.nome.toLowerCase().includes('matheus')) {
-          return h.responsavel.nome
-        }
-        if (h.assinaturaResponsavel?.trim() && !h.assinaturaResponsavel.toLowerCase().includes('matheus')) {
-          return h.assinaturaResponsavel.trim()
-        }
-        return 'Daniel Neves Lima'
-      })(),
-      gerenteValidacao: h.assinaturaGerente?.trim() || h.gerente?.nome || 'Rafael Cordeiro',
+      // Mesmos nomes do certificado: a regra mora no backend (D518)
+      responsavelTecnico: h.assinaturas?.responsavelTecnico ?? (h.assinaturaResponsavel?.trim() || h.responsavel?.nome || '—'),
+      gerenteValidacao: h.assinaturas?.gerenteValidacao ?? (h.assinaturaGerente?.trim() || h.gerente?.nome || '—'),
       dataInicio: h.dataInicio,
       dataFim: h.dataFim,
     }

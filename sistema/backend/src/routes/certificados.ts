@@ -162,13 +162,19 @@ const certificadoRoutes: FastifyPluginAsync = async (fastify) => {
 
     const ambienteEfetivo = await ambienteDoCertificado(request.user, id, ambiente)
 
-    const podeEditar = request.user.papel !== 'PARCEIRO' && editavel === '1'
+    // Aberta: Mobiltec edita tudo pelos lápis. Aprovada: o documento é
+    // somente leitura, mas o admin ainda corrige quem assina (D518).
+    const aprovada = h.status === 'APROVADO' || h.status === 'PUBLICADO'
+    const pediuEdicao = request.user.papel !== 'PARCEIRO' && editavel === '1'
+    const podeEditar = pediuEdicao && !aprovada
+    const assinaturasEditaveis = pediuEdicao && aprovada && request.user.papel === 'ADMIN'
 
     return reply
       .type('text/html; charset=utf-8')
       .send(
         gerarCertificadoHtml(h as unknown as HomologacaoCertificado, {
           editavel: podeEditar,
+          assinaturasEditaveis,
           ambiente: ambienteEfetivo,
         }),
       )

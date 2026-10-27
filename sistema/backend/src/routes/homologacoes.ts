@@ -27,6 +27,7 @@ import {
 } from '../lib/escopo.js'
 import { removerArquivos } from '../lib/storage.js'
 import { resultadosDaMatriz } from '../lib/planilha.js'
+import { resolverAssinaturas } from '../services/certificado.js'
 
 // Status que EXIGEM justificativa (regra central da spec)
 const STATUS_COM_JUSTIFICATIVA_OBRIGATORIA: StatusResultado[] = [
@@ -43,6 +44,9 @@ const _STATUS_VISIVEIS_CERTIFICADO: StatusResultado[] = [
   StatusResultado.COM_RESSALVA,
   StatusResultado.NAO_APLICAVEL,
 ]
+
+/** Nomes que assinam o certificado — o admin corrige mesmo com a homologação aprovada (D518) */
+const CAMPOS_ASSINATURA = ['assinaturaResponsavel', 'assinaturaGerente', 'assinaturaApoio']
 
 const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
 
@@ -233,9 +237,14 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
     })
     if (!atual) return reply.status(404).send({ erro: 'Homologação não encontrada' })
 
-    // Mesma regra dos resultados: aprovada é somente leitura (spec §11.4)
+    // Mesma regra dos resultados: aprovada é somente leitura (spec §11.4).
+    // Exceção (D518): o admin corrige os nomes que assinam o certificado sem
+    // reabrir — é dado do documento, não do teste.
     if (atual.status === StatusHomologacao.APROVADO || atual.status === StatusHomologacao.PUBLICADO) {
-      return reply.status(403).send({ erro: 'Homologação aprovada é somente leitura. Reabra para editar.' })
+      const soAssinaturas = Object.keys(body).every(c => CAMPOS_ASSINATURA.includes(c))
+      if (!(request.user.papel === 'ADMIN' && soAssinaturas)) {
+        return reply.status(403).send({ erro: 'Homologação aprovada é somente leitura. Reabra para editar.' })
+      }
     }
 
     // Parceiro só altera dados enquanto a homologação está com ele — RASCUNHO
@@ -333,7 +342,8 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
     // Ficha web ("Exibir informações", detalhe do dispositivo) com os itens
     // da matriz atual — os mesmos do certificado (D517)
     const { resultados } = await resultadosDaMatriz(fastify.prisma, homologacao)
-    return { ...homologacao, resultados }
+    // Quem assina, pela mesma regra do certificado — a ficha só exibe (D518)
+    return { ...homologacao, resultados, assinaturas: resolverAssinaturas(homologacao) }
   })
 
   // ============================================================

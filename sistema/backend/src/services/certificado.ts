@@ -373,6 +373,54 @@ function normalizarBlocos(bruto: unknown): BlocoAnalise[] {
 }
 
 /** Aceita só o que tem forma de análise: o campo é Json e vem do cliente */
+/** Responsável técnico quando nada foi digitado e ninguém da Mobiltec aprovou nem cadastrou */
+const RESPONSAVEL_TECNICO_PADRAO = 'Daniel Neves Lima'
+const GERENTE_VALIDACAO_PADRAO = 'Rafael Cordeiro'
+
+export interface DadosAssinatura {
+  assinaturaResponsavel?: string | null
+  assinaturaGerente?: string | null
+  assinaturaApoio?: string | null
+  responsavel?: { nome: string; papel?: string } | null
+  gerente?: { nome: string } | null
+  apoio?: { nome: string; empresa?: string | null } | null
+  historicoStatus?: { statusNovo: string; usuario?: { nome: string } | null }[]
+}
+
+/**
+ * Nomes que assinam o certificado — regra ÚNICA (D518), usada pelo
+ * certificado (web e PDF) e pela ficha web, para os dois nunca divergirem.
+ *
+ * O nome digitado (lápis do certificado ou painel Assinaturas) SEMPRE vale.
+ * Sem nome digitado:
+ *  - Responsável técnico: quem aprovou a homologação; senão o responsável
+ *    cadastrado — no ambiente Mobiltec, só se for da Mobiltec (o parceiro
+ *    que executou não assina pela Mobiltec); senão o padrão.
+ *  - Gerente de validação: o gerente vinculado; senão o padrão.
+ *  - Apoio adicional: só no certificado do ambiente do parceiro (D476).
+ */
+export function resolverAssinaturas(
+  h: DadosAssinatura,
+  ambiente: 'parceiro' | 'mobiltec' = 'mobiltec',
+): { responsavelTecnico: string; gerenteValidacao: string; apoio: string | null } {
+  const digitado = (v?: string | null) => v?.trim() || null
+  const aprovador = h.historicoStatus?.find((x) => x.statusNovo === 'APROVADO')?.usuario?.nome
+  const cadastrado =
+    h.responsavel && (ambiente === 'parceiro' || h.responsavel.papel !== 'PARCEIRO') ? h.responsavel.nome : null
+
+  const apoio =
+    ambiente === 'parceiro'
+      ? digitado(h.assinaturaApoio) ||
+        (h.apoio ? (h.apoio.empresa ? `${h.apoio.nome} — ${h.apoio.empresa}` : h.apoio.nome) : null)
+      : null
+
+  return {
+    responsavelTecnico: digitado(h.assinaturaResponsavel) || aprovador || cadastrado || RESPONSAVEL_TECNICO_PADRAO,
+    gerenteValidacao: digitado(h.assinaturaGerente) || h.gerente?.nome || GERENTE_VALIDACAO_PADRAO,
+    apoio,
+  }
+}
+
 export function lerAnaliseManual(bruto: unknown): AnaliseManual | null {
   // Array puro é a forma que este campo teve no primeiro dia, antes de `vistos`
   if (Array.isArray(bruto)) return { blocos: normalizarBlocos(bruto), vistos: [] }
@@ -519,7 +567,12 @@ function dataExtenso(d: Date | string | null | undefined): string {
 
 export function gerarCertificadoHtml(
   h: HomologacaoCertificado,
-  opcoes: { editavel?: boolean; ambiente?: 'parceiro' | 'mobiltec' } = {},
+  opcoes: {
+    editavel?: boolean
+    /** Só os lápis das assinaturas — homologação aprovada aberta pelo admin (D518) */
+    assinaturasEditaveis?: boolean
+    ambiente?: 'parceiro' | 'mobiltec'
+  } = {},
 ): string {
   const fundo = fundoDataUri()
   const editavel = opcoes.editavel === true
@@ -533,6 +586,10 @@ export function gerarCertificadoHtml(
   const lapis = (tipo: string, chave: string) =>
     editavel
       ? `<button class="editar" data-tipo="${esc(tipo)}" data-chave="${esc(chave)}" title="Editar este texto">✎</button>`
+      : ''
+  const lapisAssinatura = (tipo: string) =>
+    editavel || opcoes.assinaturasEditaveis
+      ? `<button class="editar" data-tipo="${esc(tipo)}" data-chave="" title="Editar este nome">✎</button>`
       : ''
 
   const cat = (h.dispositivo as any)?.categoria
@@ -820,54 +877,22 @@ export function gerarCertificadoHtml(
       </div>`
     : ''
 
-  // Resolução de assinaturas conforme D476 (Regra de certificado por ambiente):
-  let nomeResponsavel = ''
-  let nomeGerente = 'Rafael Cordeiro'
-  let exibirApoio = false
-  let nomeApoio = ''
-
-  // Admin Mobiltec que aprovou a validação (obtido de HistoricoStatus)
-  const aprovacao = h.historicoStatus?.find((hist) => hist.statusNovo === 'APROVADO')
-  const adminAprovador = aprovacao?.usuario?.nome
-
-  if (ambiente === 'parceiro') {
-    // 1. Painel do parceiro (ambiente exclusivo):
-    // Se o responsável cadastrado for parceiro mas já foi aprovado por admin, preserva assinatura se digitada ou admin aprovador
-    nomeResponsavel = h.assinaturaResponsavel?.trim() || adminAprovador || h.responsavel?.nome || ''
-    nomeGerente = h.assinaturaGerente?.trim() || h.gerente?.nome || 'Rafael Cordeiro'
-
-    // Apoio adicional: opcional. Se informado, aparece com nome e empresa. Se vazio, omitido.
-    nomeApoio = h.assinaturaApoio?.trim() || (h.apoio ? (h.apoio.empresa ? `${h.apoio.nome} — ${h.apoio.empresa}` : h.apoio.nome) : '')
-    exibirApoio = Boolean(nomeApoio && nomeApoio.trim().length > 0)
-  } else {
-    // 2. Painel público da Mobiltec:
-    // Responsável técnico: nome do Admin da Mobiltec que realizou/aprovou a validação
-    if (adminAprovador) {
-      nomeResponsavel = adminAprovador
-    } else if (h.responsavel?.papel === 'ADMIN') {
-      nomeResponsavel = h.responsavel.nome
-    } else if (h.assinaturaResponsavel?.trim() && !h.assinaturaResponsavel.toLowerCase().includes('matheus')) {
-      nomeResponsavel = h.assinaturaResponsavel.trim()
-    } else {
-      nomeResponsavel = 'Daniel Neves Lima'
-    }
-
-    // Gerente de validação: SEMPRE Rafael Cordeiro
-    nomeGerente = 'Rafael Cordeiro'
-
-    // Apoio adicional: NÃO EXIBIR
-    exibirApoio = false
-  }
+  // Assinaturas: regra única de `resolverAssinaturas` (D518)
+  const assinaturas = resolverAssinaturas(h, ambiente)
+  const nomeResponsavel = assinaturas.responsavelTecnico
+  const nomeGerente = assinaturas.gerenteValidacao
+  const nomeApoio = assinaturas.apoio ?? ''
+  const exibirApoio = nomeApoio.length > 0
 
   const blocoApoioHtml = exibirApoio
-    ? `<div class="assinatura"><span class="valor">${esc(nomeApoio)}</span>${lapis('assinaturaApoio', '')}<br><span class="cargo">Apoio Adicional</span></div>`
+    ? `<div class="assinatura"><span class="valor">${esc(nomeApoio)}</span>${lapisAssinatura('assinaturaApoio')}<br><span class="cargo">Apoio Adicional</span></div>`
     : ''
 
   const rodapeHtml = `<div class="rodape rodape-final">
     ${fontesHtml}
     <div class="assinaturas ${exibirApoio ? 'com-apoio' : 'sem-apoio'}">
-      <div class="assinatura"><span class="valor">${esc(nomeResponsavel)}</span>${lapis('assinaturaResponsavel', '')}<br><span class="cargo">Responsável Técnico</span></div>
-      <div class="assinatura"><span class="valor">${esc(nomeGerente)}</span>${lapis('assinaturaGerente', '')}<br><span class="cargo">Gerente de Validação</span></div>
+      <div class="assinatura"><span class="valor">${esc(nomeResponsavel)}</span>${lapisAssinatura('assinaturaResponsavel')}<br><span class="cargo">Responsável Técnico</span></div>
+      <div class="assinatura"><span class="valor">${esc(nomeGerente)}</span>${lapisAssinatura('assinaturaGerente')}<br><span class="cargo">Gerente de Validação</span></div>
       ${blocoApoioHtml}
     </div>
     <div class="emissao">${esc(h.localEmissao)}, ${esc(dataExtenso(h.dataFim ?? new Date()))}</div>

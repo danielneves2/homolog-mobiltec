@@ -602,6 +602,11 @@ export interface Homologacao {
   assinaturaResponsavel: string | null
   assinaturaGerente: string | null
   assinaturaApoio: string | null
+  /**
+   * Nomes que de fato assinam o certificado (ambiente Mobiltec), pela regra
+   * única do backend (`resolverAssinaturas`, D518). Vem só em GET /homologacoes/:id.
+   */
+  assinaturas?: { responsavelTecnico: string; gerenteValidacao: string; apoio: string | null }
   /** Rascunho do técnico durante a homologação — vira a pergunta para o dev, não sai no certificado */
   observacoes: string | null
   criadoEm: string
