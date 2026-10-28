@@ -25,7 +25,7 @@ import { LoadingTela } from '@/componentes/LoadingTela'
 import { RotuloGrupo } from '@/componentes/matriz/RotuloGrupo'
 import { CelulaFicha } from '@/componentes/matriz/CelulaFicha'
 import { AjudaItem } from '@/componentes/matriz/AjudaItem'
-import { VersoesColuna } from '@/componentes/matriz/VersoesColuna'
+import { ModalVersoes } from '@/componentes/matriz/VersoesColuna'
 import {
   GRUPO_ORDEM,
   META_STATUS,
@@ -129,6 +129,8 @@ export function Matriz() {
 
   const [novoModelo, setNovoModelo] = useState(false)
   const [reteste, setReteste] = useState<ColunaMatriz | null>(null)
+  /** Versões testadas do modelo (D522) */
+  const [versoes, setVersoes] = useState<ColunaMatriz | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const [painel, setPainel] = useState<{
     coluna: ColunaMatriz
@@ -786,7 +788,6 @@ export function Matriz() {
                           </span>
                         </div>
 
-                        {c.homologacoesAnteriores.length > 0 && <VersoesColuna coluna={c} />}
                       </div>
 
                       <div className="absolute right-0 top-0">
@@ -802,6 +803,8 @@ export function Matriz() {
                         return (
                           <MenuColuna
                             modelo={c.homologacao.dispositivo.nomeComercial}
+                            // Ponto no ☰ avisa que o modelo está em reteste
+                            marcador={c.emReteste}
                             acoes={[
                               // Configuração disponível para parceiro durante o processo e para Mobiltec
                               !ehLeitor && (!ehSomenteLeitura(c.homologacao.status, usuario?.papel) || !ehParceiro) && {
@@ -818,6 +821,11 @@ export function Matriz() {
                               !ehLeitor && finalizada && {
                                 rotulo: 'Reteste',
                                 aoClicar: () => setReteste(c),
+                              },
+                              c.homologacoesAnteriores.length > 0 && {
+                                rotulo: `Versões (${c.homologacoesAnteriores.length + 1})`,
+                                aoClicar: () => setVersoes(c),
+                                marcado: c.emReteste,
                               },
                               {
                                 rotulo: 'Observação',
@@ -1141,6 +1149,8 @@ export function Matriz() {
           </div>
         </div>
       )}
+
+      {versoes && <ModalVersoes coluna={versoes} aoFechar={() => setVersoes(null)} />}
 
       {reteste && (
         <ModalReteste

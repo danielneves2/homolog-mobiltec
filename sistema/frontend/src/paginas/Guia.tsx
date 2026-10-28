@@ -655,8 +655,8 @@ const ARTIGOS: Artigo[] = [
                 <strong>antes: OK</strong>, por exemplo.
               </Check>
               <Check>
-                Abaixo do nome do modelo, <Rotulo>2ª homologação ▾</Rotulo> lista todas as versões testadas. Cada uma
-                abre a própria ficha.
+                No menu ☰ da coluna, <Rotulo>Versões</Rotulo> lista todas as versões testadas (um ponto no ☰ marca o
+                modelo em reteste). Cada versão abre a própria ficha.
               </Check>
               <Check>
                 Na ficha e na validação do certificado, <strong>O que mudou</strong> separa o que piorou, o que
