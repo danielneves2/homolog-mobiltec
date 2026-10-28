@@ -357,7 +357,7 @@ export function ConfigurarDispositivos() {
                         <td className="px-4 py-3.5">
                           {h.status === 'APROVADO' ? (
                             <span
-                              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold select-none"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap select-none"
                               style={{
                                 color: 'var(--color-success-fg, #166534)',
                                 background: 'var(--color-success-soft, #f0fdf4)',
@@ -369,7 +369,7 @@ export function ConfigurarDispositivos() {
                             </span>
                           ) : h.status === 'PUBLICADO' ? (
                             <span
-                              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold select-none"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap select-none"
                               style={{
                                 color: 'var(--color-info-fg, #1e40af)',
                                 background: 'var(--color-info-soft, #eff6ff)',
@@ -381,7 +381,7 @@ export function ConfigurarDispositivos() {
                             </span>
                           ) : h.status === 'REPROVADO' ? (
                             <span
-                              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold select-none"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap select-none"
                               style={{
                                 color: 'var(--color-destructive-fg, #991b1b)',
                                 background: 'var(--color-destructive-soft, #fef2f2)',
@@ -393,7 +393,7 @@ export function ConfigurarDispositivos() {
                             </span>
                           ) : (
                             <span
-                              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold select-none"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap select-none"
                               style={{
                                 color: '#b45309',
                                 background: '#fef3c7',
