@@ -187,7 +187,7 @@ export function SeloVersao({ status }: { status: StatusHomologacao }) {
       ? { bg: 'rgba(126,32,101,0.08)', fg: 'var(--color-primary)' }
       : status === 'REPROVADO'
         ? { bg: '#fee2e2', fg: '#b91c1c' }
-        : { bg: 'rgba(243,120,4,0.12)', fg: '#c2410c' }
+        : { bg: 'rgba(243,120,4,0.12)', fg: 'var(--color-brand-orange)' }
   return (
     <span className="rounded-full px-1.5 py-px text-[10px] font-semibold" style={{ background: cor.bg, color: cor.fg }}>
       {status === 'RASCUNHO' ? 'Em teste' : ROTULO_STATUS_HOMOLOGACAO[status]}

@@ -89,7 +89,7 @@ export function CardDispositivo({ dispositivo: d }: { dispositivo: DispositivoVi
           {d.reteste && (
             <p
               className="mt-1.5 flex items-center justify-between gap-2 rounded-md px-2 py-1 text-[11px]"
-              style={{ background: 'rgba(243,120,4,0.10)', color: '#c2410c' }}
+              style={{ background: 'rgba(243,120,4,0.10)', color: 'var(--color-brand-orange)' }}
               title={`Reteste iniciado em ${new Date(d.reteste.dataInicio).toLocaleDateString('pt-BR')}`}
               data-reteste
             >

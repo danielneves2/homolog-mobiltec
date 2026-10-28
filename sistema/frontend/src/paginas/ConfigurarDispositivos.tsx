@@ -399,7 +399,7 @@ export function ConfigurarDispositivos() {
                               style={
                                 h.status === 'RASCUNHO'
                                   ? {
-                                      color: '#c2410c',
+                                      color: 'var(--color-brand-orange)',
                                       background: 'rgba(243,120,4,0.12)',
                                       border: '1px solid rgba(243,120,4,0.30)',
                                     }

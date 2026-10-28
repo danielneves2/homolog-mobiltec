@@ -19,7 +19,7 @@ const ROTULO_CURTO_GERENCIAMENTO: Record<TipoGerenciamento, string> = {
 }
 
 const STATUS_PROCESSO: Record<StatusHomologacao, { rotulo: string; bg: string; fg: string }> = {
-  RASCUNHO: { rotulo: 'Em homologação', bg: 'rgba(243,120,4,0.12)', fg: '#c2410c' },
+  RASCUNHO: { rotulo: 'Em homologação', bg: 'rgba(243,120,4,0.13)', fg: 'var(--color-brand-orange)' },
   // Mesmas cores da tela Validar Certificado: validação em roxo, revisão em âmbar
   AGUARDANDO_ANALISE: { rotulo: 'Em validação', bg: 'rgba(126,32,101,0.08)', fg: 'var(--color-primary)' },
   EM_REVISAO: { rotulo: 'Em revisão', bg: '#fef3c7', fg: '#b45309' },
