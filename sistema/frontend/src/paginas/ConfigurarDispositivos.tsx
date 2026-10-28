@@ -394,13 +394,26 @@ export function ConfigurarDispositivos() {
                           ) : (
                             <span
                               className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap select-none"
-                              style={{
-                                color: '#b45309',
-                                background: '#fef3c7',
-                                border: '1px solid rgba(245, 158, 11, 0.25)',
-                              }}
+                              // Em homologação: laranja da marca (as setas do logo), como
+                              // nos cards do painel. Revisão e validação seguem âmbar.
+                              style={
+                                h.status === 'RASCUNHO'
+                                  ? {
+                                      color: '#c2410c',
+                                      background: 'rgba(243,120,4,0.12)',
+                                      border: '1px solid rgba(243,120,4,0.30)',
+                                    }
+                                  : {
+                                      color: '#b45309',
+                                      background: '#fef3c7',
+                                      border: '1px solid rgba(245, 158, 11, 0.25)',
+                                    }
+                              }
                             >
-                              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
+                              <span
+                                className="h-1.5 w-1.5 rounded-full shrink-0"
+                                style={{ background: h.status === 'RASCUNHO' ? 'var(--color-brand-orange)' : '#f59e0b' }}
+                              />
                               <span>{ROTULO_STATUS_ANDAMENTO[h.status] ?? h.status}</span>
                             </span>
                           )}
