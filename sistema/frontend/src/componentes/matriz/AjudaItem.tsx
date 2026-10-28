@@ -4,7 +4,7 @@ import { ancorarMenu } from '@/lib/ancorarMenu'
 import type { ItemTeste } from '@/lib/tipos'
 
 /**
- * "?" roxo ao lado do nome do item na matriz (D502).
+ * "i" roxo (informação) ao lado do nome do item na matriz (D502).
  *
  * Usado nos itens que agrupam várias funcionalidades — no iOS, cada linha de
  * "Configurações de Restrição" é um tópico (Restrições, Aplicativo, Rede…) que
@@ -67,10 +67,13 @@ export function AjudaItem({
         onMouseLeave={() => setAberto(false)}
         onFocus={abrir}
         onBlur={() => setAberto(false)}
-        className="inline-grid h-4 w-4 shrink-0 place-items-center rounded-full align-middle text-[10px] font-bold text-white transition-transform hover:scale-110"
+        className="inline-grid h-4 w-4 shrink-0 place-items-center rounded-full align-middle text-white transition-transform hover:scale-110"
         style={{ background: 'var(--color-primary)' }}
       >
-        ?
+        <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden focusable="false">
+          <circle cx="8" cy="4.9" r="1.1" fill="currentColor" />
+          <rect x="7.1" y="7" width="1.8" height="5" rx="0.9" fill="currentColor" />
+        </svg>
       </button>
 
       {/* Portal: a coluna dos nomes é sticky e criaria um contexto de

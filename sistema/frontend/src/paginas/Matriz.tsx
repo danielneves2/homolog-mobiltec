@@ -968,10 +968,11 @@ export function Matriz() {
                             background: 'var(--color-card)',
                             height: `${alturaLinha}px`,
                           }}
-                          title={item.descricaoAcao}
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <span className={item.ativo ? '' : 'line-through opacity-60'}>
+                            {/* O title fica só no nome: na célula inteira, o tooltip
+                                nativo (preto) aparecia junto com o balão do (i) */}
+                            <span className={item.ativo ? '' : 'line-through opacity-60'} title={item.descricaoAcao}>
                               {item.nome}
                             </span>
                             <AjudaItem item={item} temByod={temByod} temSupervisionado={temSupervisionado} />
