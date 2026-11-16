@@ -414,7 +414,7 @@ async function main() {
   for (const p of plano) {
     // Uma foto já enviada pelo sistema não deve se perder num reimport.
     const dispositivo = await prisma.dispositivo.upsert({
-      where: { fabricante_modelo: { fabricante: p.fabricante, modelo: p.modelo } },
+      where: { categoriaId_fabricante_modelo: { categoriaId: categoria.id, fabricante: p.fabricante, modelo: p.modelo } },
       update: { nomeComercial: p.nomeComercial, categoriaId: categoria.id, ativo: true },
       create: {
         categoriaId: categoria.id,

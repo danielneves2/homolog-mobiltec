@@ -101,7 +101,7 @@ const dispositivoRoutes: FastifyPluginAsync = async (fastify) => {
     } catch (e: any) {
       fastify.log.error(e)
       if (e.code === 'P2002') {
-        return reply.status(409).send({ erro: 'Já existe um dispositivo com esse fabricante e modelo.' })
+        return reply.status(409).send({ erro: 'Já existe um dispositivo com esse fabricante e modelo neste tipo.' })
       }
       if (e.code === 'P2003') {
         return reply.status(400).send({ erro: 'Categoria de dispositivo inválida ou inexistente.' })

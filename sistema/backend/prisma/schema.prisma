@@ -152,7 +152,9 @@ model Dispositivo {
   categoria      Categoria     @relation(fields: [categoriaId], references: [id])
   homologacoes   Homologacao[]
 
-  @@unique([fabricante, modelo])
+  /// D524: o mesmo fabricante e modelo pode existir em tipos diferentes
+  /// (Verifone X990 PoS e X990 PinPad) — único só dentro do tipo.
+  @@unique([categoriaId, fabricante, modelo])
   @@map("dispositivo")
 }
 

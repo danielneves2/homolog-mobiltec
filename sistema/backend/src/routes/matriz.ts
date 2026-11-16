@@ -316,7 +316,7 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
       fastify.log.error(e)
       if (e.code === 'P2002') {
         return reply.status(409).send({
-          erro: `Já existe um dispositivo ${fabricante} ${modelo}. Para um novo teste do mesmo modelo, abra um reteste em vez de cadastrar de novo.`,
+          erro: `Já existe ${fabricante} ${modelo} neste tipo de dispositivo. Para um novo teste do mesmo modelo, abra um reteste em vez de cadastrar de novo.`,
         })
       }
       return reply.status(400).send({
