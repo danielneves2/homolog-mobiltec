@@ -56,6 +56,7 @@ export function FotoDispositivo({
           )}
 
           <img
+            data-foto-dispositivo
             ref={refImg}
             crossOrigin="anonymous"
             src={url.startsWith('/uploads') ? `/api${url}` : url}

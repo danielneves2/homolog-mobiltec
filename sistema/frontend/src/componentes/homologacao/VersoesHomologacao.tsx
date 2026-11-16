@@ -184,9 +184,9 @@ function Status({ s }: { s: StatusResultado }) {
 export function SeloVersao({ status }: { status: StatusHomologacao }) {
   const cor =
     status === 'APROVADO' || status === 'PUBLICADO'
-      ? { bg: 'rgba(126,32,101,0.08)', fg: 'var(--color-primary)' }
+      ? { bg: 'var(--tom-roxo-bg)', fg: 'var(--color-primary)' }
       : status === 'REPROVADO'
-        ? { bg: '#fee2e2', fg: '#b91c1c' }
+        ? { bg: 'var(--tom-vermelho-bg)', fg: 'var(--tom-vermelho-fg)' }
         : { bg: 'rgba(243,120,4,0.12)', fg: 'var(--color-brand-orange)' }
   return (
     <span className="rounded-full px-1.5 py-px text-[10px] font-semibold" style={{ background: cor.bg, color: cor.fg }}>

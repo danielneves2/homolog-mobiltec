@@ -12,6 +12,12 @@
       rel="stylesheet"
     />
     <title>Homologação · Mobiltec</title>
+    <!-- Tema escolhido pelo usuário (D523), aplicado antes da primeira pintura -->
+    <script>
+      try {
+        if (localStorage.getItem('homolog.tema') === 'escuro') document.documentElement.classList.add('dark')
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

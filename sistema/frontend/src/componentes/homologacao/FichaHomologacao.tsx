@@ -62,7 +62,7 @@ export function FichaUnidadeTestada({
       <div className="flex flex-col items-center gap-2">
         <div
           className="group relative w-48 shrink-0 self-center overflow-hidden rounded-xl border transition-all"
-          style={{ background: 'var(--color-sidebar)' }}
+          style={{ background: 'var(--fundo-foto, var(--color-sidebar))' }}
         >
           <FotoDispositivo url={ficha.fotoUrl} nome={ficha.nomeComercial} altura={192} semBorda />
           {aoEditarFoto && (
@@ -187,7 +187,7 @@ function IconeDuvidaJustificativa({
         title={textoFallback}
         className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-2xs transition-all hover:scale-115 active:scale-95 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/40 cursor-help"
         style={{
-          background: 'var(--color-primary, #631B5B)',
+          background: 'var(--color-primary)',
         }}
       >
         ?
@@ -204,7 +204,7 @@ function IconeDuvidaJustificativa({
             style={{
               left: posicao.x,
               top: posicao.y,
-              background: 'var(--color-popover, #ffffff)',
+              background: 'var(--color-popover)',
               borderColor: 'var(--color-border)',
               color: 'var(--color-foreground)',
               boxShadow: '0 12px 30px -4px rgba(99, 27, 91, 0.25), 0 4px 12px rgba(0, 0, 0, 0.12)',
@@ -214,12 +214,12 @@ function IconeDuvidaJustificativa({
               className="flex items-center gap-1.5 mb-1.5 pb-1 border-b text-[11px] font-bold uppercase tracking-wider"
               style={{
                 borderColor: 'var(--color-border)',
-                color: 'var(--color-primary, #631B5B)',
+                color: 'var(--color-primary)',
               }}
             >
               <span
                 className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full text-[9px] font-bold text-white"
-                style={{ background: 'var(--color-primary, #631B5B)' }}
+                style={{ background: 'var(--color-primary)' }}
               >
                 ?
               </span>

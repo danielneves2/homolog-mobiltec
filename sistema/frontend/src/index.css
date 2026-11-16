@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
-/* O sistema é só claro. Sem isto, as classes `dark:` seguiam o modo escuro
-   do Windows/macOS e pintavam elementos de cinza-escuro no meio da tela. */
+/* O tema escuro é escolha do usuário (classe `.dark` no <html>, D523), nunca
+   o modo escuro do Windows/macOS. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ============================================================
@@ -143,9 +143,194 @@
   --color-brand-purple-soft: #fbf4fa;
   --color-brand-purple-fg: #6e226b;
   --color-brand-purple-border: #f0d5eb;
-  --gradient-brand-purple: linear-gradient(90deg, var(--color-brand-purple) 0%, var(--color-primary) 45%, var(--color-brand-purple-deep) 100%);
-  --gradient-brand-purple-v: linear-gradient(180deg, var(--color-brand-purple) 0%, var(--color-primary) 45%, var(--color-brand-purple-deep) 100%);
+  /* Degradê com as cores da marca fixas (e não `--color-primary`): no tema
+     escuro o primary clareia para virar texto legível, mas botão e faixa
+     continuam no roxo profundo da marca. */
+  --gradient-brand-purple: linear-gradient(90deg, #6e226b 0%, #7e2065 45%, #4a1240 100%);
+  --gradient-brand-purple-v: linear-gradient(180deg, #6e226b 0%, #7e2065 45%, #4a1240 100%);
+
+  /* Superfície sob o cursor (linhas, botões de ícone) */
+  --color-hover: rgba(15, 15, 18, 0.04);
+
+  /* Tons de aviso usados direto nos componentes (D523) */
+  --tom-ambar-bg: #fef3c7;
+  --tom-ambar-fg: #b45309;
+  --tom-ambar-borda: rgba(245, 158, 11, 0.25);
+  --tom-vermelho-bg: #fee2e2;
+  --tom-vermelho-fg: #b91c1c;
+  --tom-verde-borda: #a3e6cb;
+  --tom-roxo-bg: rgba(126, 32, 101, 0.08);
+  /* Mesa onde o certificado (sempre claro) fica apoiado */
+  --fundo-documento: #ddd9de;
 }
+
+/* ============================================================
+   Tema escuro (D523) — escolha do usuário, botão ao lado do sino.
+
+   Grafite em camadas, não preto chapado: o fundo é quase preto, o menu e a
+   barra sobem um degrau, os cards mais um, e os popups mais um. Cada camada
+   se separa da de baixo pela luz, não pela borda. As divisórias têm um toque
+   de roxo acinzentado — a marca aparece sem gritar.
+
+   O roxo de destaque clareia (#c46aaf): o #7e2065 da marca some sobre o
+   grafite como texto. Botões e faixas seguem no roxo profundo pelo degradê.
+   O certificado não muda: é documento, sai sempre claro.
+   ============================================================ */
+.dark {
+  color-scheme: dark;
+
+  --color-background: #0d0d10;
+  --color-sidebar: #121216;
+  --color-card: #17171c;
+  --color-popover: #1d1d23;
+  --color-muted: #23232a;
+  --color-foreground: #ececf1;
+  --color-muted-foreground: #9b9aa8;
+  --color-border: #2c2732;
+  --color-input: #383240;
+  --color-hover: rgba(255, 255, 255, 0.05);
+
+  --color-primary: #c46aaf;
+  --color-info: #c46aaf;
+  --color-brand-purple-soft: #261a24;
+  --color-brand-purple-fg: #e2a6d2;
+  --color-brand-purple-border: #4a2f45;
+  --color-info-soft: #241b23;
+  --color-info-fg: #e2a6d2;
+  --color-hero-accent: #e2a6d2;
+
+  --color-success-soft: #10241a;
+  --color-success-fg: #6fdc9c;
+  --color-warning-soft: #2a2412;
+  --color-warning-fg: #f3cd6a;
+  --color-destructive: #f05252;
+  --color-destructive-soft: #2c1517;
+  --color-destructive-fg: #f9a3a3;
+
+  --tom-ambar-bg: #2b2311;
+  --tom-ambar-fg: #f4c45e;
+  --tom-ambar-borda: rgba(244, 196, 94, 0.22);
+  --tom-vermelho-bg: #321719;
+  --tom-vermelho-fg: #f58c8c;
+  --tom-verde-borda: #1f4a35;
+  --tom-roxo-bg: rgba(196, 106, 175, 0.14);
+  --fundo-documento: #0a0a0c;
+
+  /* Status da matriz: fundo escuro tingido, texto claro na mesma cor */
+  --color-status-ok: #5fd68e;
+  --color-status-ok-fill: #12291c;
+  --color-status-ok-soft: #0f2117;
+  --color-status-falha: #f47c7c;
+  --color-status-falha-fill: #351719;
+  --color-status-falha-soft: #2a1314;
+  --color-status-nao-suportado: #f9a35a;
+  --color-status-nao-suportado-fill: #35210f;
+  --color-status-nao-suportado-soft: #2a1a0c;
+  --color-status-ressalva: #eec455;
+  --color-status-ressalva-fill: #302810;
+  --color-status-ressalva-soft: #26200d;
+  --color-status-nao-aplicavel: #98a2b3;
+  --color-status-nao-aplicavel-fill: #22262d;
+  --color-status-nao-aplicavel-soft: #1c1f25;
+  --color-status-nao-testado: #c6cfdc;
+  --color-status-nao-testado-fill: #2b313b;
+  --color-status-nao-testado-soft: #1e222a;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 36px rgba(0, 0, 0, 0.55);
+}
+
+/* Fotos de produto no escuro: placa clara e a foto em "multiply", para o
+   fundo branco das fotos de fabricante virar a própria placa — vira foto de
+   catálogo, e não um quadrado branco recortado no grafite. */
+.dark { --fundo-foto: #e6e4ea; }
+.dark img[data-foto-dispositivo] { mix-blend-mode: multiply; }
+
+/* A logo é roxa sobre fundo claro; no grafite ela clareia um pouco */
+.dark img[data-logo-marca] { filter: brightness(1.75) saturate(0.85); }
+
+/* Troca de tema instantânea, sem cada elemento animar no seu ritmo */
+.trocando-tema,
+.trocando-tema * {
+  transition: none !important;
+}
+
+/* Classes de cor fixa que ainda existem nos componentes: no escuro elas
+   seguem as superfícies e os textos do tema. */
+.dark .bg-white,
+.dark .bg-white\/80,
+.dark .bg-white\/90 { background-color: var(--color-card); }
+.dark .bg-slate-50,
+.dark .bg-slate-50\/70,
+.dark .bg-slate-50\/80,
+.dark .bg-slate-50\/90,
+.dark .bg-slate-100,
+.dark .bg-gray-50,
+.dark .bg-gray-100,
+.dark .bg-neutral-50,
+.dark .bg-neutral-100 { background-color: var(--color-muted); }
+.dark .bg-purple-50,
+.dark .bg-purple-100 { background-color: var(--color-brand-purple-soft); }
+.dark .bg-red-50 { background-color: var(--color-destructive-soft); }
+.dark .bg-amber-50,
+.dark .bg-amber-50\/70,
+.dark .bg-amber-100 { background-color: var(--tom-ambar-bg); }
+.dark .bg-emerald-50,
+.dark .bg-green-50 { background-color: var(--color-success-soft); }
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-slate-700,
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-neutral-900 { color: var(--color-foreground); }
+.dark .text-slate-600,
+.dark .text-slate-500,
+.dark .text-slate-400,
+.dark .text-gray-600,
+.dark .text-gray-500,
+.dark .text-neutral-600,
+.dark .text-neutral-500 { color: var(--color-muted-foreground); }
+.dark .text-purple-700,
+.dark .text-purple-800,
+.dark .text-purple-900 { color: var(--color-primary); }
+.dark .text-red-700,
+.dark .text-red-800 { color: var(--color-destructive-fg); }
+.dark .text-amber-800,
+.dark .text-amber-900 { color: var(--tom-ambar-fg); }
+.dark .border-amber-200,
+.dark .border-amber-200\/80 { border-color: var(--tom-ambar-borda); }
+.dark .border-slate-200,
+.dark .border-gray-200 { border-color: var(--color-border); }
+@media (hover: hover) {
+  .dark .hover\:bg-white:hover,
+  .dark .hover\:bg-slate-50:hover,
+  .dark .hover\:bg-slate-50\/70:hover,
+  .dark .hover\:bg-slate-100:hover,
+  .dark .hover\:bg-gray-100:hover,
+  .dark .hover\:bg-muted:hover,
+  .dark .hover\:bg-black\/5:hover,
+  .dark .hover\:bg-black\/\[0\.02\]:hover,
+  .dark .hover\:bg-black\/\[0\.03\]:hover,
+  .dark .hover\:bg-black\/\[0\.035\]:hover,
+  .dark .hover\:bg-black\/\[0\.04\]:hover,
+  .dark .hover\:bg-neutral-500\/10:hover { background-color: var(--color-hover); }
+  .dark .hover\:bg-purple-50:hover,
+  .dark .hover\:bg-purple-50\/50:hover,
+  .dark .hover\:bg-purple-100:hover { background-color: var(--color-brand-purple-soft); }
+  .dark .hover\:text-purple-900:hover { color: var(--color-brand-purple-fg); }
+  .dark .hover\:text-slate-900:hover { color: var(--color-foreground); }
+}
+.dark .btn-menu-lateral:not(.btn-menu-ativo):hover { background-color: rgba(255, 255, 255, 0.06) !important; }
+.dark .btn-menu-lateral:active { background-color: rgba(255, 255, 255, 0.09) !important; }
+
+/* Barras de rolagem discretas no escuro */
+.dark ::-webkit-scrollbar { width: 10px; height: 10px; }
+.dark ::-webkit-scrollbar-track { background: transparent; }
+.dark ::-webkit-scrollbar-thumb { background: #34303a; border-radius: 8px; border: 2px solid var(--color-background); }
+.dark ::-webkit-scrollbar-thumb:hover { background: #4a4452; }
 
 @layer base {
   * {

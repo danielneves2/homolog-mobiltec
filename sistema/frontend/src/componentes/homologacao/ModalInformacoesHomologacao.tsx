@@ -199,7 +199,7 @@ export function ModalInformacoesHomologacao({
         aria-label={titulo}
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-5xl max-h-[90vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden"
-        style={{ background: 'var(--color-popover, #ffffff)', borderColor: 'var(--color-border)' }}
+        style={{ background: 'var(--color-popover)', borderColor: 'var(--color-border)' }}
       >
         <div className="p-5 border-b flex items-start justify-between gap-3 shrink-0">
           <div className="min-w-0">

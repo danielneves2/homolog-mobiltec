@@ -54,7 +54,7 @@ export function CardDispositivo({ dispositivo: d }: { dispositivo: DispositivoVi
         <div className="absolute left-1/2 top-0" style={{ transform: 'translate(-50%, -45%)' }}>
           <div
             className="overflow-hidden rounded-2xl border shadow-xs"
-            style={{ height: 96, width: 96, background: 'var(--color-card)' }}
+            style={{ height: 96, width: 96, background: 'var(--fundo-foto, var(--color-card))' }}
           >
             <FotoDispositivo url={d.fotoUrl} nome={d.nomeComercial} altura={96} semBorda />
           </div>

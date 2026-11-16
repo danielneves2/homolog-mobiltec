@@ -504,14 +504,14 @@ export function GerenciarParceiros() {
                   <div
                     className="p-3 rounded-lg border"
                     style={{
-                      borderColor: 'var(--color-brand-purple-border, #f0d5eb)',
-                      background: 'var(--color-brand-purple-soft, #fbf4fa)',
+                      borderColor: 'var(--color-brand-purple-border)',
+                      background: 'var(--color-brand-purple-soft)',
                     }}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <label
                         className="block text-xs font-bold"
-                        style={{ color: 'var(--color-brand-purple-fg, #6e226b)' }}
+                        style={{ color: 'var(--color-brand-purple-fg)' }}
                       >
                         Nome do Novo Parceiro / Empresa
                       </label>

@@ -8,6 +8,7 @@ import { useParceiros } from '@/hooks/useParceiros'
 import { LogoMobiltec } from './LogoMobiltec'
 import { Icone, iconeDaCategoria, type NomeIcone } from './Icone'
 import { CentralNotificacoes } from './CentralNotificacoes'
+import { BotaoTema } from './BotaoTema'
 import { useNotificacoes } from '@/hooks/useNotificacoes'
 
 const CHAVE_MENU = 'homolog.menu-aberto'
@@ -1033,7 +1034,7 @@ export function Layout() {
       {ehSandbox && (
         <div
           className="w-full py-1.5 px-4 text-center text-xs font-bold uppercase tracking-wider shrink-0 z-50 flex items-center justify-center gap-2 shadow-sm"
-          style={{ background: '#FEF3C7', color: '#92400E', borderBottom: '1px solid #FCD34D' }}
+          style={{ background: 'var(--tom-ambar-bg)', color: 'var(--tom-ambar-fg)', borderBottom: '1px solid var(--tom-ambar-borda)' }}
         >
           <span>⚠️ AMBIENTE SANDBOX — EXPERIMENTAÇÃO ISOLADA (SEM IMPACTO EM PRODUÇÃO)</span>
         </div>
@@ -1232,7 +1233,10 @@ export function Layout() {
               )}
 
               <div className="ml-auto flex items-center gap-3 text-xs">
-                <CentralNotificacoes />
+                <div className="flex items-center gap-1">
+                  <BotaoTema />
+                  <CentralNotificacoes />
+                </div>
                 <span className="font-medium" style={{ color: 'var(--color-foreground)' }}>
                   {usuario?.nome}
                 </span>

@@ -373,7 +373,7 @@ export function PainelJustificativa({
               className="p-3 rounded-lg text-xs font-semibold flex items-center justify-between gap-2 border transition-all animate-in fade-in"
               style={{
                 background: 'var(--color-success-soft, rgba(22, 163, 74, 0.1))',
-                color: 'var(--color-success, #16a34a)',
+                color: 'var(--color-success)',
                 borderColor: 'rgba(22, 163, 74, 0.25)',
               }}
             >

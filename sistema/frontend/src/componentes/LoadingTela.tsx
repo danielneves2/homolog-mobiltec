@@ -52,7 +52,7 @@ export function LoadingTela({
             cx="27"
             cy="27"
             r={dim.raio}
-            stroke="var(--color-brand-purple, #6e226b)"
+            stroke="var(--color-brand-purple)"
             strokeOpacity="0.12"
             strokeWidth={dim.stroke}
           />
@@ -61,7 +61,7 @@ export function LoadingTela({
             cx="27"
             cy="27"
             r={dim.raio}
-            stroke="var(--color-brand-purple, #6e226b)"
+            stroke="var(--color-brand-purple)"
             strokeWidth={dim.stroke}
             strokeDasharray={dim.dash}
             strokeLinecap="round"

@@ -227,7 +227,7 @@ function ItemNotificacao({
                 }}
                 disabled={confirmando}
                 className="px-2.5 py-1 rounded-md text-[11px] font-semibold text-white transition-all hover:opacity-90 shadow-2xs inline-flex items-center gap-1 cursor-pointer"
-                style={{ background: '#b45309' }}
+                style={{ background: 'var(--tom-ambar-fg)' }}
               >
                 <span>✓</span>
                 <span>Confirmar recebimento</span>

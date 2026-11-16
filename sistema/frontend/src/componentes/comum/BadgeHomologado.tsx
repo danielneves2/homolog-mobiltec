@@ -23,8 +23,8 @@ export function BadgeHomologado({
       <span
         className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold tracking-tight whitespace-nowrap select-none shrink-0 ${className}`}
         style={{
-          background: '#FEECEB',
-          color: '#B91C1C',
+          background: 'var(--tom-vermelho-bg)',
+          color: 'var(--tom-vermelho-fg)',
         }}
       >
         {comIcone && (
@@ -50,7 +50,7 @@ export function BadgeHomologado({
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-tight whitespace-nowrap select-none shrink-0 ${className}`}
       style={{
-        background: 'rgba(126, 32, 101, 0.08)',
+        background: 'var(--tom-roxo-bg)',
         color: 'var(--color-primary)',
       }}
     >

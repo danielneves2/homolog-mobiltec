@@ -21,11 +21,11 @@ const ROTULO_CURTO_GERENCIAMENTO: Record<TipoGerenciamento, string> = {
 const STATUS_PROCESSO: Record<StatusHomologacao, { rotulo: string; bg: string; fg: string }> = {
   RASCUNHO: { rotulo: 'Em homologação', bg: 'rgba(243,120,4,0.13)', fg: 'var(--color-brand-orange)' },
   // Mesmas cores da tela Validar Certificado: validação em roxo, revisão em âmbar
-  AGUARDANDO_ANALISE: { rotulo: 'Em validação', bg: 'rgba(126,32,101,0.08)', fg: 'var(--color-primary)' },
-  EM_REVISAO: { rotulo: 'Em revisão', bg: '#fef3c7', fg: '#b45309' },
-  APROVADO: { rotulo: 'Homologado', bg: 'rgba(126,32,101,0.08)', fg: 'var(--color-primary)' },
-  PUBLICADO: { rotulo: 'Homologado', bg: 'rgba(126,32,101,0.08)', fg: 'var(--color-primary)' },
-  REPROVADO: { rotulo: 'Reprovado', bg: '#fee2e2', fg: '#b91c1c' },
+  AGUARDANDO_ANALISE: { rotulo: 'Em validação', bg: 'var(--tom-roxo-bg)', fg: 'var(--color-primary)' },
+  EM_REVISAO: { rotulo: 'Em revisão', bg: 'var(--tom-ambar-bg)', fg: 'var(--tom-ambar-fg)' },
+  APROVADO: { rotulo: 'Homologado', bg: 'var(--tom-roxo-bg)', fg: 'var(--color-primary)' },
+  PUBLICADO: { rotulo: 'Homologado', bg: 'var(--tom-roxo-bg)', fg: 'var(--color-primary)' },
+  REPROVADO: { rotulo: 'Reprovado', bg: 'var(--tom-vermelho-bg)', fg: 'var(--tom-vermelho-fg)' },
 }
 
 export function BadgeStatusProcesso({ status, reteste = false }: { status: StatusHomologacao; reteste?: boolean }) {
@@ -115,7 +115,7 @@ export function DadosModelo({
     <div className="p-4 flex items-center gap-4">
       <div
         className="h-20 w-20 rounded-xl border overflow-hidden shrink-0 flex items-center justify-center p-1"
-        style={{ background: 'var(--color-sidebar)' }}
+        style={{ background: 'var(--fundo-foto, var(--color-sidebar))' }}
       >
         <FotoDispositivo url={fotoUrl} nome={nomeComercial} altura={76} semBorda />
       </div>

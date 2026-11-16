@@ -27,6 +27,7 @@ export function LogoMobiltec({
 }) {
   return (
     <img
+      data-logo-marca
       src={ARQUIVO[variante]}
       alt="Mobiltec"
       className={className}

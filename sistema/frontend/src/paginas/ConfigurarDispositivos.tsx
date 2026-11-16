@@ -127,8 +127,8 @@ export function ConfigurarDispositivos() {
               <span
                 className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold select-none"
                 style={{
-                  color: 'var(--color-success-fg, #166534)',
-                  background: 'var(--color-success-soft, #f0fdf4)',
+                  color: 'var(--color-success-fg)',
+                  background: 'var(--color-success-soft)',
                   border: '1px solid rgba(22, 163, 74, 0.25)',
                 }}
               >
@@ -140,8 +140,8 @@ export function ConfigurarDispositivos() {
                 <span
                   className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold select-none"
                   style={{
-                    color: 'var(--color-destructive-fg, #991b1b)',
-                    background: 'var(--color-destructive-soft, #fef2f2)',
+                    color: 'var(--color-destructive-fg)',
+                    background: 'var(--color-destructive-soft)',
                     border: '1px solid rgba(220, 38, 38, 0.25)',
                   }}
                 >
@@ -359,8 +359,8 @@ export function ConfigurarDispositivos() {
                             <span
                               className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap select-none"
                               style={{
-                                color: 'var(--color-success-fg, #166534)',
-                                background: 'var(--color-success-soft, #f0fdf4)',
+                                color: 'var(--color-success-fg)',
+                                background: 'var(--color-success-soft)',
                                 border: '1px solid rgba(22, 163, 74, 0.25)',
                               }}
                             >
@@ -371,8 +371,8 @@ export function ConfigurarDispositivos() {
                             <span
                               className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap select-none"
                               style={{
-                                color: 'var(--color-info-fg, #1e40af)',
-                                background: 'var(--color-info-soft, #eff6ff)',
+                                color: 'var(--color-info-fg)',
+                                background: 'var(--color-info-soft)',
                                 border: '1px solid rgba(126, 32, 101, 0.25)',
                               }}
                             >
@@ -383,8 +383,8 @@ export function ConfigurarDispositivos() {
                             <span
                               className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap select-none"
                               style={{
-                                color: 'var(--color-destructive-fg, #991b1b)',
-                                background: 'var(--color-destructive-soft, #fef2f2)',
+                                color: 'var(--color-destructive-fg)',
+                                background: 'var(--color-destructive-soft)',
                                 border: '1px solid rgba(220, 38, 38, 0.25)',
                               }}
                             >
@@ -404,9 +404,9 @@ export function ConfigurarDispositivos() {
                                       border: '1px solid rgba(243,120,4,0.30)',
                                     }
                                   : {
-                                      color: '#b45309',
-                                      background: '#fef3c7',
-                                      border: '1px solid rgba(245, 158, 11, 0.25)',
+                                      color: 'var(--tom-ambar-fg)',
+                                      background: 'var(--tom-ambar-bg)',
+                                      border: '1px solid var(--tom-ambar-borda)',
                                     }
                               }
                             >

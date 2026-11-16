@@ -111,9 +111,9 @@ export function PainelParceiro() {
           <div
             className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg border text-xs shadow-2xs"
             style={{
-              background: 'var(--color-brand-purple-soft, #fbf4fa)',
-              borderColor: 'var(--color-brand-purple-border, #f0d5eb)',
-              color: 'var(--color-brand-purple-fg, #6e226b)',
+              background: 'var(--color-brand-purple-soft)',
+              borderColor: 'var(--color-brand-purple-border)',
+              color: 'var(--color-brand-purple-fg)',
             }}
           >
             <div className="flex items-center gap-2">

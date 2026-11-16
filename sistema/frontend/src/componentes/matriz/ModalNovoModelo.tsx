@@ -511,7 +511,7 @@ export function ModalNovoModelo({
                   <div>
                     <span
                       className="block text-xs font-bold"
-                      style={{ color: 'var(--color-brand-purple-fg, #6e226b)' }}
+                      style={{ color: 'var(--color-brand-purple-fg)' }}
                     >
                       O agente precisa de assinatura do fabricante? <span style={{ color: 'var(--color-destructive)' }}>*</span>
                     </span>

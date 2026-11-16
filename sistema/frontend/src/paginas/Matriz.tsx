@@ -543,7 +543,7 @@ export function Matriz() {
                 {painelDivergencias && (
                   <span
                     className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full"
-                    style={{ background: !ehParceiro && divergencias.semJustificativa > 0 ? '#b91c1c' : 'var(--color-primary)' }}
+                    style={{ background: !ehParceiro && divergencias.semJustificativa > 0 ? 'var(--tom-vermelho-fg)' : 'var(--color-primary)' }}
                   />
                 )}
               </button>

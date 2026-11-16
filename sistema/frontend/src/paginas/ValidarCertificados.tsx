@@ -248,7 +248,7 @@ export function ValidarCertificados() {
               className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold select-none shrink-0"
               style={{
                 color: pendentes.length > 0 ? 'var(--color-primary)' : 'var(--color-muted-foreground)',
-                background: pendentes.length > 0 ? 'rgba(126,32,101,0.08)' : 'var(--color-muted)',
+                background: pendentes.length > 0 ? 'var(--tom-roxo-bg)' : 'var(--color-muted)',
                 border: pendentes.length > 0 ? '1px solid rgba(126,32,101,0.25)' : '1px solid var(--color-border)',
               }}
             >
@@ -265,8 +265,8 @@ export function ValidarCertificados() {
               <div
                 className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0"
                 style={{
-                  background: 'var(--color-success-soft, #f0fdf4)',
-                  color: 'var(--color-success-fg, #166534)',
+                  background: 'var(--color-success-soft)',
+                  color: 'var(--color-success-fg)',
                 }}
               >
                 <Icone nome="certificado" className="h-3.5 w-3.5" />
@@ -278,8 +278,8 @@ export function ValidarCertificados() {
             <span
               className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold select-none shrink-0"
               style={{
-                color: 'var(--color-success-fg, #166534)',
-                background: 'var(--color-success-soft, #f0fdf4)',
+                color: 'var(--color-success-fg)',
+                background: 'var(--color-success-soft)',
                 border: '1px solid rgba(22, 163, 74, 0.25)',
               }}
             >
@@ -489,7 +489,7 @@ export function ValidarCertificados() {
                               className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold select-none"
                               style={{
                                 color: 'var(--color-primary)',
-                                background: 'rgba(126, 32, 101, 0.08)',
+                                background: 'var(--tom-roxo-bg)',
                                 border: '1px solid rgba(126, 32, 101, 0.25)',
                               }}
                             >
@@ -500,9 +500,9 @@ export function ValidarCertificados() {
                             <span
                               className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold select-none"
                               style={{
-                                color: '#b45309',
-                                background: '#fef3c7',
-                                border: '1px solid rgba(245, 158, 11, 0.25)',
+                                color: 'var(--tom-ambar-fg)',
+                                background: 'var(--tom-ambar-bg)',
+                                border: '1px solid var(--tom-ambar-borda)',
                               }}
                             >
                               <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
@@ -522,7 +522,7 @@ export function ValidarCertificados() {
 
                           <span
                             className="px-2 py-0.5 rounded-md text-[10.5px] font-bold tracking-wide"
-                            style={{ background: 'rgba(126,32,101,0.08)', color: 'var(--color-primary)' }}
+                            style={{ background: 'var(--tom-roxo-bg)', color: 'var(--color-primary)' }}
                           >
                             {nomeEmpresa}
                           </span>

@@ -157,9 +157,9 @@ export function DetalheDispositivo() {
             style={
               aviso.toLowerCase().includes('sucesso')
                 ? {
-                    background: 'var(--color-success-soft, #e6f9f0)',
-                    color: 'var(--color-success-fg, #0d7045)',
-                    borderColor: 'var(--color-success-border, #a3e6cb)',
+                    background: 'var(--color-success-soft)',
+                    color: 'var(--color-success-fg)',
+                    borderColor: 'var(--color-success-border)',
                   }
                 : aviso.toLowerCase().includes('gerando')
                   ? {

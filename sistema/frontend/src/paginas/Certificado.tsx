@@ -246,9 +246,9 @@ export function Certificado() {
           style={
             aviso.toLowerCase().includes('sucesso')
               ? {
-                  background: 'var(--color-success-soft, #e6f9f0)',
-                  color: 'var(--color-success-fg, #0d7045)',
-                  borderColor: 'var(--color-success-border, #a3e6cb)',
+                  background: 'var(--color-success-soft)',
+                  color: 'var(--color-success-fg)',
+                  borderColor: 'var(--color-success-border)',
                 }
               : aviso.toLowerCase().includes('gerando')
                 ? {
@@ -314,7 +314,7 @@ export function Certificado() {
         )}
 
         {!podeVerCertificado ? (
-          <div className="flex-1 flex items-center justify-center p-8" style={{ background: '#F4F4F5' }}>
+          <div className="flex-1 flex items-center justify-center p-8" style={{ background: 'var(--color-muted)' }}>
             <div className="max-w-md text-center p-8 rounded-xl border shadow-sm" style={{ background: 'var(--color-card)' }}>
               <div className="text-4xl mb-3">🔒</div>
               <h3 className="text-base font-semibold mb-2">Certificado em Validação</h3>
@@ -325,7 +325,7 @@ export function Certificado() {
             </div>
           </div>
         ) : (
-          <div className="flex-1 overflow-auto p-6" style={{ background: '#DDD9DE' }}>
+          <div className="flex-1 overflow-auto p-6" style={{ background: 'var(--fundo-documento)' }}>
             {isLoading && (
               <div className="py-12">
                 <LoadingTela mensagem="Gerando visualização do certificado técnico…" />

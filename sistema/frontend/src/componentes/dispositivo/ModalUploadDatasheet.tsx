@@ -111,7 +111,7 @@ export function ModalUploadDatasheet({
       <div
         className="w-full max-w-lg rounded-2xl border p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
         style={{
-          background: 'var(--color-card, #ffffff)',
+          background: 'var(--color-card)',
           borderColor: 'var(--color-border)',
         }}
       >
@@ -144,9 +144,9 @@ export function ModalUploadDatasheet({
             role="alert"
             className="mt-4 rounded-lg border p-3 text-xs leading-relaxed"
             style={{
-              background: 'var(--color-destructive-soft, #fdf2f2)',
-              borderColor: 'var(--color-destructive-border, #f8b4b4)',
-              color: 'var(--color-destructive-fg, #9b1c1c)',
+              background: 'var(--color-destructive-soft)',
+              borderColor: 'var(--color-destructive-border)',
+              color: 'var(--color-destructive-fg)',
             }}
           >
             {erro}

@@ -1193,7 +1193,7 @@ function Inicio() {
                 <div className="flex items-center gap-2.5">
                   <span
                     className="grid h-8 w-8 shrink-0 place-items-center rounded-lg"
-                    style={{ background: 'rgba(126,32,101,0.08)', color: 'var(--color-primary)' }}
+                    style={{ background: 'var(--tom-roxo-bg)', color: 'var(--color-primary)' }}
                   >
                     <Icone nome={c.icone} className="h-4 w-4" />
                   </span>
@@ -1256,7 +1256,7 @@ function FluxoStatus() {
         <Chip tipo="ok">Homologado</Chip>
       </div>
       <p className="mt-3 text-[13px]" style={{ color: 'var(--color-muted-foreground)' }}>
-        <strong style={{ color: '#b45309' }}>↺ Em revisão:</strong> se a Mobiltec pedir ajustes, o dispositivo volta para
+        <strong style={{ color: 'var(--tom-ambar-fg)' }}>↺ Em revisão:</strong> se a Mobiltec pedir ajustes, o dispositivo volta para
         você, você corrige e reenvia.
       </p>
     </div>
@@ -1272,10 +1272,10 @@ function Seta() {
 }
 
 const CORES_CHIP = {
-  rascunho: { bg: '#f1f5f9', fg: '#475569' },
-  validacao: { bg: 'rgba(126,32,101,0.08)', fg: 'var(--color-primary)' },
-  revisao: { bg: '#fef3c7', fg: '#b45309' },
-  ok: { bg: '#f0fdf4', fg: '#15803d' },
+  rascunho: { bg: 'var(--color-muted)', fg: 'var(--color-muted-foreground)' },
+  validacao: { bg: 'var(--tom-roxo-bg)', fg: 'var(--color-primary)' },
+  revisao: { bg: 'var(--tom-ambar-bg)', fg: 'var(--tom-ambar-fg)' },
+  ok: { bg: 'var(--color-success-soft)', fg: 'var(--color-success-fg)' },
   neutro: { bg: 'var(--color-muted)', fg: 'var(--color-muted-foreground)' },
 } as const
 
