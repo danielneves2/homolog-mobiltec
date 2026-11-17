@@ -179,25 +179,25 @@
 .dark {
   color-scheme: dark;
 
-  --color-background: #0d0d10;
-  --color-sidebar: #121216;
-  --color-card: #17171c;
-  --color-popover: #1d1d23;
-  --color-muted: #23232a;
-  --color-foreground: #ececf1;
-  --color-muted-foreground: #9b9aa8;
-  --color-border: #2c2732;
-  --color-input: #383240;
-  --color-hover: rgba(255, 255, 255, 0.05);
+  --color-background: #0f0b12;
+  --color-sidebar: #110c14;
+  --color-card: #1b1520;
+  --color-popover: #231b29;
+  --color-muted: #271f2d;
+  --color-foreground: #f2edf5;
+  --color-muted-foreground: #a99fb2;
+  --color-border: #2e2535;
+  --color-input: #3b3044;
+  --color-hover: rgba(232, 200, 255, 0.06);
 
-  --color-primary: #c46aaf;
-  --color-info: #c46aaf;
-  --color-brand-purple-soft: #261a24;
-  --color-brand-purple-fg: #e2a6d2;
-  --color-brand-purple-border: #4a2f45;
-  --color-info-soft: #241b23;
-  --color-info-fg: #e2a6d2;
-  --color-hero-accent: #e2a6d2;
+  --color-primary: #b986d6;
+  --color-info: #b986d6;
+  --color-brand-purple-soft: #2a1d33;
+  --color-brand-purple-fg: #dcb9ee;
+  --color-brand-purple-border: #4b3359;
+  --color-info-soft: #261c2e;
+  --color-info-fg: #dcb9ee;
+  --color-hero-accent: #dcb9ee;
 
   --color-success-soft: #10241a;
   --color-success-fg: #6fdc9c;
@@ -213,8 +213,8 @@
   --tom-vermelho-bg: #321719;
   --tom-vermelho-fg: #f58c8c;
   --tom-verde-borda: #1f4a35;
-  --tom-roxo-bg: rgba(196, 106, 175, 0.14);
-  --fundo-documento: #0a0a0c;
+  --tom-roxo-bg: rgba(185, 134, 214, 0.14);
+  --fundo-documento: #0b080d;
 
   /* Status da matriz: fundo escuro tingido, texto claro na mesma cor */
   --color-status-ok: #5fd68e;
@@ -241,6 +241,12 @@
   --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.5);
   --shadow-xl: 0 20px 36px rgba(0, 0, 0, 0.55);
+
+  /* Ameixa noturna (D525): base do painel um degrau abaixo dos cards, com
+     halo da marca no topo; degradê dos botões mais luminoso */
+  --color-painel: #140f18;
+  --gradient-brand-purple: linear-gradient(90deg, #8e3184 0%, #a2399a 45%, #6c2066 100%);
+  --gradient-brand-purple-v: linear-gradient(180deg, #8e3184 0%, #a2399a 45%, #6c2066 100%);
 }
 
 /* Fotos de produto no escuro: placa clara e a foto em "multiply", para o
@@ -251,6 +257,29 @@
 
 /* A logo é roxa sobre fundo claro; no grafite ela clareia um pouco */
 .dark img[data-logo-marca] { filter: brightness(1.75) saturate(0.85); }
+
+/* Luz no escuro (D525): o painel ganha um halo roxo no topo, os cards
+   uma borda de luz em cima, e os botões da marca um brilho suave — é o que
+   tira o escuro do "chapado" sem precisar de cor gritando. */
+.dark [data-painel] {
+  background:
+    radial-gradient(ellipse 75% 42% at 50% -6%, rgba(162, 57, 154, 0.22), transparent 72%),
+    radial-gradient(ellipse 40% 30% at 100% 0%, rgba(243, 120, 4, 0.05), transparent 70%),
+    var(--color-painel) !important;
+  border-color: #2a2131;
+}
+.dark [data-painel] > div:first-child {
+  background: rgba(20, 15, 24, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.dark [style*="--color-card"].rounded-xl,
+.dark [style*="--color-card"].rounded-2xl {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045), 0 8px 24px -14px rgba(0, 0, 0, 0.7);
+}
+.dark [style*="gradient-brand-purple"] {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 6px 18px -8px rgba(162, 57, 154, 0.65);
+}
 
 /* Troca de tema instantânea, sem cada elemento animar no seu ritmo */
 .trocando-tema,
