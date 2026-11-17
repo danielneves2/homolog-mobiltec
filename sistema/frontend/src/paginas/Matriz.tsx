@@ -67,11 +67,11 @@ type FiltroSituacao =
 
 /** Degradê sutil para as colunas de modelos do cabeçalho */
 const GRADIENTE_FAIXA =
-  'linear-gradient(90deg, #84236B 0%, #761D5E 45%, #62144D 100%)'
+  'var(--faixa-matriz, linear-gradient(90deg, #84236B 0%, #761D5E 45%, #62144D 100%))'
 
 /** Degradê vertical de cima para baixo nos cards do rail de grupos: sutil, leve e mantendo o tom roxo escuro */
 const GRADIENTE_RAIL_VERTICAL =
-  'linear-gradient(180deg, #84236B 0%, #721C5A 50%, #5E144A 100%)'
+  'var(--rail-matriz, linear-gradient(180deg, #84236B 0%, #721C5A 50%, #5E144A 100%))'
 
 /**
  * Estilo de cada célula/card da faixa do cabeçalho.

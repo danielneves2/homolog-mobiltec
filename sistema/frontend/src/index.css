@@ -190,14 +190,14 @@
   --color-input: #3b3044;
   --color-hover: rgba(232, 200, 255, 0.06);
 
-  --color-primary: #b986d6;
-  --color-info: #b986d6;
-  --color-brand-purple-soft: #2a1d33;
-  --color-brand-purple-fg: #dcb9ee;
-  --color-brand-purple-border: #4b3359;
+  --color-primary: #e9e1ee;
+  --color-info: #e9e1ee;
+  --color-brand-purple-soft: #282030;
+  --color-brand-purple-fg: #efe9f2;
+  --color-brand-purple-border: #3e3247;
   --color-info-soft: #261c2e;
-  --color-info-fg: #dcb9ee;
-  --color-hero-accent: #dcb9ee;
+  --color-info-fg: #e3dae9;
+  --color-hero-accent: #efe9f2;
 
   --color-success-soft: #10241a;
   --color-success-fg: #6fdc9c;
@@ -213,7 +213,7 @@
   --tom-vermelho-bg: #321719;
   --tom-vermelho-fg: #f58c8c;
   --tom-verde-borda: #1f4a35;
-  --tom-roxo-bg: rgba(185, 134, 214, 0.14);
+  --tom-roxo-bg: rgba(255, 255, 255, 0.07);
   --fundo-documento: #0b080d;
 
   /* Status da matriz: fundo escuro tingido, texto claro na mesma cor */
@@ -242,11 +242,14 @@
   --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.5);
   --shadow-xl: 0 20px 36px rgba(0, 0, 0, 0.55);
 
-  /* Ameixa noturna (D525): base do painel um degrau abaixo dos cards, com
-     halo da marca no topo; degradê dos botões mais luminoso */
+  /* Ameixa noturna (D525/D526): base do painel um degrau abaixo dos cards.
+     Ação e destaque em branco-lilás chapado — sem degradê, sem roxo vivo */
   --color-painel: #140f18;
-  --gradient-brand-purple: linear-gradient(90deg, #8e3184 0%, #a2399a 45%, #6c2066 100%);
-  --gradient-brand-purple-v: linear-gradient(180deg, #8e3184 0%, #a2399a 45%, #6c2066 100%);
+  --gradient-brand-purple: #ece6f0;
+  --gradient-brand-purple-v: #ece6f0;
+  /* Faixa e rail da matriz: ameixa chapado no lugar do degradê roxo */
+  --faixa-matriz: #2a2130;
+  --rail-matriz: #251d2b;
 }
 
 /* Fotos de produto no escuro: placa clara e a foto em "multiply", para o
@@ -263,8 +266,7 @@
    tira o escuro do "chapado" sem precisar de cor gritando. */
 .dark [data-painel] {
   background:
-    radial-gradient(ellipse 75% 42% at 50% -6%, rgba(162, 57, 154, 0.22), transparent 72%),
-    radial-gradient(ellipse 40% 30% at 100% 0%, rgba(243, 120, 4, 0.05), transparent 70%),
+    radial-gradient(ellipse 70% 38% at 50% -8%, rgba(150, 100, 170, 0.10), transparent 72%),
     var(--color-painel) !important;
   border-color: #2a2131;
 }
@@ -278,8 +280,17 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045), 0 8px 24px -14px rgba(0, 0, 0, 0.7);
 }
 .dark [style*="gradient-brand-purple"] {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 6px 18px -8px rgba(162, 57, 154, 0.65);
+  box-shadow: none;
 }
+.dark [style*="gradient-brand-purple"],
+.dark [style*="gradient-brand-purple"] * {
+  color: #19131d !important;
+}
+@media (hover: hover) {
+  .dark [style*="gradient-brand-purple"]:hover { background: #ffffff !important; }
+}
+.dark .bg-brand-gradient,
+.dark .bg-brand-gradient-v { background: #ece6f0; color: #19131d; }
 
 /* Troca de tema instantânea, sem cada elemento animar no seu ritmo */
 .trocando-tema,
@@ -354,6 +365,9 @@
 }
 .dark .btn-menu-lateral:not(.btn-menu-ativo):hover { background-color: rgba(255, 255, 255, 0.06) !important; }
 .dark .btn-menu-lateral:active { background-color: rgba(255, 255, 255, 0.09) !important; }
+/* Guia de uso: no escuro segue a paleta neutra do menu, sem rosa */
+.dark .btn-menu-lateral.btn-menu-guia,
+.dark .btn-menu-lateral.btn-menu-guia:not(.btn-menu-ativo):hover { color: var(--color-primary) !important; }
 
 /* Barras de rolagem discretas no escuro */
 .dark ::-webkit-scrollbar { width: 10px; height: 10px; }
