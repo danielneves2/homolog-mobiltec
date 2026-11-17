@@ -179,22 +179,22 @@
 .dark {
   color-scheme: dark;
 
-  --color-background: #0f0b12;
-  --color-sidebar: #110c14;
-  --color-card: #1b1520;
-  --color-popover: #231b29;
-  --color-muted: #271f2d;
+  --color-background: #13091a;
+  --color-sidebar: #170b1f;
+  --color-card: #1f1e24;
+  --color-popover: #27262d;
+  --color-muted: #2d2c33;
   --color-foreground: #f2edf5;
   --color-muted-foreground: #a99fb2;
-  --color-border: #2e2535;
-  --color-input: #3b3044;
+  --color-border: #352a3e;
+  --color-input: #3a3842;
   --color-hover: rgba(232, 200, 255, 0.06);
 
   --color-primary: #e9e1ee;
   --color-info: #e9e1ee;
-  --color-brand-purple-soft: #282030;
+  --color-brand-purple-soft: #2c1d38;
   --color-brand-purple-fg: #efe9f2;
-  --color-brand-purple-border: #3e3247;
+  --color-brand-purple-border: #4a3359;
   --color-info-soft: #261c2e;
   --color-info-fg: #e3dae9;
   --color-hero-accent: #efe9f2;
@@ -243,13 +243,15 @@
   --shadow-xl: 0 20px 36px rgba(0, 0, 0, 0.55);
 
   /* Ameixa noturna (D525/D526): base do painel um degrau abaixo dos cards.
-     Ação e destaque em branco-lilás chapado — sem degradê, sem roxo vivo */
-  --color-painel: #140f18;
+     Ação e destaque em branco-lilás chapado — sem degradê, sem roxo vivo.
+     D527: camadas intercaladas — roxo escuro atrás (fundo, menu, painel),
+     cinza escuro por cima (cards, popups, campos). */
+  --color-painel: #1c0f25;
   --gradient-brand-purple: #ece6f0;
   --gradient-brand-purple-v: #ece6f0;
   /* Faixa e rail da matriz: ameixa chapado no lugar do degradê roxo */
-  --faixa-matriz: #2a2130;
-  --rail-matriz: #251d2b;
+  --faixa-matriz: #2a1736;
+  --rail-matriz: #241330;
 }
 
 /* Fotos de produto no escuro: placa clara e a foto em "multiply", para o
@@ -266,12 +268,12 @@
    tira o escuro do "chapado" sem precisar de cor gritando. */
 .dark [data-painel] {
   background:
-    radial-gradient(ellipse 70% 38% at 50% -8%, rgba(150, 100, 170, 0.10), transparent 72%),
+    radial-gradient(ellipse 70% 38% at 50% -8%, rgba(120, 50, 150, 0.18), transparent 72%),
     var(--color-painel) !important;
-  border-color: #2a2131;
+  border-color: #2e1c3a;
 }
 .dark [data-painel] > div:first-child {
-  background: rgba(20, 15, 24, 0.55);
+  background: rgba(28, 15, 37, 0.6);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
