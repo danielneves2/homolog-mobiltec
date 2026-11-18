@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contextos/AuthContext'
 import { ErroApi } from '@/lib/api'
 import { LogoMobiltec } from '@/componentes/LogoMobiltec'
+import { temaSalvo } from '@/lib/tema'
 
 export function Login() {
   const { entrar, autenticado } = useAuth()
@@ -14,6 +15,17 @@ export function Login() {
   const [exibirSenha, setExibirSenha] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
+
+  // O login é sempre claro (D528): é a porta de entrada da marca, e o tema
+  // escuro é preferência de quem já está dentro. Ao sair daqui, o tema salvo
+  // volta.
+  useEffect(() => {
+    const raiz = document.documentElement
+    raiz.classList.remove('dark')
+    return () => {
+      if (temaSalvo() === 'escuro') raiz.classList.add('dark')
+    }
+  }, [])
 
   const destino = (localizacao.state as { de?: string } | null)?.de ?? '/'
 

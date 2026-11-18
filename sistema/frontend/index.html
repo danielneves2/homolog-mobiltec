@@ -15,7 +15,7 @@
     <!-- Tema escolhido pelo usuário (D523), aplicado antes da primeira pintura -->
     <script>
       try {
-        if (localStorage.getItem('homolog.tema') === 'escuro') document.documentElement.classList.add('dark')
+        if (localStorage.getItem('homolog.tema') === 'escuro' && location.pathname !== '/login') document.documentElement.classList.add('dark')
       } catch (e) {}
     </script>
   </head>
