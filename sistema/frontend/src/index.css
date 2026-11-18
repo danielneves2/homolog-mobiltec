@@ -165,76 +165,85 @@
 }
 
 /* ============================================================
-   Tema escuro (D523) — escolha do usuário, botão ao lado do sino.
+   Tema escuro (D523, paleta refeita no D529).
 
-   Grafite em camadas, não preto chapado: o fundo é quase preto, o menu e a
-   barra sobem um degrau, os cards mais um, e os popups mais um. Cada camada
-   se separa da de baixo pela luz, não pela borda. As divisórias têm um toque
-   de roxo acinzentado — a marca aparece sem gritar.
+   Uma família só: todas as superfícies são grafite com o mesmo leve tom de
+   ameixa, subindo de luz em degraus (fundo → menu → painel → card → popup).
+   Antes havia cinza neutro sobre roxo, e os dois brigavam.
 
-   O roxo de destaque clareia (#c46aaf): o #7e2065 da marca some sobre o
-   grafite como texto. Botões e faixas seguem no roxo profundo pelo degradê.
+   A cor da marca volta para as ações: botões, abas ativas, cabeçalhos de
+   grupo e marcadores usam o roxo Mobiltec chapado, um pouco mais aceso que
+   o do tema claro para não afundar no escuro, sempre com texto branco.
+   Como texto de destaque (links, rótulos ativos) o roxo vira um orquídea
+   claro e pouco saturado, que lê bem sem gritar.
    O certificado não muda: é documento, sai sempre claro.
    ============================================================ */
 .dark {
   color-scheme: dark;
 
-  --color-background: #13091a;
-  --color-sidebar: #170b1f;
-  --color-card: #1f1e24;
-  --color-popover: #27262d;
-  --color-muted: #2d2c33;
-  --color-foreground: #f2edf5;
-  --color-muted-foreground: #a99fb2;
-  --color-border: #352a3e;
-  --color-input: #3a3842;
-  --color-hover: rgba(232, 200, 255, 0.06);
+  /* Superfícies: mesma matiz, luz crescente */
+  --color-background: #0f0b12;
+  --color-sidebar: #120d16;
+  --color-painel: #151019;
+  --color-card: #1c1620;
+  --color-popover: #241d29;
+  --color-muted: #251f2a;
+  --color-input: #362d3c;
+  --color-border: #2d2533;
+  --color-hover: rgba(255, 255, 255, 0.05);
 
-  --color-primary: #e9e1ee;
-  --color-info: #e9e1ee;
-  --color-brand-purple-soft: #2c1d38;
-  --color-brand-purple-fg: #efe9f2;
-  --color-brand-purple-border: #4a3359;
-  --color-info-soft: #261c2e;
-  --color-info-fg: #e3dae9;
-  --color-hero-accent: #efe9f2;
+  --color-foreground: #f4eff6;
+  --color-muted-foreground: #a99eb0;
 
-  --color-success-soft: #10241a;
-  --color-success-fg: #6fdc9c;
-  --color-warning-soft: #2a2412;
-  --color-warning-fg: #f3cd6a;
-  --color-destructive: #f05252;
-  --color-destructive-soft: #2c1517;
-  --color-destructive-fg: #f9a3a3;
+  /* Destaque em texto: orquídea claro. Ação: roxo da marca (abaixo) */
+  --color-primary: #e2b6d7;
+  --color-primary-foreground: #ffffff;
+  --color-info: #e2b6d7;
+  --color-hero-accent: #e2b6d7;
+  --acao-marca: #8e2a76;
+  --acao-marca-hover: #a0348a;
+  --color-brand-purple-soft: #2a1a29;
+  --color-brand-purple-fg: #f0d9ea;
+  --color-brand-purple-border: #5b2c51;
+  --color-info-soft: #22192a;
+  --color-info-fg: #ead3e4;
 
-  --tom-ambar-bg: #2b2311;
-  --tom-ambar-fg: #f4c45e;
-  --tom-ambar-borda: rgba(244, 196, 94, 0.22);
-  --tom-vermelho-bg: #321719;
-  --tom-vermelho-fg: #f58c8c;
-  --tom-verde-borda: #1f4a35;
-  --tom-roxo-bg: rgba(255, 255, 255, 0.07);
-  --fundo-documento: #0b080d;
+  --color-success-soft: #11221a;
+  --color-success-fg: #74d9a0;
+  --color-warning-soft: #29220f;
+  --color-warning-fg: #f0cb6b;
+  --color-destructive: #ef5b5b;
+  --color-destructive-soft: #2b1518;
+  --color-destructive-fg: #f6a2a2;
+
+  --tom-ambar-bg: #2a2210;
+  --tom-ambar-fg: #f2c35f;
+  --tom-ambar-borda: rgba(242, 195, 95, 0.22);
+  --tom-vermelho-bg: #301619;
+  --tom-vermelho-fg: #f48d8d;
+  --tom-verde-borda: #1f4634;
+  --tom-roxo-bg: rgba(142, 42, 118, 0.2);
+  --fundo-documento: #0a080c;
 
   /* Status da matriz: fundo escuro tingido, texto claro na mesma cor */
-  --color-status-ok: #5fd68e;
-  --color-status-ok-fill: #12291c;
-  --color-status-ok-soft: #0f2117;
-  --color-status-falha: #f47c7c;
-  --color-status-falha-fill: #351719;
-  --color-status-falha-soft: #2a1314;
-  --color-status-nao-suportado: #f9a35a;
-  --color-status-nao-suportado-fill: #35210f;
-  --color-status-nao-suportado-soft: #2a1a0c;
-  --color-status-ressalva: #eec455;
-  --color-status-ressalva-fill: #302810;
-  --color-status-ressalva-soft: #26200d;
-  --color-status-nao-aplicavel: #98a2b3;
-  --color-status-nao-aplicavel-fill: #22262d;
-  --color-status-nao-aplicavel-soft: #1c1f25;
-  --color-status-nao-testado: #c6cfdc;
-  --color-status-nao-testado-fill: #2b313b;
-  --color-status-nao-testado-soft: #1e222a;
+  --color-status-ok: #66d493;
+  --color-status-ok-fill: #12241a;
+  --color-status-ok-soft: #0f1e16;
+  --color-status-falha: #f37f7f;
+  --color-status-falha-fill: #331719;
+  --color-status-falha-soft: #281315;
+  --color-status-nao-suportado: #f7a45d;
+  --color-status-nao-suportado-fill: #33200f;
+  --color-status-nao-suportado-soft: #28190c;
+  --color-status-ressalva: #ecc35a;
+  --color-status-ressalva-fill: #2e2711;
+  --color-status-ressalva-soft: #241f0e;
+  --color-status-nao-aplicavel: #9d97a6;
+  --color-status-nao-aplicavel-fill: #24202a;
+  --color-status-nao-aplicavel-soft: #1d1a22;
+  --color-status-nao-testado: #cbc4d3;
+  --color-status-nao-testado-fill: #2e2834;
+  --color-status-nao-testado-soft: #201b25;
 
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -242,57 +251,57 @@
   --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.5);
   --shadow-xl: 0 20px 36px rgba(0, 0, 0, 0.55);
 
-  /* Ameixa noturna (D525/D526): base do painel um degrau abaixo dos cards.
-     Ação e destaque em branco-lilás chapado — sem degradê, sem roxo vivo.
-     D527: camadas intercaladas — roxo escuro atrás (fundo, menu, painel),
-     cinza escuro por cima (cards, popups, campos). */
-  --color-painel: #1c0f25;
-  --gradient-brand-purple: #ece6f0;
-  --gradient-brand-purple-v: #ece6f0;
-  /* Faixa e rail da matriz: ameixa chapado no lugar do degradê roxo */
-  --faixa-matriz: #2a1736;
-  --rail-matriz: #241330;
+  /* Botões e faixas da marca: roxo chapado, sem degradê */
+  --gradient-brand-purple: #8e2a76;
+  --gradient-brand-purple-v: #8e2a76;
+  /* Faixa e rail da matriz: roxo profundo da marca, texto branco */
+  --faixa-matriz: #3a1734;
+  --rail-matriz: #30132c;
 }
 
 /* Fotos de produto no escuro: placa clara e a foto em "multiply", para o
-   fundo branco das fotos de fabricante virar a própria placa — vira foto de
-   catálogo, e não um quadrado branco recortado no grafite. */
-.dark { --fundo-foto: #e6e4ea; }
+   fundo branco das fotos de fabricante virar a própria placa. */
+.dark { --fundo-foto: #e6e3e8; }
 .dark img[data-foto-dispositivo] { mix-blend-mode: multiply; }
 
-/* A logo é roxa sobre fundo claro; no grafite ela clareia um pouco */
-.dark img[data-logo-marca] { filter: brightness(1.75) saturate(0.85); }
+/* A logo é roxa sobre fundo claro; no escuro ela clareia um pouco */
+.dark img[data-logo-marca] { filter: brightness(1.55) saturate(0.9); }
 
-/* Luz no escuro (D525): o painel ganha um halo roxo no topo, os cards
-   uma borda de luz em cima, e os botões da marca um brilho suave — é o que
-   tira o escuro do "chapado" sem precisar de cor gritando. */
+/* O painel ganha um halo roxo discreto no topo; a barra do topo, vidro */
 .dark [data-painel] {
   background:
-    radial-gradient(ellipse 70% 38% at 50% -8%, rgba(120, 50, 150, 0.18), transparent 72%),
+    radial-gradient(ellipse 70% 36% at 50% -8%, rgba(142, 42, 118, 0.16), transparent 72%),
     var(--color-painel) !important;
-  border-color: #2e1c3a;
+  border-color: #241d2a;
 }
 .dark [data-painel] > div:first-child {
-  background: rgba(28, 15, 37, 0.6);
+  background: rgba(21, 16, 25, 0.7);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
 .dark [style*="--color-card"].rounded-xl,
 .dark [style*="--color-card"].rounded-2xl {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045), 0 8px 24px -14px rgba(0, 0, 0, 0.7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 24px -14px rgba(0, 0, 0, 0.7);
 }
-.dark [style*="gradient-brand-purple"] {
-  box-shadow: none;
-}
-.dark [style*="gradient-brand-purple"],
-.dark [style*="gradient-brand-purple"] * {
-  color: #19131d !important;
-}
-@media (hover: hover) {
-  .dark [style*="gradient-brand-purple"]:hover { background: #ffffff !important; }
-}
+
+/* Tudo que no claro é fundo roxo da marca vira o roxo de ação, com texto
+   branco: botões, aba ativa, cabeçalho de grupo, marcadores. No escuro o
+   `--color-primary` é cor de texto, então o fundo é trocado aqui. */
+.dark [style*="background: var(--color-primary)"],
+.dark .bg-\[var\(--color-primary\)\],
 .dark .bg-brand-gradient,
-.dark .bg-brand-gradient-v { background: #ece6f0; color: #19131d; }
+.dark .bg-brand-gradient-v {
+  background: var(--acao-marca) !important;
+  color: #ffffff;
+}
+.dark [style*="gradient-brand-purple"] { color: #ffffff; }
+@media (hover: hover) {
+  .dark button[style*="gradient-brand-purple"]:not(:disabled):hover,
+  .dark a[style*="gradient-brand-purple"]:hover,
+  .dark button[style*="background: var(--color-primary)"]:not(:disabled):hover {
+    background: var(--acao-marca-hover) !important;
+  }
+}
 
 /* Troca de tema instantânea, sem cada elemento animar no seu ritmo */
 .trocando-tema,
@@ -374,8 +383,8 @@
 /* Barras de rolagem discretas no escuro */
 .dark ::-webkit-scrollbar { width: 10px; height: 10px; }
 .dark ::-webkit-scrollbar-track { background: transparent; }
-.dark ::-webkit-scrollbar-thumb { background: #34303a; border-radius: 8px; border: 2px solid var(--color-background); }
-.dark ::-webkit-scrollbar-thumb:hover { background: #4a4452; }
+.dark ::-webkit-scrollbar-thumb { background: #362d3c; border-radius: 8px; border: 2px solid var(--color-background); }
+.dark ::-webkit-scrollbar-thumb:hover { background: #4a3f52; }
 
 @layer base {
   * {
