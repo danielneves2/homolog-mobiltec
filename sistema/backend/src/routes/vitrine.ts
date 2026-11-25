@@ -34,8 +34,9 @@ const vitrineRoutes: FastifyPluginAsync = async (fastify) => {
     // O que entra (D510, mesma regra de escopo da matriz e do painel):
     //  1. Aprovados/publicados de qualquer empresa — é a vitrine.
     //  2. O andamento da planilha Mobiltec (com a TNS em PoS, que divide a
-    //     planilha) — a Mobiltec vê tudo; o parceiro vê o andamento interno.
-    //  3. Para o parceiro, o andamento da própria planilha.
+    //     planilha).
+    // O Painel Mobiltec é só da Mobiltec (D530): o parceiro não navega até ele,
+    // e se chamar a rota recebe apenas a planilha da própria empresa.
     const escopo = ehParceiro
       ? whereVeParceiro(await carregarUsuarioEscopo(fastify.prisma, request.user))
       : { OR: [{ status: { in: [StatusHomologacao.APROVADO, StatusHomologacao.PUBLICADO] } }, escopoPlanilha(null)] }

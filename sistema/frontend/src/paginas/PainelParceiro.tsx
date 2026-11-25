@@ -96,14 +96,17 @@ export function PainelParceiro() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Link
-              to="/"
-              className="px-3 py-1.5 rounded-lg border text-xs font-medium text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.03] transition-colors"
-            >
-              Ver Painel Geral Mobiltec
-            </Link>
-          </div>
+          {/* Atalho para o Painel Mobiltec: só a Mobiltec tem esse painel (D530) */}
+          {!ehParceiro && (
+            <div className="flex items-center gap-2">
+              <Link
+                to="/"
+                className="px-3 py-1.5 rounded-lg border text-xs font-medium text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-black/[0.03] transition-colors"
+              >
+                Ver Painel Geral Mobiltec
+              </Link>
+            </div>
+          )}
         </header>
 
         {/* Alerta de Revisão Pendente (se houver modelos que necessitam de ajustes) */}

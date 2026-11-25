@@ -7,7 +7,6 @@ import { Login } from '@/paginas/Login'
 import { Matriz } from '@/paginas/Matriz'
 import { RegistroDispositivo } from '@/paginas/RegistroDispositivo'
 import { GerenciarTipos } from '@/paginas/GerenciarTipos'
-import { Home } from '@/paginas/Home'
 import { DetalheDispositivo } from '@/paginas/DetalheDispositivo'
 import { Certificado } from '@/paginas/Certificado'
 import { GerenciarParceiros } from '@/paginas/GerenciarParceiros'
@@ -16,6 +15,7 @@ import { PainelParceiro } from '@/paginas/PainelParceiro'
 import { ConfigurarDispositivos } from '@/paginas/ConfigurarDispositivos'
 import { Guia } from '@/paginas/Guia'
 import { AmbienteParceiro } from '@/paginas/AmbienteParceiro'
+import { PainelInicial } from '@/paginas/PainelInicial'
 
 const clienteQuery = new QueryClient({
   defaultOptions: {
@@ -64,8 +64,8 @@ export default function App() {
                 </RotaProtegida>
               }
             >
-              <Route path="/" element={<Home />} />
-              <Route path="/paineis/mobiltec" element={<Home />} />
+              <Route path="/" element={<PainelInicial />} />
+              <Route path="/paineis/mobiltec" element={<PainelInicial />} />
               <Route path="/paineis/meu-painel" element={<PainelParceiro />} />
               <Route path="/paineis/parceiro/:id" element={<PainelParceiro />} />
               <Route path="/paineis" element={<Navigate to="/" replace />} />

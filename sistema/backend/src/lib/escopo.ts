@@ -12,9 +12,10 @@
  *    empresa.
  *  - Exceção TNS: na categoria PoS a TNS divide a planilha com a Mobiltec —
  *    vê e opera as homologações PoS da Mobiltec e vice-versa.
- *  - Homologações APROVADAS/PUBLICADAS e o andamento interno da Mobiltec são
- *    vitrine: qualquer parceiro pode consultar (nunca editar), nos tipos
- *    liberados para parceiros (D498).
+ *  - Painéis individuais (D530): o parceiro consulta só a planilha da própria
+ *    empresa. O Painel Mobiltec (aprovados de todas as empresas e o andamento
+ *    interno) é só da Mobiltec — nada de outra empresa chega ao parceiro, nem
+ *    pela API.
  *
  * Matriz e painel saem da mesma regra (`escopoPlanilha`): o painel mostra um
  * card para cada coluna que a matriz mostraria, e nada além disso.
@@ -24,7 +25,6 @@ import { STATUS_EDITAVEIS_PARCEIRO } from './transicoes.js'
 
 export const SLUG_POS = 'pos'
 
-const STATUS_FINAIS = ['APROVADO', 'PUBLICADO'] as const
 
 /** Casa com nada — parceiro sem empresa não tem planilha */
 const NENHUMA: Prisma.HomologacaoWhereInput = { OR: [] }
@@ -114,19 +114,13 @@ export function whereOperaParceiro(u: UsuarioEscopo): Prisma.HomologacaoWhereInp
   return escopoPlanilha(u.empresa, ehTns(u))
 }
 
-/** O que o parceiro pode CONSULTAR: o que opera + vitrine (finalizadas e andamento Mobiltec) */
+/**
+ * O que o parceiro pode CONSULTAR: a planilha da própria empresa, e só ela
+ * (D530). Antes somava a vitrine — aprovados de qualquer empresa e o andamento
+ * interno da Mobiltec —, que agora é exclusiva do Painel Mobiltec.
+ */
 export function whereVeParceiro(u: UsuarioEscopo): Prisma.HomologacaoWhereInput {
-  return {
-    OR: [
-      {
-        AND: [
-          { OR: [{ status: { in: [...STATUS_FINAIS] } }, ESCOPO_MOBILTEC] },
-          { dispositivo: { categoria: { ativo: true, liberadaParceiros: true } } },
-        ],
-      },
-      whereOperaParceiro(u),
-    ],
-  }
+  return whereOperaParceiro(u)
 }
 
 /** Parceiro pode consultar esta homologação? (ADMIN/HOMOLOGADOR sempre podem) */

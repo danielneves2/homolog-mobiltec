@@ -603,7 +603,8 @@ function MenuPaineis({
             <div
               className="mt-1 ml-5 space-y-0.5"
             >
-              {/* Mobiltec — Painel Geral Público */}
+              {/* Painel Mobiltec — só da Mobiltec; o parceiro vê só o painel da empresa (D530) */}
+              {!ehParceiro && (
               <NavLink
                 to="/"
                 end
@@ -617,6 +618,7 @@ function MenuPaineis({
               >
                 <span className="truncate">MOBILTEC</span>
               </NavLink>
+              )}
 
               {/* Se for PARCEIRO: mostra diretamente o nome da própria empresa (se não for a Mobiltec) */}
               {ehParceiro && usuario?.empresa && usuario.empresa.trim().toLowerCase() !== 'mobiltec' && (
@@ -730,7 +732,7 @@ function MenuPaineis({
       {!aberto && secundario.conteudo === chave && secundario.slot &&
         createPortal(
           <ConteudoSecundario titulo="Painéis">
-            <ItemSecundario para="/" fim rotulo="MOBILTEC" />
+            {!ehParceiro && <ItemSecundario para="/" fim rotulo="MOBILTEC" />}
             {ehParceiro && usuario?.empresa && usuario.empresa.trim().toLowerCase() !== 'mobiltec' && (
               <ItemSecundario
                 para="/paineis/meu-painel"

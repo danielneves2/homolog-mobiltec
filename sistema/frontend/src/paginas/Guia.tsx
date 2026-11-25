@@ -131,11 +131,11 @@ const ARTIGOS: Artigo[] = [
     id: 'paineis',
     categoria: 'inicio',
     titulo: 'Os painéis',
-    resumo: 'Dois painéis, dois papéis: o da Mobiltec é a vitrine oficial; o da sua empresa é onde você acompanha o seu trabalho.',
+    resumo: 'Cada empresa tem o seu painel, individual: o parceiro vê só os dispositivos da própria empresa. O Painel Mobiltec é da equipe Mobiltec.',
     destaque: (
       <>
-        No menu, em <Rotulo>Painéis</Rotulo>, ficam o <strong>Painel Mobiltec</strong> e o{' '}
-        <strong>painel da sua empresa</strong>. Os dois são para consulta: o trabalho é feito na matriz de testes.
+        No menu, em <Rotulo>Painéis</Rotulo>, fica o <strong>painel da sua empresa</strong>. Ele é individual: mostra
+        só os seus dispositivos, nunca os de outra empresa. É para consulta: o trabalho é feito na matriz de testes.
       </>
     ),
     tags: ['painel', 'mobiltec', 'empresa'],
@@ -149,8 +149,9 @@ const ARTIGOS: Artigo[] = [
         conteudo: (
           <>
             <p>
-              É o painel <strong>oficial</strong> da plataforma. Todo dispositivo aprovado pela Mobiltec aparece aqui,
-              de qualquer empresa, junto com o que a própria Mobiltec está testando.
+              É o painel <strong>interno</strong> da equipe Mobiltec: reúne os dispositivos aprovados de todas as
+              empresas e o que a própria Mobiltec está testando. Parceiros não acessam este painel; cada um acompanha
+              os seus dispositivos no painel da própria empresa.
             </p>
             <ul className="mt-3 space-y-2.5">
               <Check>
@@ -162,7 +163,7 @@ const ARTIGOS: Artigo[] = [
                 Em cada homologado, <Botao>Exibir informações</Botao> abre a ficha completa, com o resultado dos testes.
               </Check>
             </ul>
-            <Dica>Os seus dispositivos entram como homologados aqui só depois da aprovação da Mobiltec.</Dica>
+            <Dica>Pelo menu Painéis › Parceiros, a Mobiltec abre o painel individual de cada empresa.</Dica>
           </>
         ),
       },
@@ -200,8 +201,8 @@ const ARTIGOS: Artigo[] = [
         titulo: 'Qual usar quando',
         conteudo: (
           <div className="grid gap-2">
-            <Escolha pergunta="Quero ver o que já está homologado na plataforma" resposta="Painel Mobiltec" />
-            <Escolha pergunta="Quero acompanhar os meus dispositivos" resposta="Painel da sua empresa" />
+            <Escolha pergunta="Quero acompanhar os meus dispositivos e os já homologados" resposta="Painel da sua empresa" />
+            <Escolha pergunta="Sou da Mobiltec e quero ver tudo o que foi homologado" resposta="Painel Mobiltec" />
             <Escolha pergunta="Quero registrar testes" resposta="Matriz de testes" />
           </div>
         ),
@@ -249,7 +250,7 @@ const ARTIGOS: Artigo[] = [
             </Passos>
             <p className="mt-4">
               A matriz oculta sai do menu e da <Rotulo>Matriz de testes</Rotulo> da empresa, mas os dados continuam
-              guardados. O <Rotulo>Painel Mobiltec</Rotulo> segue mostrando todos os dispositivos aprovados.
+              guardados.
             </p>
           </>
         ),
@@ -606,8 +607,8 @@ const ARTIGOS: Artigo[] = [
         conteudo: (
           <p>
             Na tela do certificado, <Botao destaque>Baixar Certificado</Botao> gera o PDF. A ficha técnica do fabricante,
-            quando cadastrada, sai em <Botao>Exportar Datasheet</Botao>, dentro de <Rotulo>Exibir informações</Rotulo> no
-            Painel Mobiltec.
+            quando cadastrada, sai em <Botao>Exportar Datasheet</Botao>, dentro de <Rotulo>Exibir informações</Rotulo> do
+            dispositivo.
           </p>
         ),
       },
