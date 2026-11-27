@@ -196,7 +196,10 @@ export function Matriz() {
    * registro do tipo o que faz sentido, e a planilha mostra só isso. Categoria
    * anterior ao registro vem com a lista vazia e recebe a ficha inteira.
    */
-  const linhasFicha = useMemo(() => linhasDaFicha(data?.categoria.camposFicha), [data])
+  const linhasFicha = useMemo(
+    () => linhasDaFicha(data?.categoria.camposFicha, data?.categoria.rotulosFicha),
+    [data],
+  )
 
   /** Só as seções que têm linhas aqui — na ordem da categoria ou padrão, com suporte a novas baterias */
   const secoesVisiveis = useMemo(() => {
@@ -875,7 +878,11 @@ export function Matriz() {
                     style={{ background: 'var(--color-sidebar)' }}
                   >
                     {/* No iOS a linha do sistema é a versão do iOS, não "Android" */}
-                    {linha.chave === 'versaoSo' && data.categoria.plataforma === 'IOS' ? 'Versão do iOS' : linha.rotulo}
+                    {linha.chave === 'versaoSo' &&
+                    data.categoria.plataforma === 'IOS' &&
+                    !data.categoria.rotulosFicha?.versaoSo
+                      ? 'Versão do iOS'
+                      : linha.rotulo}
                   </th>
                   {colunas.map((c) => (
                     <td key={c.homologacao.id} className="border p-0">

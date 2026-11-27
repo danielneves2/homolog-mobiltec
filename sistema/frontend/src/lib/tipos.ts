@@ -435,6 +435,8 @@ export interface Categoria {
    * anteriores ao registro de tipos.
    */
   camposFicha?: ChaveFicha[]
+  /** D531: nome de cada linha da ficha quando difere do padrão, e das linhas criadas no tipo */
+  rotulosFicha?: Record<string, string>
   gruposOrdem?: string[]
   gruposTitulos?: Record<string, string>
   _count?: { dispositivos: number }
@@ -673,6 +675,8 @@ export interface Homologacao {
   metodoInscricao: string
   assinaturaAgente: boolean
   precisaAssinaturaDev: boolean
+  /** D531: valores das linhas da ficha criadas no registro do tipo (chave → texto) */
+  camposExtras?: Record<string, string>
   dataInicio: string
   dataFim: string | null
   responsavelId: string
@@ -848,6 +852,29 @@ export const LINHAS_FICHA = [
 export type ChaveFicha = (typeof LINHAS_FICHA)[number]['chave']
 
 /**
+ * Uma linha da ficha como a matriz desenha: as padrão de `LINHAS_FICHA`, com o
+ * nome que o tipo deu a elas, e as criadas no registro do tipo (`extra`),
+ * cujo valor mora em `homologacao.camposExtras` (D531).
+ */
+export interface LinhaFicha {
+  chave: string
+  rotulo: string
+  edicao: (typeof LINHAS_FICHA)[number]['edicao'] | 'extra'
+}
+
+const CHAVES_PADRAO = new Set<string>(LINHAS_FICHA.map((l) => l.chave))
+
+/** Linha criada no registro do tipo, fora das padrão */
+export function ehLinhaExtra(chave: string): boolean {
+  return !CHAVES_PADRAO.has(chave)
+}
+
+/** Nome de uma linha da ficha no tipo: o que ele gravou, ou o padrão */
+export function rotuloDaLinha(chave: string, rotulos?: Record<string, string>, padrao?: string): string {
+  return rotulos?.[chave]?.trim() || padrao || LINHAS_FICHA.find((l) => l.chave === chave)?.rotulo || chave
+}
+
+/**
  * Linhas que todo tipo carrega, marcadas ou não no registro.
  *
  * Fabricante e modelo são o que distingue uma coluna da outra — sem eles a
@@ -863,11 +890,21 @@ export const FICHA_FIXA: ChaveFicha[] = ['homologado', 'fabricante', 'modelo']
  * matriz (onde o resultado aparece), para que as duas não divirjam.
  */
 export function linhasDaFicha(
-  camposFicha: ChaveFicha[] | undefined,
-): readonly (typeof LINHAS_FICHA)[number][] {
-  if (!camposFicha || camposFicha.length === 0) return LINHAS_FICHA
+  camposFicha: readonly string[] | undefined,
+  rotulos?: Record<string, string>,
+): LinhaFicha[] {
+  const comNome = (l: (typeof LINHAS_FICHA)[number]): LinhaFicha => ({
+    chave: l.chave,
+    rotulo: rotuloDaLinha(l.chave, rotulos, l.rotulo),
+    edicao: l.edicao,
+  })
+  if (!camposFicha || camposFicha.length === 0) return LINHAS_FICHA.map(comNome)
   const escolhidas = new Set<string>([...camposFicha, ...FICHA_FIXA])
-  return LINHAS_FICHA.filter((l) => escolhidas.has(l.chave))
+  // As criadas no tipo vêm depois das padrão, na ordem em que foram criadas
+  const extras: LinhaFicha[] = camposFicha
+    .filter(ehLinhaExtra)
+    .map((chave) => ({ chave, rotulo: rotuloDaLinha(chave, rotulos), edicao: 'extra' }))
+  return [...LINHAS_FICHA.filter((l) => escolhidas.has(l.chave)).map(comNome), ...extras]
 }
 
 /**

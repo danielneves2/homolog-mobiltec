@@ -227,13 +227,16 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
       assinaturaApoio: z.string().optional().nullable(),
       // Rascunho do técnico durante o teste — não sai no certificado
       observacoes: z.string().optional().nullable(),
+      // D531: valores das linhas criadas no registro do tipo. Chega só o que
+      // mudou; `null` ou vazio apaga a linha.
+      camposExtras: z.record(z.string().min(1).max(40), z.string().max(200).nullable()).optional(),
     })
 
     const body = schema.parse(request.body)
 
     const atual = await fastify.prisma.homologacao.findUnique({
       where: { id },
-      select: { status: true, responsavelId: true, apoioId: true, gerenciamento: true, bateriaId: true },
+      select: { status: true, responsavelId: true, apoioId: true, gerenciamento: true, bateriaId: true, camposExtras: true },
     })
     if (!atual) return reply.status(404).send({ erro: 'Homologação não encontrada' })
 
@@ -265,6 +268,18 @@ const homologacaoRoutes: FastifyPluginAsync = async (fastify) => {
           erro: `Parceiros não possuem permissão para alterar: ${tentouEditar.join(', ')}. Esses campos são gerenciados exclusivamente pela equipe Mobiltec.`,
         })
       }
+    }
+
+    // Linhas extras da ficha: junta com o que já estava gravado, e não troca o
+    // objeto inteiro — cada célula da matriz manda só a sua linha.
+    if (body.camposExtras) {
+      const juntos: Record<string, string> = { ...((atual.camposExtras ?? {}) as Record<string, string>) }
+      for (const [chave, valor] of Object.entries(body.camposExtras)) {
+        const texto = valor?.trim()
+        if (texto) juntos[chave] = texto
+        else delete juntos[chave]
+      }
+      ;(body as Record<string, unknown>).camposExtras = juntos
     }
 
     // iOS: trocar BYOD ↔ Supervisionado muda quais itens existem na

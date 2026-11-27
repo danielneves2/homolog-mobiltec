@@ -412,6 +412,7 @@ const matrizRoutes: FastifyPluginAsync = async (fastify) => {
         tipoAgente: base.tipoAgente,
         versaoAgente: body.versaoAgente,
         versaoPos: base.versaoPos,
+        camposExtras: base.camposExtras ?? {},
         ferramenta: base.ferramenta,
         metodoInscricao: base.metodoInscricao,
         assinaturaAgente: base.assinaturaAgente,

@@ -16,6 +16,12 @@ import { z } from 'zod'
 import { Prisma, StatusResultado } from '@prisma/client'
 import { itemAplicavel } from '../lib/gerenciamento.js'
 
+/**
+ * Nomes das linhas da ficha de um tipo (D531): chave da linha → rótulo. Só o
+ * que difere do padrão, mais as linhas criadas no registro do tipo.
+ */
+const ROTULOS_FICHA = z.record(z.string().min(1).max(40), z.string().trim().min(1).max(60))
+
 const GRUPOS = ['TELEMETRIA', 'COLETA', 'COMANDOS', 'PERFIS'] as const
 
 /** Homologação fechada é somente-leitura (spec §11.4) — a bateria dela não muda */
@@ -144,6 +150,7 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
       ativo: c.ativo,
       liberadaParceiros: c.liberadaParceiros,
       camposFicha: c.camposFicha,
+      rotulosFicha: c.rotulosFicha as Record<string, string>,
       gruposOrdem: c.gruposOrdem,
       gruposTitulos: c.gruposTitulos as Record<string, string>,
       plataforma: c.plataforma,
@@ -163,6 +170,8 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
       icone: z.string().trim().min(1).max(40),
       /** Chaves de LINHAS_FICHA; vazio = a ficha inteira */
       camposFicha: z.array(z.string().min(1).max(40)).default([]),
+      /** D531: nome de cada linha da ficha (chave → rótulo) quando difere do padrão */
+      rotulosFicha: ROTULOS_FICHA.default({}),
       /** D498: true = liberado para parceiros; false = homologação interna */
       liberadaParceiros: z.boolean().default(true),
       /** ANDROID ou IOS (D502) */
@@ -236,6 +245,7 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
           icone: body.icone,
           ordem: (ultima?.ordem ?? 0) + 1,
           camposFicha: body.camposFicha,
+          rotulosFicha: body.rotulosFicha,
           gruposOrdem: body.gruposOrdem,
           gruposTitulos: body.gruposTitulos,
           liberadaParceiros: body.liberadaParceiros,
@@ -309,6 +319,7 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
       nome: z.string().trim().min(2).max(60).optional(),
       icone: z.string().trim().min(1).max(40).optional(),
       camposFicha: z.array(z.string().min(1).max(40)).optional(),
+      rotulosFicha: ROTULOS_FICHA.optional(),
       gruposOrdem: z.array(z.string().min(1).max(100)).optional(),
       gruposTitulos: z.record(z.string()).optional(),
       ativo: z.boolean().optional(),
@@ -375,6 +386,7 @@ const tiposDispositivoRoutes: FastifyPluginAsync = async (fastify) => {
           ...(body.nome !== undefined ? { nome: body.nome } : {}),
           ...(body.icone !== undefined ? { icone: body.icone } : {}),
           ...(body.camposFicha !== undefined ? { camposFicha: body.camposFicha } : {}),
+          ...(body.rotulosFicha !== undefined ? { rotulosFicha: body.rotulosFicha } : {}),
           ...(body.gruposOrdem !== undefined ? { gruposOrdem: body.gruposOrdem } : {}),
           ...(body.gruposTitulos !== undefined ? { gruposTitulos: body.gruposTitulos } : {}),
           ...(body.ativo !== undefined ? { ativo: body.ativo } : {}),

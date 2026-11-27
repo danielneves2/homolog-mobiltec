@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { ROTULO_GERENCIAMENTO, opcoesGerenciamento } from '@/lib/tipos'
-import type { ColunaMatriz, LINHAS_FICHA, Plataforma, TipoGerenciamento } from '@/lib/tipos'
+import type { ColunaMatriz, LinhaFicha, Plataforma, TipoGerenciamento } from '@/lib/tipos'
 
-type Linha = (typeof LINHAS_FICHA)[number]
+type Linha = LinhaFicha
 
 interface Props {
   coluna: ColunaMatriz
@@ -37,12 +37,15 @@ export function CelulaFicha({
   const { dispositivo } = homologacao
 
   const valorBruto =
-    linha.edicao === 'dispositivo' || linha.edicao === 'foto'
-      ? ((dispositivo as unknown as Record<string, unknown>)[linha.chave] as string | null)
-      : ((homologacao as unknown as Record<string, unknown>)[linha.chave] as
-          | string
-          | boolean
-          | null)
+    linha.edicao === 'extra'
+      ? // Linha criada no registro do tipo (D531)
+        (homologacao.camposExtras?.[linha.chave] ?? null)
+      : linha.edicao === 'dispositivo' || linha.edicao === 'foto'
+        ? ((dispositivo as unknown as Record<string, unknown>)[linha.chave] as string | null)
+        : ((homologacao as unknown as Record<string, unknown>)[linha.chave] as
+            | string
+            | boolean
+            | null)
 
   const [editando, setEditando] = useState(false)
   const [rascunho, setRascunho] = useState('')
@@ -57,6 +60,11 @@ export function CelulaFicha({
     const novo = rascunho.trim()
     const antigo = typeof valorBruto === 'string' ? valorBruto : ''
     if (novo === antigo) return
+    if (linha.edicao === 'extra') {
+      // Só a linha desta célula: o backend junta com as outras já gravadas
+      aoSalvarFicha({ camposExtras: { [linha.chave]: novo || null } })
+      return
+    }
     const campos = { [linha.chave]: novo || null }
     if (linha.edicao === 'dispositivo') aoSalvarDispositivo(campos)
     else aoSalvarFicha(campos)

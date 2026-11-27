@@ -15,6 +15,8 @@ export interface TipoDispositivo {
   /** D502 */
   plataforma?: 'ANDROID' | 'IOS'
   camposFicha: (ChaveFicha | string)[]
+  /** D531: nome de cada linha da ficha quando difere do padrão */
+  rotulosFicha?: Record<string, string>
   gruposOrdem?: string[]
   gruposTitulos?: Record<string, string>
   /** Modelos ativos cadastrados neste tipo — o que impede apagar */
@@ -48,6 +50,7 @@ export interface PayloadTipoDispositivo {
   /** D502: ANDROID ou IOS */
   plataforma?: 'ANDROID' | 'IOS'
   camposFicha: (ChaveFicha | string)[]
+  rotulosFicha?: Record<string, string>
   gruposOrdem?: string[]
   gruposTitulos?: Record<string, string>
   itensExistentes: string[]

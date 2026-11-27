@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import { ChaveLiberarParceiros } from './ChaveLiberarParceiros'
 import { useNavigate } from 'react-router-dom'
 import { ErroApi } from '@/lib/api'
@@ -6,6 +7,7 @@ import {
   useEditarTipo,
   useItensTeste,
   useRegistrarTipo,
+  type ResumoEdicao,
   type TipoDispositivo,
 } from '@/hooks/useTipoDispositivo'
 import { Icone, ICONES_TIPO, type NomeIcone } from '@/componentes/Icone'
@@ -49,7 +51,17 @@ function padraoDoCatalogo(catalogo: ItemTeste[]): Set<string> {
   return new Set(catalogo.filter((i) => (i.tipos ?? 0) >= piso).map((i) => i.id))
 }
 
-export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
+export function FormularioTipo({
+  tipo,
+  aviso,
+  aoSalvar,
+}: {
+  tipo?: TipoDispositivo
+  /** Aviso no topo do formulário (o "salvo" depois de uma edição) */
+  aviso?: ReactNode
+  /** Editando: o que fazer depois de salvar. Sem ele, volta para a lista. */
+  aoSalvar?: (resumo: ResumoEdicao, nome: string) => Promise<void> | void
+}) {
   const navegar = useNavigate()
   const { data: catalogo, isLoading } = useItensTeste()
   const registrar = useRegistrarTipo()
@@ -248,9 +260,14 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
     const chavesPadrao = new Set<string>(LINHAS_FICHA.map((l) => l.chave))
     return (tipo.camposFicha ?? [])
       .filter((c) => !chavesPadrao.has(c))
-      .map((c) => ({ chave: c, rotulo: c }))
+      .map((c) => ({ chave: c, rotulo: tipo.rotulosFicha?.[c] ?? c }))
   })
-  const [rotulosEditadosRegistro, setRotulosEditadosRegistro] = useState<Record<string, string>>({})
+  // Nomes gravados no tipo (D531): "Versão PoS" pode ser "Versão PinPad" aqui
+  const [rotulosEditadosRegistro, setRotulosEditadosRegistro] = useState<Record<string, string>>(() => {
+    if (!tipo?.rotulosFicha) return {}
+    const padrao = new Set<string>(LINHAS_FICHA.map((l) => l.chave))
+    return Object.fromEntries(Object.entries(tipo.rotulosFicha).filter(([chave]) => padrao.has(chave)))
+  })
   const [registroEditandoChave, setRegistroEditandoChave] = useState<string | null>(null)
   const [novoNomeRegistro, setNovoNomeRegistro] = useState('')
 
@@ -401,14 +418,29 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
       }
     }
 
+    // Nome digitado no campo de edição e ainda não confirmado com "Salvar"
+    // vale também: quem escreve e clica direto em "Salvar alterações" espera
+    // que o nome novo vá junto.
+    const pendente =
+      registroEditandoChave && novoNomeRegistro.trim()
+        ? { [registroEditandoChave]: novoNomeRegistro.trim() }
+        : {}
+    const linhasFinais = todasLinhasRegistro
+      .map((l) => ({ ...l, rotulo: pendente[l.chave] ?? l.rotulo }))
+      .filter((l) => campos.has(l.chave) || FICHA_FIXA.includes(l.chave as ChaveFicha))
+    // Só o que difere do padrão, e sempre o nome das linhas criadas aqui
+    const padroes = new Map<string, string>(LINHAS_FICHA.map((l) => [l.chave, l.rotulo]))
+    const rotulosFicha = Object.fromEntries(
+      linhasFinais.filter((l) => l.rotulo.trim() && l.rotulo !== padroes.get(l.chave)).map((l) => [l.chave, l.rotulo.trim()]),
+    )
+
     const payload = {
       nome: nome.trim(),
       icone,
       liberadaParceiros,
       plataforma,
-      camposFicha: todasLinhasRegistro
-        .map((l) => l.chave)
-        .filter((c) => campos.has(c) || FICHA_FIXA.includes(c as ChaveFicha)),
+      camposFicha: linhasFinais.map((l) => l.chave),
+      rotulosFicha,
       gruposOrdem: ordemBlocos,
       // Títulos só das baterias que ficaram: o de uma excluída ressuscitava
       // a bateria na próxima edição
@@ -423,10 +455,11 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
     try {
       if (editando) {
         const resumo = await editar.mutateAsync({ id: tipo.id, ...payload })
-        // Volta para a lista levando o que a edição fez. Sem isso a tela some
-        // calada, e uma edição que não mexeu na planilha (porque o item tem
-        // histórico) fica indistinguível de uma que não salvou.
-        navegar('/registro/tipos', { state: { resumo, nome: payload.nome } })
+        // Fica na tela (D531) e mostra o que a edição fez. Sem aviso, uma
+        // edição que não mexeu na planilha (porque o item tem histórico) fica
+        // indistinguível de uma que não salvou.
+        if (aoSalvar) await aoSalvar(resumo, payload.nome)
+        else navegar('/registro/tipos', { state: { resumo, nome: payload.nome } })
       } else {
         const criado = await registrar.mutateAsync(payload)
         // A planilha do tipo recém-criado é o próximo passo natural: é lá que
@@ -471,6 +504,8 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
               {editando ? `Editar "${tipo.nome}"` : 'Registrar tipo de dispositivo'}
             </h2>
           </header>
+
+          {aviso}
 
           {/* ---------------- 1. Identidade do tipo ---------------- */}
           <Secao numero={1} titulo="Tipo de dispositivo">
@@ -846,7 +881,7 @@ export function FormularioTipo({ tipo }: { tipo?: TipoDispositivo }) {
                 className="rounded-md px-4 py-2 text-sm"
                 style={{ color: 'var(--color-muted-foreground)' }}
               >
-                Cancelar
+                Voltar à lista
               </button>
             )}
             {/* D498: liberado para parceiros ou homologação interna, ao lado do botão */}

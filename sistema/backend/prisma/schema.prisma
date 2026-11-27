@@ -85,6 +85,10 @@ model Categoria {
   /// impressora não tem IMEI, coletor não tem versão de PoS. Vazio significa
   /// "a ficha inteira" — é o estado das categorias criadas antes do registro.
   camposFicha     String[]       @default([]) @map("campos_ficha")
+  /// D531: nome de cada linha da ficha neste tipo, quando difere do padrão
+  /// ("Versão PoS" → "Versão PinPad") ou é uma linha criada no registro do
+  /// tipo. Chave da linha → rótulo.
+  rotulosFicha    Json           @default("{}") @map("rotulos_ficha")
   gruposOrdem     String[]       @default([]) @map("grupos_ordem")
   gruposTitulos   Json           @default("{}") @map("grupos_titulos")
   /// ANDROID ou IOS. No iOS não há agente: a ficha e o cadastro do modelo
@@ -255,6 +259,9 @@ model Homologacao {
   /// ainda não viraram justificativa. É a anotação que vai para o dev; do que
   /// ele responder sai a justificativa formal do item. Não entra no certificado.
   observacoes           String?
+  /// D531: valores das linhas da ficha criadas no registro do tipo (chave da
+  /// linha → texto). As linhas padrão continuam nas colunas próprias.
+  camposExtras          Json            @default("{}") @map("campos_extras")
   /// Blocos da "Análise das Divergências" quando o técnico assume a seção.
   /// NULO = automático: o certificado monta a análise a partir das
   /// justificativas, como sempre fez. Preenchido = manual: sai exatamente o

@@ -13,6 +13,8 @@ import {
   somenteVersaoAndroid,
   somenteVersaoIos,
   ehGerenciamentoIos,
+  ehLinhaExtra,
+  rotuloDaLinha,
 } from '@/lib/tipos'
 import type { GrupoItem, Homologacao, StatusResultado } from '@/lib/tipos'
 
@@ -56,6 +58,15 @@ export function FichaUnidadeTestada({
       dataFim: h.dataFim,
     }
   }, [homologacao])
+
+  // Os nomes que o tipo deu às linhas e as linhas criadas nele (D531)
+  const categoria = homologacao.dispositivo?.categoria
+  const rotulos = categoria?.rotulosFicha
+  const extras = (categoria?.camposFicha ?? []).filter(ehLinhaExtra).map((chave) => ({
+    chave,
+    rotulo: rotuloDaLinha(chave, rotulos),
+    valor: homologacao.camposExtras?.[chave] ?? null,
+  }))
 
   return (
     <div className="flex flex-wrap items-start gap-6">
@@ -108,14 +119,17 @@ export function FichaUnidadeTestada({
             </>
           ) : (
             <>
-              <Campo rotulo="Android" valor={somenteVersaoAndroid(ficha.versaoSo)} />
-              <Campo rotulo="Versão do agente" valor={ficha.versaoAgente} />
-              <Campo rotulo="Tipo de agente" valor={ficha.tipoAgente} />
-              <Campo rotulo="Versão PoS" valor={ficha.versaoPos} />
+              <Campo rotulo={rotuloDaLinha('versaoSo', rotulos, 'Android')} valor={somenteVersaoAndroid(ficha.versaoSo)} />
+              <Campo rotulo={rotuloDaLinha('versaoAgente', rotulos, 'Versão do agente')} valor={ficha.versaoAgente} />
+              <Campo rotulo={rotuloDaLinha('tipoAgente', rotulos, 'Tipo de agente')} valor={ficha.tipoAgente} />
+              <Campo rotulo={rotuloDaLinha('versaoPos', rotulos)} valor={ficha.versaoPos} />
               <Campo rotulo="Gerenciamento" valor={ROTULO_GERENCIAMENTO[ficha.gerenciamento]} />
               <Campo rotulo="Método de inscrição" valor={ficha.metodoInscricao} />
             </>
           )}
+          {extras.map((e) => (
+            <Campo key={e.chave} rotulo={e.rotulo} valor={e.valor} />
+          ))}
           <Campo rotulo="Início" valor={formatarData(ficha.dataInicio)} />
           <Campo rotulo="Conclusão" valor={formatarData(ficha.dataFim)} />
           <Campo rotulo="Responsável técnico" valor={ficha.responsavelTecnico} />
